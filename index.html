@@ -1279,10 +1279,19 @@
     return { collection(name){ return wrapCollectionRef(realDb.collection(name)); }, undo: performUndo, hasUndo: ()=> undoStack.length>0 };
   }
 
+  /* Configuração do projeto Firebase da campanha, já embutida — assim, nem o mestre nem os
+     jogadores precisam colar isso na mão; o app já abre conectado direto na tela de login. */
+  const FIREBASE_CONFIG_EMBUTIDA = {
+    apiKey: "AIzaSyCCVicgy50l56fO5N9kaxYHwJlFChYftJc",
+    authDomain: "got-e4f11.firebaseapp.com",
+    projectId: "got-e4f11",
+    storageBucket: "got-e4f11.firebasestorage.app",
+    messagingSenderId: "1066819914707",
+    appId: "1:1066819914707:web:e6f14cf23f4d1937933d26",
+    measurementId: "G-0P8XR5TJDF"
+  };
   function getFirebaseConfig(){
-    const raw = safeStorage.get(FIREBASE_CFG_KEY);
-    if(!raw) return null;
-    try{ return JSON.parse(raw); }catch(e){ return null; }
+    return FIREBASE_CONFIG_EMBUTIDA;
   }
   let persistenceRequested = false;
   let authListenerRegistered = false;
