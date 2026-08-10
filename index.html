@@ -3365,7 +3365,7 @@
           <button type="button" class="btn ${f.rollVisibility!=='privada'?'primary':''}" data-setvisibility="publica">🌐 Pública</button>
           <button type="button" class="btn ${f.rollVisibility==='privada'?'primary':''}" data-setvisibility="privada">🔒 Privada</button>
         </div>` : ''}
-        ${session.role==='mestre' ? `<button class="btn danger" id="btnDeleteFicha">Excluir ficha</button>` : ''}
+        ${editable ? `<button class="btn danger" id="btnDeleteFicha">Excluir ficha</button>` : ''}
       </div>
       <div class="editor-body">
 
@@ -3693,7 +3693,7 @@
     document.getElementById('btnBackToList').addEventListener('click', closeEditor);
     const delBtn = document.getElementById('btnDeleteFicha');
     if(delBtn) delBtn.addEventListener('click', ()=>{
-      if(!confirm('Excluir esta ficha permanentemente?')) return;
+      if(!confirm(`Excluir "${f.nome||'esta ficha'}" permanentemente? Essa ação não pode ser desfeita.`)) return;
       fichasCol().doc(id).delete().then(closeEditor).catch(err=> toast('Erro: '+err.message));
     });
 
