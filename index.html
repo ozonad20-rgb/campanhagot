@@ -2045,12 +2045,12 @@
   /* ============ criador de personagem (assistente passo a passo, ao criar uma ficha normal) ============ */
   /* Faixas etárias — ajustadas: Adolescente vai até 16 (a maioridade em Westeros), Adulto começa aí */
   const IDADE_FAIXAS = [
-    {max:9, label:'Criança'}, {max:13, label:'Jovem'}, {max:15, label:'Adolescente'},
+    {max:9, label:'Criança'}, {max:13, label:'Adolescente'}, {max:15, label:'Jovem'},
     {max:29, label:'Adulto'}, {max:49, label:'Meia Idade'}, {max:69, label:'Velho'},
     {max:79, label:'Muito Velho'}, {max:Infinity, label:'Venerável'}
   ];
   /* ordem de "quão velho" — usada pra checar exigências tipo "Idade Velho ou maior" */
-  const IDADE_ORDEM = ['Criança','Jovem','Adolescente','Adulto','Meia Idade','Velho','Muito Velho','Venerável'];
+  const IDADE_ORDEM = ['Criança','Adolescente','Jovem','Adulto','Meia Idade','Velho','Muito Velho','Venerável'];
   function faixaEtariaPorIdade(idade){
     const n = Number(idade);
     if(isNaN(n) || n<0) return '';
@@ -2059,8 +2059,8 @@
   }
   function faixaPorRoll3d6(soma){
     if(soma===3) return {label:'Criança', min:0, max:9};
-    if(soma===4) return {label:'Jovem', min:10, max:13};
-    if(soma>=5 && soma<=6) return {label:'Adolescente', min:14, max:16};
+    if(soma===4) return {label:'Adolescente', min:10, max:13};
+    if(soma>=5 && soma<=6) return {label:'Jovem', min:14, max:16};
     if(soma>=7 && soma<=11) return {label:'Adulto', min:16, max:29};
     if(soma>=12 && soma<=15) return {label:'Meia Idade', min:30, max:49};
     if(soma===16) return {label:'Velho', min:50, max:69};
@@ -2090,7 +2090,7 @@
 
   /* Tabela 3-8: Comprando Habilidades — XP disponível e graduação inicial máxima (exceto Status) por idade */
   const TABELA_XP_HABILIDADES = {
-    'Criança':{xp:120,gradMax:4}, 'Jovem':{xp:150,gradMax:4}, 'Adolescente':{xp:180,gradMax:5},
+    'Criança':{xp:120,gradMax:4}, 'Adolescente':{xp:150,gradMax:4}, 'Jovem':{xp:180,gradMax:5},
     'Adulto':{xp:210,gradMax:7}, 'Meia Idade':{xp:240,gradMax:6}, 'Velho':{xp:270,gradMax:5},
     'Muito Velho':{xp:330,gradMax:5}, 'Venerável':{xp:360,gradMax:5}
   };
@@ -2106,21 +2106,21 @@
 
   /* Tabela 3-9: Comprando Especialidades — XP disponível por idade + custo por dado de bônus */
   const TABELA_XP_ESPECIALIDADES = {
-    'Criança':40, 'Jovem':40, 'Adolescente':60, 'Adulto':80, 'Meia Idade':100, 'Velho':160, 'Muito Velho':200, 'Venerável':240
+    'Criança':40, 'Adolescente':40, 'Jovem':60, 'Adulto':80, 'Meia Idade':100, 'Velho':160, 'Muito Velho':200, 'Venerável':240
   };
   function custoEspecialidade(bonus){ return Math.max(0, bonus) * 10; }
 
   /* Tabela 3-10: Idade e Pontos de Destino */
   const TABELA_PONTOS_DESTINO = {
-    'Criança':{pd:7,max:3}, 'Jovem':{pd:6,max:3}, 'Adolescente':{pd:5,max:3},
+    'Criança':{pd:7,max:3}, 'Adolescente':{pd:6,max:3}, 'Jovem':{pd:5,max:3},
     'Adulto':{pd:4,max:3}, 'Meia Idade':{pd:3,max:3}, 'Velho':{pd:2,max:2},
     'Muito Velho':{pd:1,max:1}, 'Venerável':{pd:0,max:0}
   };
 
   /* Tabela 3-11: Idade e Defeitos — 1 desvantagem geral obrigatória a partir de Adulto,
      mais defeitos de habilidade específicos que crescem a partir de Meia Idade */
-  const DESVANTAGENS_GERAIS_MIN = {'Criança':0,'Jovem':0,'Adolescente':0,'Adulto':1,'Meia Idade':1,'Velho':1,'Muito Velho':1,'Venerável':1};
-  const DEFEITOS_HABILIDADE_MIN = {'Criança':0,'Jovem':0,'Adolescente':0,'Adulto':0,'Meia Idade':1,'Velho':1,'Muito Velho':2,'Venerável':3};
+  const DESVANTAGENS_GERAIS_MIN = {'Criança':0,'Adolescente':0,'Jovem':0,'Adulto':1,'Meia Idade':1,'Velho':1,'Muito Velho':1,'Venerável':1};
+  const DEFEITOS_HABILIDADE_MIN = {'Criança':0,'Adolescente':0,'Jovem':0,'Adulto':0,'Meia Idade':1,'Velho':1,'Muito Velho':2,'Venerável':3};
   const DEFEITOS_HABILIDADE_LISTA_CURTA = ['agilidade','atletismo','vigor'];
   const DEFEITOS_HABILIDADE_LISTA_LONGA = ['agilidade','atletismo','percepcao','astucia','vigor','luta','pontaria'];
   function habilidadesPermitidasParaDefeito(faixa){
@@ -2159,7 +2159,9 @@
       {nome:'Terras', exigencia:'Patrono', efeito:'Você caiu nas boas graças de seu lorde e, em troca, recebeu terras e um título. Está em dívida com seu senhor — deve responder ao chamado às armas e servi-lo quando necessário. Pode gastar Experiência pra aumentar seu Status. Exige Patrono.'},
       {nome:'Trocador de Peles', exigencia:'Warg', efeito:'Você dominou a troca de peles e não está mais restrito ao seu Companheiro Animal pra usar Warg. Entrar em outro animal exige dominar a vontade dele: um Teste de Conflito usando Lidar com Animais contra a Vontade passiva da fera. Um sucesso te dá controle via Warg. Dominar mais de uma fera aumenta cumulativamente +3 na Vontade passiva de resistência das próximas. Gastando um Ponto de Destino, pode até tentar dominar um humano com Astúcia 1. Se você morrer enquanto possui uma pele, pode queimar um Ponto de Destino pra continuar existindo dentro dela.'},
       {nome:'Visão Verde', exigencia:'Vontade 5', efeito:'Seus sonhos às vezes se tornam realidade. Você tem premonições (sonhos simples, emocionais) e portentos (sonhos proféticos completos). Ao dormir, role 1d6; com 6, você tem um desses sonhos. Gastando ou queimando um Ponto de Destino, pode usar o simbolismo do sonho pra receber +1D usável pra torná-lo realidade — no caso de portentos, esse bônus persiste por mais de um dia.'},
-      {nome:'Warg', exigencia:'Vontade 5, Sonhos de Warg', efeito:'A conexão com seu companheiro animal fica disponível mesmo acordado, permitindo entrar na pele dele quando quiser, como uma ação maior. Você usa as estatísticas do animal mas mantém sua própria Astúcia e Vontade; seu corpo fica inconsciente enquanto isso. Pode permanecer nessa forma por quanto tempo quiser (respeitando as necessidades do corpo original) e até entrar em combate; se o animal sofrer ferimentos, você volta ao seu corpo e recebe 1 ponto de Fadiga.'}
+      {nome:'Warg', exigencia:'Vontade 5, Sonhos de Warg', efeito:'A conexão com seu companheiro animal fica disponível mesmo acordado, permitindo entrar na pele dele quando quiser, como uma ação maior. Você usa as estatísticas do animal mas mantém sua própria Astúcia e Vontade; seu corpo fica inconsciente enquanto isso. Pode permanecer nessa forma por quanto tempo quiser (respeitando as necessidades do corpo original) e até entrar em combate; se o animal sofrer ferimentos, você volta ao seu corpo e recebe 1 ponto de Fadiga.'},
+      {nome:'Clariaudiência', exigencia:'Vontade 5', custo:1, efeito:'Você pode gastar 1 Ponto de Destino para receber uma informação relacionada a algo em que esteja se concentrando. A informação é transmitida pelas vozes que ouve e pode ser incompleta, vaga ou exigir interpretação. Alternativamente, você pode queimar 1 Ponto de Destino para obter uma resposta clara e objetiva a uma pergunta — nesse caso, o Mestre fornece toda a informação disponível sobre o assunto perguntado. A pergunta é feita pela jogadora, não pela personagem: a personagem não precisa formular ou conhecer a pergunta, a resposta simplesmente surge espontaneamente através das vozes.'},
+      {nome:'Feitiçaria de Sangue', exigencia:'Vontade 5, Sangue de Valyria, Conhecimento 4 ou Foco em Conhecimento', custo:2, efeito:'Você aprendeu a manipular o sangue por meio de práticas mágicas e pode conjurar feitiços de sangue. Os feitiços disponíveis e suas regras são definidos pelo sistema de Magia, e devem ser compatíveis com o tipo de magia que você pratica em seus descritores e interpretação.'}
     ],
     'Herança': [
       {nome:'Enorme', exigencia:'Vigor 5', efeito:'Você é surpreendentemente grande. Pode usar armas de duas mãos com apenas uma, e ignora a qualidade Desajeitada dessas armas, se houver.'},
@@ -2662,11 +2664,13 @@
     const info = TABELA_PONTOS_DESTINO[faixa] || TABELA_PONTOS_DESTINO['Adulto'];
     const escolhidos = wizState.qualidadesEscolhidas;
     const nomesEscolhidos = escolhidos.map(q=>q.nome);
-    const podeEscolherMais = escolhidos.length < info.max;
+    const pdGasto = escolhidos.reduce((s,q)=> s+(q.custo||1), 0);
+    const podeEscolherMais = escolhidos.length < info.max && pdGasto < info.pd;
     return `
-      <p class="wizard-intro">Faixa etária: <strong style="color:var(--gold-bright);">${faixa}</strong> — Pontos de Destino iniciais: <strong style="color:var(--gold-bright);">${info.pd}</strong> · Máximo de benefícios investíveis na criação: <strong style="color:var(--gold-bright);">${info.max}</strong>. Cada qualidade escolhida consome 1 Ponto de Destino.</p>
-      <div class="wizard-xp-tracker">Qualidades escolhidas: <strong>${escolhidos.length}</strong> / ${info.max}</div>
-      ${escolhidos.length ? `<div class="wizard-escolhidos-lista">${escolhidos.map((q,i)=> `<span class="wizard-escolhido-tag">${escapeHtml(q.nome)} <button data-wizqual-remover="${i}" title="Remover">×</button></span>`).join('')}</div>` : ''}
+      <p class="wizard-intro">Faixa etária: <strong style="color:var(--gold-bright);">${faixa}</strong> — Pontos de Destino iniciais: <strong style="color:var(--gold-bright);">${info.pd}</strong> · Máximo de benefícios investíveis na criação: <strong style="color:var(--gold-bright);">${info.max}</strong>. A maioria das qualidades custa 1 Ponto de Destino, mas algumas custam mais (ex: Feitiçaria de Sangue custa 2).</p>
+      <div class="wizard-xp-tracker ${pdGasto>info.pd?'estourado':''}">Qualidades escolhidas: <strong>${escolhidos.length}</strong> / ${info.max} — Pontos de Destino usados: <strong>${pdGasto}</strong> / ${info.pd}</div>
+      ${escolhidos.length ? `<div class="wizard-escolhidos-lista">${escolhidos.map((q,i)=> `<span class="wizard-escolhido-tag">${escapeHtml(q.nome)}${q.custo>1?` (${q.custo} PD)`:''} <button data-wizqual-remover="${i}" title="Remover">×</button></span>`).join('')}</div>` : ''}
+      <button class="btn add-row-btn" id="btnWizQualPersonalizada" ${!podeEscolherMais?'disabled':''}>✏️ Adicionar Personalizada</button>
       ${Object.keys(QUALIDADES_CATALOGO_CRIACAO).map(categoria=>{
         const itens = QUALIDADES_CATALOGO_CRIACAO[categoria].filter(q=> atendeExigencia(q.exigencia, wizState.habilidadesCompradas, nomesEscolhidos));
         if(!itens.length) return '';
@@ -2674,12 +2678,13 @@
           <div class="wizard-qual-grid">
             ${itens.map(q=>{
               const jaEscolhida = nomesEscolhidos.includes(q.nome);
+              const custo = q.custo||1;
               return `<div class="wizard-qual-item ${jaEscolhida?'escolhida':''}">
                 <div class="wizard-qual-row" data-toggleq="${categoria}.${q.nome}">
                   <span class="qd-toggle-icon">▸</span>
-                  <span class="wizard-qual-nome">${escapeHtml(q.nome)}</span>
+                  <span class="wizard-qual-nome">${escapeHtml(q.nome)}${custo>1?` <span style="color:var(--gold-bright);font-size:.8em;">(${custo} PD)</span>`:''}</span>
                   ${q.exigencia!=='—'?`<span class="wizard-qual-exig">${escapeHtml(q.exigencia)}</span>`:''}
-                  <button class="btn ${jaEscolhida?'':''}" data-wizqual-toggle="${categoria}|${escapeHtml(q.nome)}" style="padding:.2rem .55rem;font-size:.8rem;margin:0;" ${(!jaEscolhida && !podeEscolherMais)?'disabled':''}>${jaEscolhida?'✓ Escolhida':'+ Escolher'}</button>
+                  <button class="btn" data-wizqual-toggle="${categoria}|${escapeHtml(q.nome)}" style="padding:.2rem .55rem;font-size:.8rem;margin:0;" ${(!jaEscolhida && !podeEscolherMais)?'disabled':''}>${jaEscolhida?'✓ Escolhida':'+ Escolher'}</button>
                 </div>
                 <div class="wizard-qual-detail" style="display:none;">${escapeHtml(q.efeito)}</div>
               </div>`;
@@ -2708,10 +2713,13 @@
       if(idx>=0){ wizState.qualidadesEscolhidas.splice(idx,1); }
       else {
         const faixa = wizFaixaAtual();
-        const max = (TABELA_PONTOS_DESTINO[faixa]||TABELA_PONTOS_DESTINO['Adulto']).max;
-        if(wizState.qualidadesEscolhidas.length >= max){ toast('Você já escolheu o máximo de benefícios pra sua idade.'); return; }
+        const info = TABELA_PONTOS_DESTINO[faixa]||TABELA_PONTOS_DESTINO['Adulto'];
         const q = QUALIDADES_CATALOGO_CRIACAO[categoria].find(x=>x.nome===nome);
-        wizState.qualidadesEscolhidas.push({nome:q.nome, categoria, efeito:q.efeito});
+        const custo = q.custo||1;
+        const pdGasto = wizState.qualidadesEscolhidas.reduce((s,x)=> s+(x.custo||1), 0);
+        if(wizState.qualidadesEscolhidas.length >= info.max){ toast('Você já escolheu o máximo de benefícios pra sua idade.'); return; }
+        if(pdGasto + custo > info.pd){ toast('Você não tem Pontos de Destino suficientes pra essa qualidade.'); return; }
+        wizState.qualidadesEscolhidas.push({nome:q.nome, categoria, efeito:q.efeito, custo});
       }
       renderWizard();
     }));
@@ -2719,6 +2727,21 @@
       wizState.qualidadesEscolhidas.splice(parseInt(btn.dataset.wizqualRemover,10),1);
       renderWizard();
     }));
+    const btnWizQualPersonalizada = document.getElementById('btnWizQualPersonalizada');
+    if(btnWizQualPersonalizada) btnWizQualPersonalizada.addEventListener('click', ()=>{
+      const faixa = wizFaixaAtual();
+      const info = TABELA_PONTOS_DESTINO[faixa]||TABELA_PONTOS_DESTINO['Adulto'];
+      const pdGasto = wizState.qualidadesEscolhidas.reduce((s,x)=> s+(x.custo||1), 0);
+      if(wizState.qualidadesEscolhidas.length >= info.max){ toast('Você já escolheu o máximo de benefícios pra sua idade.'); return; }
+      const nome = prompt('Nome da qualidade personalizada:');
+      if(!nome) return;
+      const efeito = prompt('Descrição — o que ela faz:') || '';
+      let custo = parseInt(prompt('Custo em Pontos de Destino (normalmente 1):', '1'), 10);
+      if(isNaN(custo) || custo < 1) custo = 1;
+      if(pdGasto + custo > info.pd){ toast('Você não tem Pontos de Destino suficientes pra essa qualidade.'); return; }
+      wizState.qualidadesEscolhidas.push({nome, categoria:'Personalizada', efeito, custo});
+      renderWizard();
+    });
     document.getElementById('wVoltar6').addEventListener('click', ()=>{ wizState.step=5; renderWizard(); });
     document.getElementById('wAvancar6').addEventListener('click', ()=>{ wizState.step=7; renderWizard(); });
   }
@@ -2835,7 +2858,7 @@
     const infoPD = TABELA_PONTOS_DESTINO[faixa] || TABELA_PONTOS_DESTINO['Adulto'];
     const minGerais = DESVANTAGENS_GERAIS_MIN[faixa] ?? 1;
     const extras = Math.max(0, wizState.desvantagensEscolhidas.length - minGerais);
-    dados.pontosDestino = Math.max(0, infoPD.pd - wizState.qualidadesEscolhidas.length + extras);
+    dados.pontosDestino = Math.max(0, infoPD.pd - wizState.qualidadesEscolhidas.reduce((s,q)=>s+(q.custo||1),0) + extras);
 
     // qualidades e desvantagens (Passo 6/7) — todas entram na lista de Qualidades e Defeitos da ficha
     dados.qualidadesLista = [
@@ -3246,6 +3269,7 @@
     const editable = canEdit(id);
     const isNPC = f.tipo === 'npcImportante';
     const d = calc(f);
+    const penFL = penalidadesFerimentosLesoes(f);
     const editor = document.getElementById('fichaEditor');
 
     /* célula de especialidades reaproveitada tanto na ficha normal quanto na de NPC importante:
@@ -3487,6 +3511,12 @@
                 <label id="qdPickerLabel">Escolha</label>
                 <select id="qdPickerSelect"></select>
                 <div id="qdPickerDescPreview" style="font-size:.92rem;color:var(--muted);margin-top:.3rem;font-style:italic;"></div>
+                <div id="qdPickerCustomFields" style="display:none;margin-top:.4rem;">
+                  <label>Nome</label>
+                  <input type="text" id="qdCustomNome" placeholder="Nome da qualidade/defeito">
+                  <label>Descrição</label>
+                  <textarea id="qdCustomDesc" placeholder="O que ela faz…" style="min-height:70px;"></textarea>
+                </div>
                 <div class="login-actions" style="margin-top:.5rem;">
                   <button class="btn primary" id="btnConfirmarQd" style="flex:1;">Adicionar à ficha</button>
                   <button class="btn" id="btnCancelarQd">Cancelar</button>
@@ -3548,6 +3578,7 @@
               <div class="checkbox-row">${ferimCheckboxes}</div>
               <label>Lesões <span style="text-transform:none;">(&lt; Vigor)</span></label>
               <div class="checkbox-row">${lesaoCheckboxes}</div>
+              ${(penFL.mod<0 || penFL.penalty>0) ? `<div style="font-size:.85rem;color:var(--danger-bright);margin-top:.3rem;">⚠️ Penalidade automática nos testes: ${penFL.mod<0?`${penFL.mod} no resultado`:''}${(penFL.mod<0 && penFL.penalty>0)?' e ':''}${penFL.penalty>0?`-${penFL.penalty}D`:''}</div>` : ''}
               <div class="field-row" style="margin-top:.5rem;">
                 <div class="stat-box"><div class="stat-value" id="statMovimento" style="font-size:1.402rem;">${d.movimento}m</div><div class="stat-label">Movimento</div></div>
                 <div class="stat-box"><div class="stat-value" id="statCorrida" style="font-size:1.402rem;">${d.corrida}m</div><div class="stat-label">Corrida</div></div>
@@ -3589,7 +3620,7 @@
               </div>
               <div class="field-row" style="margin-top:.6rem;">
                 <div><label>Dificuldade (DT)</label><input type="number" id="magiaDtInput" value="6" min="0"></div>
-                <div><label>Dados de penalidade</label><input type="number" id="magiaPenalidadeInput" value="0" min="0"></div>
+                <div><label>Dados de penalidade extra</label><input type="number" id="magiaPenalidadeInput" value="0" min="0" title="Ferimentos e lesões já entram automaticamente — isso é só uma penalidade adicional, se houver"></div>
                 <div><label>Modificador</label><input type="number" id="magiaModificadorInput" value="0"></div>
               </div>
               <button class="btn primary" id="btnRolarMagia" type="button" style="margin-top:.4rem;width:100%;">🎲 Rolar conjuração</button>
@@ -3822,13 +3853,16 @@
     const qdPickerSelect = document.getElementById('qdPickerSelect');
     const qdPickerLabel = document.getElementById('qdPickerLabel');
     const qdPickerDescPreview = document.getElementById('qdPickerDescPreview');
+    const qdPickerCustomFields = document.getElementById('qdPickerCustomFields');
     let qdPickerTipo = null;
     function abrirQdPicker(tipo){
       qdPickerTipo = tipo;
       const catalogo = tipo==='qualidade' ? QUALIDADES_CATALOGO() : DEFEITOS_CATALOGO();
       qdPickerLabel.textContent = tipo==='qualidade' ? 'Escolha a qualidade' : 'Escolha o defeito';
-      qdPickerSelect.innerHTML = catalogo.map((q,i)=> `<option value="${i}">${escapeHtml(q.nome)}</option>`).join('');
+      qdPickerSelect.innerHTML = catalogo.map((q,i)=> `<option value="${i}">${escapeHtml(q.nome)}</option>`).join('')
+        + `<option value="custom">✏️ Personalizada…</option>`;
       qdPickerDescPreview.textContent = catalogo[0] ? catalogo[0].desc : '';
+      qdPickerCustomFields.style.display = 'none';
       qdPickerBox.style.display = '';
       qdPickerSelect.focus();
     }
@@ -3837,6 +3871,12 @@
     const btnAddDefeito = document.getElementById('btnAddDefeito');
     if(btnAddDefeito) btnAddDefeito.addEventListener('click', ()=> abrirQdPicker('defeito'));
     if(qdPickerSelect) qdPickerSelect.addEventListener('change', ()=>{
+      if(qdPickerSelect.value === 'custom'){
+        qdPickerDescPreview.textContent = '';
+        qdPickerCustomFields.style.display = '';
+        return;
+      }
+      qdPickerCustomFields.style.display = 'none';
       const catalogo = qdPickerTipo==='qualidade' ? QUALIDADES_CATALOGO() : DEFEITOS_CATALOGO();
       const item = catalogo[parseInt(qdPickerSelect.value,10)];
       qdPickerDescPreview.textContent = item ? item.desc : '';
@@ -3845,12 +3885,19 @@
     if(btnCancelarQd) btnCancelarQd.addEventListener('click', ()=>{ qdPickerBox.style.display = 'none'; });
     const btnConfirmarQd = document.getElementById('btnConfirmarQd');
     if(btnConfirmarQd) btnConfirmarQd.addEventListener('click', ()=>{
-      const catalogo = qdPickerTipo==='qualidade' ? QUALIDADES_CATALOGO() : DEFEITOS_CATALOGO();
-      const item = catalogo[parseInt(qdPickerSelect.value,10)];
-      if(!item) return;
       const f2 = fichasCache[id];
       if(!f2.qualidadesLista) f2.qualidadesLista = [];
-      f2.qualidadesLista.push({tipo: qdPickerTipo, nome: item.nome, desc: item.desc});
+      if(qdPickerSelect.value === 'custom'){
+        const nome = document.getElementById('qdCustomNome').value.trim();
+        const desc = document.getElementById('qdCustomDesc').value.trim();
+        if(!nome){ toast('Dê um nome pra essa qualidade/defeito personalizada.'); return; }
+        f2.qualidadesLista.push({tipo: qdPickerTipo, nome, desc});
+      } else {
+        const catalogo = qdPickerTipo==='qualidade' ? QUALIDADES_CATALOGO() : DEFEITOS_CATALOGO();
+        const item = catalogo[parseInt(qdPickerSelect.value,10)];
+        if(!item) return;
+        f2.qualidadesLista.push({tipo: qdPickerTipo, nome: item.nome, desc: item.desc});
+      }
       scheduleFichaSave(id, f2);
       renderEditor(id);
     });
@@ -4084,12 +4131,14 @@
       const f2 = fichasCache[id];
       const grad = f2.habilidades.conhecimento || 0;
       const bonus = f2.magiaBonusEspecialidade || 0;
-      const penalidade = parseInt(document.getElementById('magiaPenalidadeInput').value,10) || 0;
+      const penalidadeManual = parseInt(document.getElementById('magiaPenalidadeInput').value,10) || 0;
       const modificador = parseInt(document.getElementById('magiaModificadorInput').value,10) || 0;
+      const pen = penalidadesFerimentosLesoes(f2);
+      const penalidade = penalidadeManual + pen.penalty;
       const dt = parseInt(document.getElementById('magiaDtInput').value,10) || 0;
       const acumulada = f2.magiaDificuldadeAcumulada || 0;
       const dificuldadeFinal = dt + acumulada;
-      const {rolls, discarded, total} = rollDiceCore(grad, bonus, penalidade, modificador);
+      const {rolls, discarded, total} = rollDiceCore(grad, bonus, penalidade, modificador + pen.mod);
       const diceHtml = buildDiceHtml(rolls, discarded);
       const outcome = outcomeHtmlFor(total, dificuldadeFinal);
       const resultEl = document.getElementById('magiaRollResult');
@@ -4275,7 +4324,8 @@
     const f = fichasCache[fichaId];
     if(!f) return;
     const grad = (f.habilidades && f.habilidades.agilidade) ?? 2;
-    const {total} = rollDiceCore(grad, 0, 0, 0);
+    const pen = penalidadesFerimentosLesoes(f);
+    const {total} = rollDiceCore(grad, 0, pen.penalty, pen.mod);
     iniciativaCol().doc(fichaId).set({
       nome: f.nome || 'Sem nome', valor: total, tipo:'pj',
       ownerName: session.playerName, clientTime: Date.now()
@@ -4315,6 +4365,15 @@
       rolagensCache = novo;
       renderRollHistory();
     }, err=>{ console.error(err); toast('Erro de conexão (rolagens): ' + err.message); });
+  }
+
+  /* Ferimentos e lesões marcados na ficha penalizam TODO teste automaticamente:
+     cada ferimento = -1 no resultado final; cada lesão = -1 dado inteiro no teste
+     (um dado de penalidade a mais, descartando mais um resultado baixo). */
+  function penalidadesFerimentosLesoes(f){
+    const numFerimentos = (f.ferimentos||[]).filter(Boolean).length;
+    const numLesoes = (f.lesoes||[]).filter(Boolean).length;
+    return { mod: -numFerimentos, penalty: numLesoes };
   }
 
   /* núcleo da regra: role graduação + dados de bônus, descarte os menores em quantidade
@@ -4404,9 +4463,10 @@
     const f = fichasCache[fichaId];
     if(!f) return;
     const grad = (f.habilidades && f.habilidades[habKey]) ?? 2;
-    const {rolls, discarded, total} = rollDiceCore(grad, 0, 0, 0);
+    const pen = penalidadesFerimentosLesoes(f);
+    const {rolls, discarded, total} = rollDiceCore(grad, 0, pen.penalty, pen.mod);
     showQuickRollPopup(f.nome || 'Ficha', HABILIDADE_LABEL[habKey], rolls, discarded, total, ev);
-    recordRollHistory(f.nome || 'Ficha', habKey, grad, 0, 0, 0, total, null, f.rollVisibility==='privada');
+    recordRollHistory(f.nome || 'Ficha', habKey, grad, 0, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada');
   }
 
   /* rola com uma especialidade: soma grad (da habilidade) + bônus da especialidade em dados,
@@ -4420,19 +4480,21 @@
     const esp = lista[espIndex];
     if(!esp) return;
     const bonus = Math.max(0, parseInt(esp.bonus,10) || 0);
-    const {rolls, discarded, total} = rollDiceCore(grad, bonus, 0, 0);
+    const pen = penalidadesFerimentosLesoes(f);
+    const {rolls, discarded, total} = rollDiceCore(grad, bonus, pen.penalty, pen.mod);
     const label = HABILIDADE_LABEL[habKey] + (esp.nome ? ' (' + esp.nome + ')' : '');
     showQuickRollPopup(f.nome || 'Ficha', label, rolls, discarded, total, ev);
-    recordRollHistory(f.nome || 'Ficha', habKey, grad, bonus, 0, 0, total, null, f.rollVisibility==='privada');
+    recordRollHistory(f.nome || 'Ficha', habKey, grad, bonus, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada');
   }
 
   /* teste destreinado (NPC importante): sempre 2 dados fixos, sem vínculo com nenhuma habilidade específica */
   function quickRollDestreinado(fichaId, ev){
     const f = fichasCache[fichaId];
     if(!f) return;
-    const {rolls, discarded, total} = rollDiceCore(2, 0, 0, 0);
+    const pen = penalidadesFerimentosLesoes(f);
+    const {rolls, discarded, total} = rollDiceCore(2, 0, pen.penalty, pen.mod);
     showQuickRollPopup(f.nome || 'Ficha', 'Teste destreinado', rolls, discarded, total, ev);
-    recordRollHistory(f.nome || 'Ficha', null, 2, 0, 0, 0, total, null, f.rollVisibility==='privada');
+    recordRollHistory(f.nome || 'Ficha', null, 2, 0, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada');
   }
 
   /* ataque direto pela linha da arma: usa a habilidade escolhida pra essa arma (e a especialização,
@@ -4448,10 +4510,11 @@
     const lista = getEspecialidadesList(f, habKey);
     const esp = espIdx>=0 ? lista[espIdx] : null;
     const bonus = esp ? Math.max(0, parseInt(esp.bonus,10)||0) : 0;
-    const {rolls, discarded, total} = rollDiceCore(grad, bonus, 0, 0);
+    const pen = penalidadesFerimentosLesoes(f);
+    const {rolls, discarded, total} = rollDiceCore(grad, bonus, pen.penalty, pen.mod);
     const label = (arma.nome||'Arma') + ' — ' + HABILIDADE_LABEL[habKey] + (esp ? ' ('+(esp.nome||'especialização')+')' : '');
     showQuickRollPopup(f.nome || 'Ficha', label, rolls, discarded, total, ev);
-    recordRollHistory(f.nome || 'Ficha', habKey, grad, bonus, 0, 0, total, null, f.rollVisibility==='privada');
+    recordRollHistory(f.nome || 'Ficha', habKey, grad, bonus, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada');
   }
 
   function showQuickRollPopup(fichaNome, habLabel, rolls, discarded, total, ev){
