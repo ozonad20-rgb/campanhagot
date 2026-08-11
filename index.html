@@ -382,6 +382,18 @@
   .xp-stat-box{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:.6rem;text-align:center;}
   .xp-stat-value{font-family:'Cinzel',serif;font-size:1.652rem;color:var(--gold-bright);line-height:1;}
   .xp-stat-label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:.25rem;}
+
+  /* ===== Combate & Intriga: lista + ficha compacta ===== */
+  .combate-item-clicavel{cursor:pointer;transition:border-color .12s,background .12s;}
+  .combate-item-clicavel:hover{border-color:var(--gold);background:var(--panel-2);}
+  .combate-item-ativa{border-color:var(--gold-bright)!important;background:rgba(212,160,23,.12);}
+  .fc-header{display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem;}
+  .fc-nome{font-family:'Cinzel',serif;font-size:1.239rem;color:var(--gold-bright);flex:1;}
+  .fc-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.4rem;}
+  .fc-secao-titulo{font-family:'Cinzel',serif;color:var(--gold-bright);font-size:.92rem;border-bottom:1px solid var(--line);padding-bottom:.3rem;margin:1rem 0 .5rem;}
+  .fc-hab-row{display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid rgba(90,80,68,.25);font-size:.92rem;}
+  .fc-esp-row{display:flex;align-items:center;gap:.5rem;padding:.15rem 0 .15rem 1.6em;font-size:.85rem;color:var(--muted);border-bottom:1px solid rgba(90,80,68,.15);}
+  #iniciativaWrap{height:100%;}
   .historico-item{padding:.5rem 0;border-bottom:1px solid var(--line);}
   .historico-item-header{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;color:var(--muted);margin-bottom:.2rem;}
   .historico-item-desc{font-size:.85rem;line-height:1.4;}
@@ -419,6 +431,10 @@
     .editor-body, .wizard-body, .loja-modal-body{ padding-left:.8rem; padding-right:.8rem; }
     #fichasList, #recompensasWrap, #iniciativaWrap{ padding:.8rem !important; }
     .panel-box{ padding:.8rem .9rem; }
+    #combateLayout{ flex-direction:column; overflow-y:auto !important; }
+    #combateListaCol{ width:100% !important; max-width:100% !important; height:auto !important; overflow-y:visible !important; }
+    #combateFichaCol{ margin:0 .8rem .8rem !important; height:auto !important; }
+    .fc-stats-row{ grid-template-columns:repeat(2,1fr); }
   }
   @media (max-width:560px){
     #linhaTempoSidebar, .diario-sidebar{ width:104px; padding:.5rem .4rem; }
@@ -1069,7 +1085,7 @@
 
   <nav id="tabbar">
     <button class="tab-btn active" id="tabBtnFichas" data-tab="fichas">📜 Fichas</button>
-    <button class="tab-btn" id="tabBtnIniciativa" data-tab="iniciativa">🎯 Iniciativa</button>
+    <button class="tab-btn" id="tabBtnIniciativa" data-tab="iniciativa">⚔️ Combate &amp; Intriga</button>
     <button class="tab-btn" id="tabBtnLoja" data-tab="loja">🛒 Loja</button>
     <button class="tab-btn" id="tabBtnRecompensas" data-tab="recompensas">🎁 Recompensas</button>
     <button class="tab-btn" id="tabBtnLinhaTempo" data-tab="linhatempo">🕰️ Linha do Tempo</button>
@@ -1734,19 +1750,22 @@
 
   /* ============ abas ============ */
   const TAB_PANE_MAP = { fichas:'paneFichas', iniciativa:'paneIniciativa', loja:'paneLoja', recompensas:'paneRecompensas', linhatempo:'paneLinhaTempo', diario:'paneDiario', galerias:'paneGalerias', quadro:'paneQuadro' };
+  function switchTab(tabName){
+    const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    if(!btn || btn.style.display==='none') return;
+    document.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-pane').forEach(p=> p.classList.remove('active'));
+    document.getElementById(TAB_PANE_MAP[tabName]).classList.add('active');
+    if(tabName==='iniciativa') renderIniciativaTab();
+    if(tabName==='loja') renderLojaTab();
+    if(tabName==='recompensas') renderRecompensasTab();
+    if(tabName==='linhatempo') renderLinhaTempoTab();
+    if(tabName==='diario') renderDiarioTab();
+    if(tabName==='galerias') renderGaleriasTab();
+  }
   document.querySelectorAll('.tab-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      document.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
-      btn.classList.add('active');
-      document.querySelectorAll('.tab-pane').forEach(p=> p.classList.remove('active'));
-      document.getElementById(TAB_PANE_MAP[btn.dataset.tab]).classList.add('active');
-      if(btn.dataset.tab==='iniciativa') renderIniciativaTab();
-      if(btn.dataset.tab==='loja') renderLojaTab();
-      if(btn.dataset.tab==='recompensas') renderRecompensasTab();
-      if(btn.dataset.tab==='linhatempo') renderLinhaTempoTab();
-      if(btn.dataset.tab==='diario') renderDiarioTab();
-      if(btn.dataset.tab==='galerias') renderGaleriasTab();
-    });
+    btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
   });
 
   /* ============ modelo de ficha ============ */
@@ -1991,7 +2010,7 @@
       const addCardNPC = document.createElement('div');
       addCardNPC.className = 'new-ficha-card';
       addCardNPC.textContent = '👑 + Ficha de NPC Importante';
-      addCardNPC.addEventListener('click', ()=> createFichaNPC());
+      addCardNPC.addEventListener('click', ()=> abrirEscolhaCriarNPC());
       addWrapMestre.appendChild(addCardNPC);
       colMestre.appendChild(addWrapMestre);
 
@@ -2160,8 +2179,8 @@
       {nome:'Trocador de Peles', exigencia:'Warg', efeito:'Você dominou a troca de peles e não está mais restrito ao seu Companheiro Animal pra usar Warg. Entrar em outro animal exige dominar a vontade dele: um Teste de Conflito usando Lidar com Animais contra a Vontade passiva da fera. Um sucesso te dá controle via Warg. Dominar mais de uma fera aumenta cumulativamente +3 na Vontade passiva de resistência das próximas. Gastando um Ponto de Destino, pode até tentar dominar um humano com Astúcia 1. Se você morrer enquanto possui uma pele, pode queimar um Ponto de Destino pra continuar existindo dentro dela.'},
       {nome:'Visão Verde', exigencia:'Vontade 5', efeito:'Seus sonhos às vezes se tornam realidade. Você tem premonições (sonhos simples, emocionais) e portentos (sonhos proféticos completos). Ao dormir, role 1d6; com 6, você tem um desses sonhos. Gastando ou queimando um Ponto de Destino, pode usar o simbolismo do sonho pra receber +1D usável pra torná-lo realidade — no caso de portentos, esse bônus persiste por mais de um dia.'},
       {nome:'Warg', exigencia:'Vontade 5, Sonhos de Warg', efeito:'A conexão com seu companheiro animal fica disponível mesmo acordado, permitindo entrar na pele dele quando quiser, como uma ação maior. Você usa as estatísticas do animal mas mantém sua própria Astúcia e Vontade; seu corpo fica inconsciente enquanto isso. Pode permanecer nessa forma por quanto tempo quiser (respeitando as necessidades do corpo original) e até entrar em combate; se o animal sofrer ferimentos, você volta ao seu corpo e recebe 1 ponto de Fadiga.'},
-      {nome:'Clariaudiência', exigencia:'Vontade 5', custo:1, efeito:'Você pode gastar 1 Ponto de Destino para receber uma informação relacionada a algo em que esteja se concentrando. A informação é transmitida pelas vozes que ouve e pode ser incompleta, vaga ou exigir interpretação. Alternativamente, você pode queimar 1 Ponto de Destino para obter uma resposta clara e objetiva a uma pergunta — nesse caso, o Mestre fornece toda a informação disponível sobre o assunto perguntado. A pergunta é feita pela jogadora, não pela personagem: a personagem não precisa formular ou conhecer a pergunta, a resposta simplesmente surge espontaneamente através das vozes.'},
-      {nome:'Feitiçaria de Sangue', exigencia:'Vontade 5, Sangue de Valyria, Conhecimento 4 ou Foco em Conhecimento', custo:2, efeito:'Você aprendeu a manipular o sangue por meio de práticas mágicas e pode conjurar feitiços de sangue. Os feitiços disponíveis e suas regras são definidos pelo sistema de Magia, e devem ser compatíveis com o tipo de magia que você pratica em seus descritores e interpretação.'}
+      {nome:'Clariaudiência', exigencia:'Vontade 5', custo:1, efeito:'As vozes em sua mente podem revelar conhecimentos além da percepção comum. Uma vez por dia, role 1d6 ao despertar ou em outro momento definido pelo Mestre. Com um 6, você recebe uma informação vaga sobre um evento, pessoa, lugar ou situação relevante — a visão pode ser simbólica, fragmentada ou exigir interpretação; role 1d6 novamente, e se o resultado for par, a revelação vira uma informação complexa, com uma interpretação clara (ainda que não necessariamente completa). Você também pode provocar essas visões voluntariamente: gastando 1 Ponto de Destino, recebe uma informação vaga sobre qualquer assunto em que esteja se concentrando; queimando 1 Ponto de Destino, recebe uma resposta específica e objetiva a uma pergunta, limitada ao conhecimento disponível ao Mestre. A pergunta é feita pela jogadora — a personagem só recebe a revelação espontaneamente, sem precisar formular ou conhecer a pergunta.'},
+      {nome:'Feitiçaria de Fogo e Sangue', exigencia:'Vontade 5, Sangue de Valyria, Conhecimento 4 ou Foco em Conhecimento', custo:2, efeito:'Você aprendeu a manipular o sangue por meio de práticas mágicas e pode conjurar feitiços de sangue. Os feitiços disponíveis e suas regras são definidos pelo sistema de Magia, e devem ser compatíveis com o tipo de magia que você pratica em seus descritores e interpretação.'}
     ],
     'Herança': [
       {nome:'Enorme', exigencia:'Vigor 5', efeito:'Você é surpreendentemente grande. Pode usar armas de duas mãos com apenas uma, e ignora a qualidade Desajeitada dessas armas, se houver.'},
@@ -2667,7 +2686,7 @@
     const pdGasto = escolhidos.reduce((s,q)=> s+(q.custo||1), 0);
     const podeEscolherMais = escolhidos.length < info.max && pdGasto < info.pd;
     return `
-      <p class="wizard-intro">Faixa etária: <strong style="color:var(--gold-bright);">${faixa}</strong> — Pontos de Destino iniciais: <strong style="color:var(--gold-bright);">${info.pd}</strong> · Máximo de benefícios investíveis na criação: <strong style="color:var(--gold-bright);">${info.max}</strong>. A maioria das qualidades custa 1 Ponto de Destino, mas algumas custam mais (ex: Feitiçaria de Sangue custa 2).</p>
+      <p class="wizard-intro">Faixa etária: <strong style="color:var(--gold-bright);">${faixa}</strong> — Pontos de Destino iniciais: <strong style="color:var(--gold-bright);">${info.pd}</strong> · Máximo de benefícios investíveis na criação: <strong style="color:var(--gold-bright);">${info.max}</strong>. A maioria das qualidades custa 1 Ponto de Destino, mas algumas custam mais (ex: Feitiçaria de Fogo e Sangue custa 2).</p>
       <div class="wizard-xp-tracker ${pdGasto>info.pd?'estourado':''}">Qualidades escolhidas: <strong>${escolhidos.length}</strong> / ${info.max} — Pontos de Destino usados: <strong>${pdGasto}</strong> / ${info.pd}</div>
       ${escolhidos.length ? `<div class="wizard-escolhidos-lista">${escolhidos.map((q,i)=> `<span class="wizard-escolhido-tag">${escapeHtml(q.nome)}${q.custo>1?` (${q.custo} PD)`:''} <button data-wizqual-remover="${i}" title="Remover">×</button></span>`).join('')}</div>` : ''}
       <button class="btn add-row-btn" id="btnWizQualPersonalizada" ${!podeEscolherMais?'disabled':''}>✏️ Adicionar Personalizada</button>
@@ -3178,6 +3197,178 @@
     const doc = fichasCol().doc();
     const data = freshFichaNPC(session.playerName);
     doc.set(data).then(()=>{ openEditor(doc.id); }).catch(err=> toast('Erro: ' + err.message));
+  }
+
+  /* ============ gerador automático de NPC (papel + nível de poder) ============
+     O "nível" do NPC é sempre relativo ao quanto os PERSONAGENS DOS JOGADORES já
+     evoluíram na campanha — não à idade do NPC, que é só estética. */
+  const PAPEL_HABILIDADES_CHAVE = {
+    guerreiro: ['agilidade','atletismo','guerra','lidarAnimais','luta','pontaria','vigor'],
+    ladino: ['agilidade','astucia','furtividade','ladinagem','luta','percepcao','persuasao','pontaria'],
+    lider: ['astucia','guerra','luta','persuasao','status','vigor'],
+    planejador: ['astucia','conhecimento','enganacao','idioma','percepcao','persuasao','status','vontade']
+    /* "especialista" fica de fora de propósito — sorteia 3 habilidades-chave na hora, já que o
+       papel é "qualquer habilidade que reflita a especialização", sem lista fixa no livro */
+  };
+  const NPC_NIVEL_INFO = {
+    1: {label:'Fraco', mult:0.5, evoMult:0},
+    2: {label:'Mediano', mult:1, evoMult:0},
+    3: {label:'Forte', mult:1, evoMult:2},
+    4: {label:'Muito Forte', mult:1.5, evoMult:2}
+  };
+  const NPC_XP_CRIACAO_BASE = 210; // referência da Tabela 3-8 pra idade Adulto — fixo, não varia com a idade do NPC
+
+  function shuffleArray(arr){
+    for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+    return arr;
+  }
+  /* média de XP de evolução (pós-criação) já gasto pelos jogadores da campanha —
+     é essa média que dá a régua de "quão experiente é o grupo agora" */
+  function calcularXpMedioEvolucaoJogadores(){
+    const jogadores = Object.values(fichasCache).filter(f=> f.tipo!=='npcImportante');
+    if(!jogadores.length) return 0;
+    const soma = jogadores.reduce((s,f)=> s + (f.experienciaGasta||0), 0);
+    return soma / jogadores.length;
+  }
+
+  function abrirEscolhaCriarNPC(){
+    const overlay = document.createElement('div');
+    overlay.id = 'npcGenOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:460;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:linear-gradient(160deg, var(--panel-2), var(--panel) 60%);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:10px;padding:1.4rem 1.6rem;max-width:480px;width:100%;max-height:85vh;overflow:auto;';
+    box.innerHTML = `
+      <h3 style="margin-top:0;">👑 Criar NPC Importante</h3>
+      <button class="btn" id="btnNpcEmBranco" style="width:100%;margin-bottom:1rem;">📄 Ficha em branco</button>
+      <div class="wizard-secao-titulo">Ou gerar automaticamente</div>
+      <label>Papel</label>
+      <select id="npcGenPapel">
+        ${PAPEL_OPCOES.filter(p=>p.valor!=='nenhum').map(p=> `<option value="${p.valor}">${p.nome}</option>`).join('')}
+      </select>
+      <label>Nível (proporcional ao quanto seus jogadores já evoluíram)</label>
+      <div class="role-choice" style="flex-wrap:wrap;">
+        ${[1,2,3,4].map(n=> `<button type="button" class="btn" data-npcnivel="${n}" style="flex:1;min-width:100px;">${n} — ${NPC_NIVEL_INFO[n].label}</button>`).join('')}
+      </div>
+      <div class="login-actions" style="margin-top:1rem;">
+        <button class="btn" id="npcGenCancelar">Cancelar</button>
+        <button class="btn primary" id="btnGerarNpcConfirmar" style="flex:1;" disabled>🎲 Gerar NPC</button>
+      </div>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay) overlay.remove(); });
+    document.getElementById('btnNpcEmBranco').addEventListener('click', ()=>{ overlay.remove(); createFichaNPC(); });
+    document.getElementById('npcGenCancelar').addEventListener('click', ()=> overlay.remove());
+    let nivelEscolhido = null;
+    box.querySelectorAll('[data-npcnivel]').forEach(btn=> btn.addEventListener('click', ()=>{
+      nivelEscolhido = parseInt(btn.dataset.npcnivel,10);
+      box.querySelectorAll('[data-npcnivel]').forEach(b=> b.classList.toggle('primary', b===btn));
+      document.getElementById('btnGerarNpcConfirmar').disabled = false;
+    }));
+    document.getElementById('btnGerarNpcConfirmar').addEventListener('click', ()=>{
+      const papelValor = document.getElementById('npcGenPapel').value;
+      overlay.remove();
+      gerarNPCAutomatico(papelValor, nivelEscolhido);
+    });
+  }
+
+  function gerarNPCAutomatico(papelValor, nivel){
+    const info = NPC_NIVEL_INFO[nivel] || NPC_NIVEL_INFO[2];
+    const xpEvoMedio = calcularXpMedioEvolucaoJogadores();
+    const xpTotal = Math.max(0, Math.round(NPC_XP_CRIACAO_BASE * info.mult + xpEvoMedio * info.evoMult));
+
+    const papel = PAPEL_OPCOES.find(p=>p.valor===papelValor) || PAPEL_OPCOES[0];
+    const todasHabilidades = HABILIDADES.filter(h=>h!=='status');
+    let chave = PAPEL_HABILIDADES_CHAVE[papelValor];
+    if(!chave) chave = shuffleArray(todasHabilidades.slice()).slice(0,3); // especialista: 3 ao acaso
+    const naoChave = todasHabilidades.filter(h=> !chave.includes(h));
+
+    /* 70% do orçamento de XP em habilidades — sorteio ponderado (3x mais chance nas habilidades-chave
+       do papel), gastando pela mesma curva de custo da Tabela pós-criação (30 XP por graduação) */
+    const habilidades = {};
+    todasHabilidades.forEach(h=> habilidades[h] = 2);
+    const orcamentoHab = Math.round(xpTotal * 0.7);
+    let gastoHab = 0, tentativas = 0;
+    const pool = [];
+    chave.forEach(h=>{ pool.push(h,h,h); });
+    naoChave.forEach(h=> pool.push(h));
+    while(gastoHab < orcamentoHab && tentativas < 500){
+      tentativas++;
+      const h = pool[Math.floor(Math.random()*pool.length)];
+      const gradAtual = habilidades[h];
+      if(gradAtual >= 7) continue;
+      const custoProximo = custoAcumuladoHabilidade(gradAtual+1) - custoAcumuladoHabilidade(gradAtual);
+      if(gastoHab + custoProximo > orcamentoHab) continue;
+      habilidades[h] = gradAtual + 1;
+      gastoHab += custoProximo;
+    }
+
+    /* o resto do orçamento vira especialidades (10 XP cada +1B), quase sempre nas habilidades-chave */
+    const orcamentoEsp = Math.max(0, xpTotal - gastoHab);
+    const especialidades = {};
+    todasHabilidades.forEach(h=> especialidades[h]=[]);
+    const nomesEspGenericos = ['Perícia','Instinto','Técnica','Talento Natural','Golpe Certeiro','Faro Aguçado','Precisão'];
+    let gastoEsp = 0, tentativasEsp = 0;
+    while(gastoEsp + 10 <= orcamentoEsp && tentativasEsp < 200){
+      tentativasEsp++;
+      const h = chave[Math.floor(Math.random()*chave.length)];
+      const existentes = especialidades[h];
+      if(existentes.length && Math.random()>=0.4){
+        const alvo = existentes[Math.floor(Math.random()*existentes.length)];
+        if(alvo.bonus >= habilidades[h]) continue; // dado de especialidade não pode passar a graduação
+        alvo.bonus++;
+      } else {
+        const nome = nomesEspGenericos[Math.floor(Math.random()*nomesEspGenericos.length)];
+        const existente = existentes.find(e=>e.nome===nome);
+        if(existente){ if(existente.bonus>=habilidades[h]) continue; existente.bonus++; }
+        else existentes.push({nome, bonus:1});
+      }
+      gastoEsp += 10;
+    }
+
+    /* Pontos de Destino e qualidades — sem tabela oficial de XP→PD, então uso o nível como
+       proxy razoável (1 a 4 PD) e sorteio qualidades compatíveis, priorizando a categoria do papel */
+    const categoriaPreferida = {guerreiro:'Marcial', ladino:'Habilidade', lider:'Social', planejador:'Social', especialista:'Habilidade'}[papelValor] || 'Habilidade';
+    const categoriasOrdem = [categoriaPreferida, ...Object.keys(QUALIDADES_CATALOGO_CRIACAO).filter(c=>c!==categoriaPreferida)];
+    const qualidadesEscolhidas = [];
+    let pdRestante = nivel;
+    let tentativasQ = 0;
+    while(pdRestante > 0 && tentativasQ < 80){
+      tentativasQ++;
+      const cat = categoriasOrdem[Math.floor(Math.random()*Math.min(2,categoriasOrdem.length))];
+      const nomesEscolhidos = qualidadesEscolhidas.map(q=>q.nome);
+      const candidatas = QUALIDADES_CATALOGO_CRIACAO[cat].filter(q=>{
+        if(nomesEscolhidos.includes(q.nome)) return false;
+        if((q.custo||1) > pdRestante) return false;
+        return atendeExigencia(q.exigencia, habilidades, nomesEscolhidos);
+      });
+      if(!candidatas.length) continue;
+      const escolhida = candidatas[Math.floor(Math.random()*candidatas.length)];
+      const custo = escolhida.custo||1;
+      qualidadesEscolhidas.push({nome:escolhida.nome, desc:escolhida.efeito, custo});
+      pdRestante -= custo;
+    }
+
+    const idade = 18 + Math.floor(Math.random()*40); // livre — não interfere no XP, é só estética
+    const gastoTotal = gastoHab + gastoEsp;
+
+    const dados = freshFichaNPC(session.playerName);
+    dados.nome = `${papel.nome} — Nível ${nivel} (${info.label})`;
+    dados.idade = String(idade);
+    dados.papel = papelValor;
+    dados.habilidades = habilidades;
+    dados.especialidades = especialidades;
+    dados.pontosDestino = pdRestante;
+    dados.qualidadesLista = qualidadesEscolhidas.map(q=> ({tipo:'qualidade', nome:q.nome, desc:q.desc}));
+    dados.experienciaTotal = xpTotal;
+    dados.experienciaGasta = gastoTotal;
+    dados.historicoXP = [{tipo:'evolucao', data:Date.now(), custoTotal:gastoTotal,
+      itens:[{label:`Geração automática (${papel.nome}, Nível ${nivel} — ${info.label})`, custo:gastoTotal}]}];
+
+    const doc = fichasCol().doc();
+    doc.set(dados).then(()=>{
+      toast('🎲 NPC gerado: ' + dados.nome);
+      openEditor(doc.id);
+    }).catch(err=> toast('Erro: ' + err.message));
   }
 
   /* ============ editor de ficha ============ */
@@ -4210,6 +4401,7 @@
   /* ============ iniciativa (organizador de turnos — a MESMA lista pra mestre e jogadores) ============ */
   let unsubIniciativa = null;
   let iniciativaCache = {};
+  let combateFichaSelecionada = null; // fichaId aberta na coluna compacta da aba Combate & Intriga
 
   function iniciativaCol(){
     return db.collection(COLLECTION).doc(session.campaignId).collection('iniciativa');
@@ -4223,13 +4415,37 @@
     }, err=>{ console.error(err); toast('Erro de conexão (iniciativa): ' + err.message); });
   }
 
+  /* monta a lista de combate: fichas de jogadores SEMPRE aparecem; NPCs só aparecem depois
+     que o mestre os adiciona ao combate; entradas avulsas antigas (sem ficha) continuam
+     valendo pra compatibilidade, mas não abrem ficha compacta (não têm fichaId) */
+  function combateListaEntradas(){
+    const all = [];
+    Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='npcImportante').forEach(id=>{
+      const f = fichasCache[id];
+      const ini = iniciativaCache[id];
+      all.push({id, fichaId:id, nome:f.nome||'Sem nome', valor: ini?(ini.valor||0):0, tipo:'pj', ownerName:f.ownerName});
+    });
+    Object.keys(iniciativaCache).forEach(id=>{
+      const ini = iniciativaCache[id];
+      if(fichasCache[id]) return; // já coberto acima (pj) ou é NPC (tratado abaixo)
+      all.push({id, fichaId: null, nome: ini.nome||'Sem nome', valor: ini.valor||0, tipo: ini.tipo||'npc-avulso'});
+    });
+    Object.keys(fichasCache).filter(id=> fichasCache[id].tipo==='npcImportante' && iniciativaCache[id]).forEach(id=>{
+      const f = fichasCache[id];
+      const ini = iniciativaCache[id];
+      all.push({id, fichaId:id, nome:f.nome||'Sem nome', valor: ini.valor||0, tipo:'npc'});
+    });
+    all.sort((a,b)=> (b.valor||0)-(a.valor||0));
+    return all;
+  }
+
   function renderIniciativaTab(){
     const wrap = document.getElementById('iniciativaWrap');
     if(!wrap) return;
-    const entries = Object.keys(iniciativaCache).map(id=> Object.assign({id}, iniciativaCache[id]));
-    entries.sort((a,b)=> (b.valor||0) - (a.valor||0));
+    if(combateFichaSelecionada && !fichasCache[combateFichaSelecionada]) combateFichaSelecionada = null;
+    const entries = combateListaEntradas();
 
-    const minhasFichas = Object.keys(fichasCache).filter(id=> fichasCache[id].ownerName === session.playerName);
+    const minhasFichas = Object.keys(fichasCache).filter(id=> fichasCache[id].ownerName === session.playerName && fichasCache[id].tipo!=='npcImportante');
     const rollPanelHtml = (session.role==='jogador' && minhasFichas.length) ? `
       <div class="panel-box">
         <h3>🎲 Rolar minha iniciativa</h3>
@@ -4243,62 +4459,100 @@
 
     const addManualHtml = session.role==='mestre' ? `
       <div class="panel-box" style="border-left:3px solid var(--crimson-bright);">
-        <h3>➕ Adicionar à iniciativa</h3>
-        <div class="field-row">
-          <div style="flex:2;"><label>Nome</label><input type="text" id="iniciativaNovoNome" placeholder="ex: Lobo-guerreiro"></div>
+        <h3>➕ Adicionar ao combate</h3>
+        <button class="btn primary" id="btnAbrirAddNpcCombate" style="width:100%;">👑 Adicionar NPC Importante</button>
+        <div class="field-row" style="margin-top:.6rem;">
+          <div style="flex:2;"><label>Combatente avulso (sem ficha)</label><input type="text" id="iniciativaNovoNome" placeholder="ex: Lobo-guerreiro"></div>
           <div style="max-width:100px;"><label>Valor</label><input type="number" id="iniciativaNovoValor" value="0"></div>
         </div>
         <div class="login-actions" style="margin-top:.6rem;">
-          <button class="btn primary" id="btnAddIniciativaManual" style="flex:1;">Adicionar</button>
+          <button class="btn" id="btnAddIniciativaManual" style="flex:1;">Adicionar avulso</button>
           ${entries.length ? `<button class="btn" id="btnLimparIniciativa">🗑️ Limpar tudo</button>` : ''}
         </div>
       </div>` : '';
 
     const listHtml = entries.length ? entries.map(e=>{
       const isMine = e.ownerName === session.playerName;
-      return `<div class="campanha-item" style="cursor:default;${isMine?'border-color:var(--gold);':''}">
-        <span class="campanha-nome">${e.tipo==='npc' ? '👹' : '🗡️'} ${escapeHtml(e.nome)}${e.ownerName && e.tipo!=='npc' ? ' <span style="font-size:.826rem;color:var(--muted);">('+escapeHtml(e.ownerName)+')</span>' : ''}</span>
+      const podeAbrir = !!e.fichaId && (session.role==='mestre' || isMine);
+      const selecionado = e.fichaId && e.fichaId===combateFichaSelecionada;
+      const icone = e.tipo==='npc' ? '👑' : (e.tipo==='pj' ? '🗡️' : '👹');
+      return `<div class="campanha-item combate-item ${podeAbrir?'combate-item-clicavel':''} ${selecionado?'combate-item-ativa':''}" ${podeAbrir?`data-selectcombate="${e.fichaId}"`:''} style="${isMine?'border-color:var(--gold);':''}">
+        <span class="campanha-nome">${icone} ${escapeHtml(e.nome)}${e.ownerName && e.tipo!=='npc' ? ' <span style="font-size:.826rem;color:var(--muted);">('+escapeHtml(e.ownerName)+')</span>' : ''}</span>
         <span class="campanha-role mestre"${session.role==='mestre'?` data-edititem="${e.id}" style="cursor:pointer;" title="Clique pra editar (só o Mestre pode)"`:''}>${e.valor}</span>
-        ${session.role==='mestre' ? `<button class="btn" data-removeitem="${e.id}" style="padding:.2rem .5rem;margin-left:.3rem;">✕</button>` : ''}
+        ${session.role==='mestre' && e.tipo!=='pj' ? `<button class="btn" data-removeitem="${e.id}" title="Remover do combate" style="padding:.2rem .5rem;margin-left:.3rem;">✕</button>` : ''}
       </div>`;
-    }).join('') : `<div class="campanhas-empty-hint">Ninguém entrou na ordem de iniciativa ainda.</div>`;
+    }).join('') : `<div class="campanhas-empty-hint">Ninguém entrou na ordem de combate ainda.</div>`;
 
+    const larguraLista = combateFichaSelecionada ? '360px' : '640px';
     wrap.innerHTML = `
-      <div style="max-width:640px;margin:0 auto;padding:1.2rem;">
-        ${rollPanelHtml}
-        ${addManualHtml}
-        <div class="panel-box">
-          <h3>🎯 Ordem de iniciativa</h3>
-          <div id="iniciativaLista">${listHtml}</div>
+      <div id="combateLayout" style="display:flex;gap:1rem;height:100%;align-items:flex-start;overflow:hidden;">
+        <div id="combateListaCol" style="width:${larguraLista};max-width:${larguraLista};flex-shrink:0;height:100%;overflow-y:auto;padding:1.2rem;">
+          ${rollPanelHtml}
+          ${addManualHtml}
+          <div class="panel-box">
+            <h3>⚔️ Ordem de combate</h3>
+            <p style="font-size:.82rem;color:var(--muted);margin-top:-.4rem;">${session.role==='mestre' ? 'Clique em qualquer personagem pra abrir a ficha resumida.' : 'Clique na SUA ficha pra abrir a versão resumida.'}</p>
+            <div id="iniciativaLista">${listHtml}</div>
+          </div>
+          <div class="panel-box">
+            <h3>📊 Graus de Sucesso</h3>
+            <p style="font-size:.82rem;color:var(--muted);margin-top:-.4rem;">Quanto o resultado precisa superar a Defesa do alvo.</p>
+            <table class="sub-table" style="font-size:.9rem;">
+              <thead><tr><th>Margem sobre a Defesa</th><th>Grau</th></tr></thead>
+              <tbody>
+                <tr><td>+0 a +4</td><td>1 — Marginal</td></tr>
+                <tr><td>+5 a +9</td><td>2 — Grande</td></tr>
+                <tr><td>+10 a +14</td><td>3 — Incrível</td></tr>
+                <tr><td>+15 a +19</td><td>4 — Impressionante</td></tr>
+                <tr><td>+20 ou mais</td><td>5+ — Impressionante</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+        ${combateFichaSelecionada ? `<div id="combateFichaCol" class="panel-box" style="flex:1;height:100%;overflow-y:auto;margin:1.2rem 1.2rem 1.2rem 0;">${fichaCompactaHtml(combateFichaSelecionada)}</div>` : ''}
       </div>`;
 
+    wrap.querySelectorAll('[data-selectcombate]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        combateFichaSelecionada = el.dataset.selectcombate;
+        renderIniciativaTab();
+      });
+    });
     const btnRolar = document.getElementById('btnRolarIniciativa');
     if(btnRolar) btnRolar.addEventListener('click', ()=>{
       const fichaId = document.getElementById('iniciativaFichaSelect').value;
       rolarMinhaIniciativa(fichaId);
     });
+    const btnAbrirAddNpcCombate = document.getElementById('btnAbrirAddNpcCombate');
+    if(btnAbrirAddNpcCombate) btnAbrirAddNpcCombate.addEventListener('click', abrirAddNpcCombate);
     const btnAdd = document.getElementById('btnAddIniciativaManual');
     if(btnAdd) btnAdd.addEventListener('click', ()=>{
       const nome = document.getElementById('iniciativaNovoNome').value.trim();
       const valor = parseInt(document.getElementById('iniciativaNovoValor').value,10) || 0;
       if(!nome){ toast('Dê um nome ao combatente.'); return; }
-      iniciativaCol().doc().set({ nome, valor, tipo:'npc', addedBy: session.playerName, clientTime: Date.now() })
+      iniciativaCol().doc().set({ nome, valor, tipo:'npc-avulso', addedBy: session.playerName, clientTime: Date.now() })
         .catch(err=> toast('Erro: ' + err.message));
       document.getElementById('iniciativaNovoNome').value='';
       document.getElementById('iniciativaNovoValor').value='0';
     });
     const btnLimpar = document.getElementById('btnLimparIniciativa');
     if(btnLimpar) btnLimpar.addEventListener('click', ()=>{
-      if(!confirm('Limpar toda a ordem de iniciativa?')) return;
-      entries.forEach(e=> iniciativaCol().doc(e.id).delete().catch(()=>{}));
+      if(!confirm('Limpar toda a ordem de combate? (Isso não apaga nenhuma ficha, só tira todo mundo da lista.)')) return;
+      Object.keys(iniciativaCache).forEach(eid=> iniciativaCol().doc(eid).delete().catch(()=>{}));
+      combateFichaSelecionada = null;
     });
     wrap.querySelectorAll('[data-removeitem]').forEach(btn=>{
-      btn.addEventListener('click', ()=> iniciativaCol().doc(btn.dataset.removeitem).delete().catch(err=> toast('Erro: '+err.message)));
+      btn.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const remId = btn.dataset.removeitem;
+        if(remId === combateFichaSelecionada) combateFichaSelecionada = null;
+        iniciativaCol().doc(remId).delete().catch(err=> toast('Erro: '+err.message));
+      });
     });
     if(session.role==='mestre'){
       wrap.querySelectorAll('[data-edititem]').forEach(span=>{
-        span.addEventListener('click', ()=>{
+        span.addEventListener('click', (ev)=>{
+          ev.stopPropagation();
           const id = span.dataset.edititem;
           const atual = iniciativaCache[id] ? iniciativaCache[id].valor : 0;
           const input = document.createElement('input');
@@ -4312,10 +4566,149 @@
             if(!isNaN(novo)) iniciativaCol().doc(id).set({valor: novo}, {merge:true}).catch(err=> toast('Erro: '+err.message));
           };
           input.addEventListener('blur', salvar);
-          input.addEventListener('keydown', ev=>{ if(ev.key==='Enter') input.blur(); });
+          input.addEventListener('keydown', ev2=>{ if(ev2.key==='Enter') input.blur(); });
         });
       });
     }
+    wireFichaCompacta();
+  }
+
+  /* mestre escolhe, entre as fichas de NPC Importante ainda fora do combate, qual entra na lista */
+  function abrirAddNpcCombate(){
+    const npcIds = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo==='npcImportante' && !iniciativaCache[id]);
+    const overlay = document.createElement('div');
+    overlay.id = 'addNpcCombateOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:460;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:linear-gradient(160deg, var(--panel-2), var(--panel) 60%);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:10px;padding:1.4rem 1.6rem;max-width:420px;width:100%;max-height:80vh;overflow:auto;';
+    box.innerHTML = `
+      <h3 style="margin-top:0;">👑 Adicionar NPC ao combate</h3>
+      ${npcIds.length ? npcIds.map(id=> `
+        <div class="campanha-item" data-escolhernpc="${id}" style="cursor:pointer;">
+          <span class="campanha-nome">${escapeHtml(fichasCache[id].nome||'Sem nome')}</span>
+        </div>`).join('') : `<div class="campanhas-empty-hint">Todos os NPCs Importantes já estão em combate, ou nenhum foi criado ainda.</div>`}
+      <div class="login-actions" style="margin-top:1rem;"><button class="btn" id="addNpcCombateCancelar" style="flex:1;">Fechar</button></div>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay) overlay.remove(); });
+    document.getElementById('addNpcCombateCancelar').addEventListener('click', ()=> overlay.remove());
+    box.querySelectorAll('[data-escolhernpc]').forEach(el=> el.addEventListener('click', ()=>{
+      const id = el.dataset.escolhernpc;
+      const f = fichasCache[id];
+      iniciativaCol().doc(id).set({ nome: f.nome||'Sem nome', valor: 0, tipo:'npc', clientTime: Date.now() })
+        .then(()=>{ overlay.remove(); combateFichaSelecionada = id; })
+        .catch(err=> toast('Erro: ' + err.message));
+    }));
+  }
+
+  /* ---- ficha compacta (Combate & Intriga): versão condensada, só com o essencial pra jogar,
+     mas totalmente funcional — rola dados, marca ferimentos/lesões, tudo grava na ficha real ---- */
+  const COMBATE_HABS_CHAVE = ['luta','pontaria','atletismo'];
+  const INTRIGA_HABS_CHAVE = ['persuasao','astucia','enganacao'];
+
+  function fichaCompactaHtml(fichaId){
+    const f = fichasCache[fichaId];
+    if(!f) return '<div class="campanhas-empty-hint">Ficha não encontrada.</div>';
+    const editable = session.role==='mestre' || f.ownerName===session.playerName;
+    const isNPC = f.tipo==='npcImportante';
+    const d = calc(f);
+    const hab = f.habilidades||{};
+
+    const habLinha = (h)=>{
+      const esps = getEspecialidadesList(f, h);
+      const espsHtml = esps.map((e,i)=> `
+        <div class="fc-esp-row">
+          <span class="quick-roll-btn" data-fcesproll="${h}.${i}" title="Rolar ${HABILIDADE_LABEL[h]} (${e.nome||'especialização'})">🎲</span>
+          <span style="flex:1;">${escapeHtml(e.nome||'(sem nome)')}</span>
+          <span style="color:var(--muted);">+${e.bonus||1}</span>
+        </div>`).join('');
+      return `<div class="fc-hab-row">
+        <span class="quick-roll-btn" data-fcroll="${h}" title="Rolar ${HABILIDADE_LABEL[h]}">🎲</span>
+        <span style="flex:1;">${HABILIDADE_LABEL[h]}</span>
+        <span style="color:var(--gold-bright);font-family:'Cinzel',serif;">${hab[h]??2}</span>
+      </div>${espsHtml}`;
+    };
+
+    const armasHtml = (f.armas||[]).length ? (f.armas||[]).map((a,i)=> `
+      <div class="fc-hab-row">
+        <span class="quick-roll-btn" data-fcarmaroll="${i}" title="Atacar com ${escapeHtml(a.nome||'arma')}">🎲</span>
+        <span style="flex:1;">${escapeHtml(a.nome||'Sem nome')}</span>
+        <span style="color:var(--muted);font-size:.85em;">${escapeHtml(a.dano||'—')}</span>
+      </div>`).join('') : '<div class="campanhas-empty-hint" style="padding:.3rem 0;">Nenhuma arma.</div>';
+
+    const qualidadesHtml = (f.qualidadesLista||[]).length ? (f.qualidadesLista||[]).map((q,i)=> `
+      <div class="qd-item qd-${q.tipo}">
+        <div class="qd-row" data-fctoggleqd="${i}"><span class="qd-toggle-icon">▸</span><span class="qd-nome">${q.tipo==='qualidade'?'✨':'⚠️'} ${escapeHtml(q.nome)}</span></div>
+        <div class="qd-desc" style="display:none;">${escapeHtml(q.desc||'')}</div>
+      </div>`).join('') : '<div class="campanhas-empty-hint" style="padding:.3rem 0;">Nenhuma qualidade ou defeito.</div>';
+
+    const ferimCheckboxes = [1,2,3,4,5,6,7].map(n=> `<label>-${n}<input type="checkbox" data-check="ferimentos.${n-1}" ${f.ferimentos&&f.ferimentos[n-1]?'checked':''} ${editable?'':'disabled'}></label>`).join('');
+    const lesaoCheckboxes = [1,2,3,4,5,6,7].map(n=> `<label>-${n}D<input type="checkbox" data-check="lesoes.${n-1}" ${f.lesoes&&f.lesoes[n-1]?'checked':''} ${editable?'':'disabled'}></label>`).join('');
+
+    return `
+      <div class="fc-header">
+        <div class="fc-nome">${isNPC?'👑 ':''}${escapeHtml(f.nome||'Sem nome')}</div>
+        <button class="btn" id="btnFecharFichaCompacta">✕</button>
+      </div>
+      <div class="fc-stats-row">
+        <div class="stat-box"><div class="stat-value">${d.defesaCombate}</div><div class="stat-label">Defesa Combate</div></div>
+        <div class="stat-box"><div class="stat-value">${d.defesaIntriga}</div><div class="stat-label">Defesa Intriga</div></div>
+        <div class="stat-box"><div class="stat-value">${d.saude}</div><div class="stat-label">Saúde</div></div>
+        <div class="stat-box"><div class="stat-value">${d.movimento}m</div><div class="stat-label">Movimento</div></div>
+      </div>
+      <button class="btn primary" id="btnFcRolarIniciativa" style="width:100%;margin:.6rem 0;">🎲 Rolar Iniciativa (Agilidade)</button>
+      <label>Ferimentos <span style="text-transform:none;">(≤ Vigor)</span></label>
+      <div class="checkbox-row">${ferimCheckboxes}</div>
+      <label>Lesões <span style="text-transform:none;">(&lt; Vigor)</span></label>
+      <div class="checkbox-row">${lesaoCheckboxes}</div>
+      <div class="fc-secao-titulo">⚔️ Combate</div>
+      ${COMBATE_HABS_CHAVE.map(habLinha).join('')}
+      ${armasHtml}
+      <div class="fc-secao-titulo">🎭 Intriga</div>
+      ${INTRIGA_HABS_CHAVE.map(habLinha).join('')}
+      <div class="fc-secao-titulo">Qualidades e Defeitos</div>
+      ${qualidadesHtml}
+      <button class="btn" id="btnAbrirFichaCompletaCompacta" style="width:100%;margin-top:.8rem;">📜 Abrir ficha completa</button>
+    `;
+  }
+
+  function wireFichaCompacta(){
+    const col = document.getElementById('combateFichaCol');
+    if(!col || !combateFichaSelecionada) return;
+    const fichaId = combateFichaSelecionada;
+    const btnFechar = document.getElementById('btnFecharFichaCompacta');
+    if(btnFechar) btnFechar.addEventListener('click', ()=>{ combateFichaSelecionada = null; renderIniciativaTab(); });
+    const btnAbrirCompleta = document.getElementById('btnAbrirFichaCompletaCompacta');
+    if(btnAbrirCompleta) btnAbrirCompleta.addEventListener('click', ()=>{
+      switchTab('fichas');
+      openEditor(fichaId);
+    });
+    const btnFcIniciativa = document.getElementById('btnFcRolarIniciativa');
+    if(btnFcIniciativa) btnFcIniciativa.addEventListener('click', ()=> rolarMinhaIniciativa(fichaId));
+    col.querySelectorAll('[data-fcroll]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=> quickRoll(fichaId, btn.dataset.fcroll, ev));
+    });
+    col.querySelectorAll('[data-fcesproll]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        const [h, i] = btn.dataset.fcesproll.split('.');
+        quickRollEspecialidade(fichaId, h, parseInt(i,10), ev);
+      });
+    });
+    col.querySelectorAll('[data-fcarmaroll]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=> quickRollArma(fichaId, parseInt(btn.dataset.fcarmaroll,10), ev));
+    });
+    col.querySelectorAll('[data-fctoggleqd]').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const item = row.closest('.qd-item');
+        const desc = item.querySelector('.qd-desc');
+        const abrindo = desc.style.display === 'none';
+        desc.style.display = abrindo ? '' : 'none';
+        item.classList.toggle('open', abrindo);
+      });
+    });
+    col.querySelectorAll('[data-check]').forEach(el=>{
+      el.addEventListener('change', ()=>{ applyCheckChange(fichaId, el); renderIniciativaTab(); });
+    });
   }
 
   /* jogador rola iniciativa (Agilidade) direto do seu personagem — o resultado substitui
@@ -4368,26 +4761,27 @@
   }
 
   /* Ferimentos e lesões marcados na ficha penalizam TODO teste automaticamente:
-     cada ferimento = -1 no resultado final; cada lesão = -1 dado inteiro no teste
-     (um dado de penalidade a mais, descartando mais um resultado baixo). */
+     cada ferimento = -1 no resultado final; cada lesão = -1 dado da GRADUAÇÃO (o atributo),
+     nunca dos dados de bônus de especialidade — ver rollDiceCore logo abaixo. */
   function penalidadesFerimentosLesoes(f){
     const numFerimentos = (f.ferimentos||[]).filter(Boolean).length;
     const numLesoes = (f.lesoes||[]).filter(Boolean).length;
     return { mod: -numFerimentos, penalty: numLesoes };
   }
 
-  /* núcleo da regra: role graduação + dados de bônus, descarte os menores em quantidade
-     igual aos dados de bônus, depois descarte mais os dados de penalidade (também os
-     menores dentre os restantes), e some o resto + modificador */
+  /* núcleo da regra: uma LESÃO reduz a graduação (o atributo) ANTES de rolar — nunca os dados de
+     bônus de especialidade. Depois disso, rola graduação-efetiva + bônus dados, descarta os `bônus`
+     menores (mantendo só a quantidade igual à graduação-efetiva) e soma o resto + modificador.
+     Exemplo: Luta 6, especialidade Machado +2 → rola 8, descarta 2, soma 6. Com lesões o bastante
+     pra cair a Luta pra 2: rola 2+2=4, descarta 2, soma os 2 maiores (a graduação, não o bônus). */
   function rollDiceCore(grad, bonus, penalty, mod){
-    const totalDice = Math.max(0, grad + bonus);
+    const gradEfetiva = Math.max(0, grad - penalty);
+    const totalDice = Math.max(0, gradEfetiva + bonus);
     const rolls = [];
     for(let i=0;i<totalDice;i++) rolls.push(1+Math.floor(Math.random()*6));
     const order = rolls.map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v);
     const discarded = new Set();
     for(let i=0;i<bonus && i<order.length;i++) discarded.add(order[i].i);
-    const remaining = order.filter(o=>!discarded.has(o.i));
-    for(let i=0;i<penalty && i<remaining.length;i++) discarded.add(remaining[i].i);
     const keptSum = rolls.reduce((s,v,i)=> discarded.has(i) ? s : s+v, 0);
     return { rolls, discarded, total: keptSum + mod };
   }
