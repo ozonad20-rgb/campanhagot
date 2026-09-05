@@ -544,14 +544,20 @@
   #rollBubbleList{flex:1;overflow-y:auto;padding:.4rem .8rem;}
   #rollToastStack{
     position:fixed;left:1.1rem;bottom:4.8rem;z-index:210;
-    display:flex;flex-direction:column-reverse;gap:.4rem;max-width:300px;
+    display:flex;flex-direction:column-reverse;gap:.5rem;max-width:420px;
   }
   .roll-toast{
+    position:relative;
     background:linear-gradient(160deg, var(--panel-2), var(--panel) 60%);
-    border:1px solid var(--gold);border-radius:8px;padding:.55rem .75rem;
-    font-size:.944rem;box-shadow:0 8px 20px rgba(0,0,0,.5);cursor:pointer;
+    border:1px solid var(--gold);border-left:3px solid var(--crimson-bright);border-radius:9px;padding:.75rem 2.1rem .75rem 1rem;
+    font-size:1.1rem;box-shadow:0 8px 20px rgba(0,0,0,.5);cursor:help;
     animation:rollToastIn .2s ease-out;transition:opacity .4s;
   }
+  .roll-toast-close{
+    position:absolute;top:.4rem;right:.5rem;background:none;border:none;color:var(--muted);
+    font-size:1.1rem;line-height:1;cursor:pointer;padding:.15rem .3rem;border-radius:4px;
+  }
+  .roll-toast-close:hover{color:var(--gold-bright);background:rgba(255,255,255,.06);}
   @keyframes rollToastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
   ::-webkit-scrollbar{width:9px;height:9px;}
@@ -627,7 +633,7 @@
   .lt-item.below .lt-card{top:60px;}
   .lt-card-title{font-family:'Cinzel',serif;font-size:1.211rem;font-weight:700;color:var(--gold-bright);margin-bottom:.3rem;line-height:1.3;}
   .lt-card-desc{
-    font-size:.968rem;color:var(--ink-soft, #dcd0ae);line-height:1.45;max-height:8em;overflow-y:auto;
+    font-size:.968rem;color:var(--parchment-2);line-height:1.45;max-height:8em;overflow-y:auto;
     background:linear-gradient(165deg, var(--panel-2), var(--panel) 60%);border:1px solid var(--line);
     border-radius:6px;padding:.4rem .55rem;
   }
@@ -1644,6 +1650,7 @@
     if(unsubLojas){ unsubLojas(); unsubLojas=null; }
     if(unsubDiarios){ unsubDiarios(); unsubDiarios=null; }
     if(unsubGalerias){ unsubGalerias(); unsubGalerias=null; }
+    if(unsubHomebrew){ unsubHomebrew(); unsubHomebrew=null; }
     currentPastaGaleriaId = null;
     currentPaginaId = null;
     currentLojaId = null;
@@ -1685,6 +1692,7 @@
     subscribeDiarios();
     subscribeGalerias();
     subscribeLinhaTempo();
+    subscribeHomebrew();
   }
 
   document.getElementById('campaignBadgeMini').addEventListener('click', ()=>{
@@ -1780,6 +1788,29 @@
     lidarAnimais:'Lidar com Animais', luta:'Luta', percepcao:'Percepção', persuasao:'Persuasão', pontaria:'Pontaria',
     sobrevivencia:'Sobrevivência', status:'Status', vigor:'Vigor', vontade:'Vontade'
   };
+  /* Tabela 4-1 do livro: especialidades oficiais de cada habilidade, usadas pra popular o
+     seletor de "+ Especialidade" na ficha (além da opção de digitar uma personalizada). */
+  const ESPECIALIDADES_CATALOGO = {
+    agilidade: ['Acrobacia','Contorcionismo','Equilíbrio','Esquiva','Rapidez'],
+    astucia: ['Decifrar','Lógica','Memória'],
+    atletismo: ['Arremessar','Correr','Escalar','Força','Nadar','Saltar'],
+    conhecimento: ['Educação','Manha','Pesquisa'],
+    cura: ['Diagnóstico','Tratar Doença','Tratar Ferimento'],
+    enganacao: ['Atuar','Blefar','Disfarce','Trapacear'],
+    furtividade: ['Esgueirar-se','Mesclar-se'],
+    guerra: ['Comandar','Estratégia','Tática'],
+    idioma: [],
+    ladinagem: ['Arrombar','Furtar','Prestidigitação'],
+    lidarAnimais: ['Cavalgar','Conduzir','Encantar','Treinar'],
+    luta: ['Armas de Contusão','Armas de Haste','Briga','Escudos','Esgrima','Lâminas Curtas','Lâminas Longas','Lanças','Machados'],
+    percepcao: ['Empatia','Notar'],
+    persuasao: ['Barganha','Charme','Convencer','Incitar','Intimidar','Provocar','Seduzir'],
+    pontaria: ['Arcos','Armas Arremessadas','Armas de Cerco','Bestas'],
+    sobrevivencia: ['Caçar','Coletar','Orientar-se','Rastrear'],
+    status: ['Administração','Criação','Reputação','Torneios'],
+    vigor: ['Resistência','Vitalidade'],
+    vontade: ['Coordenar','Coragem','Dedicação']
+  };
 
   /* Catálogo de Qualidades e Defeitos pra adicionar de forma rápida na ficha.
      IMPORTANTE: as descrições abaixo são resumos escritos por mim, não o texto exato do livro
@@ -1791,19 +1822,94 @@
   function QUALIDADES_CATALOGO(){
     const flat = [];
     Object.keys(QUALIDADES_CATALOGO_CRIACAO).forEach(cat=> QUALIDADES_CATALOGO_CRIACAO[cat].forEach(q=> flat.push({nome:q.nome, desc:q.efeito})));
+    (homebrewCache.qualidades||[]).forEach(q=> flat.push({nome:'🛠️ '+q.nome, desc:q.efeito, homebrew:true}));
     return flat;
   }
   function DEFEITOS_CATALOGO(){
-    return DESVANTAGENS_CATALOGO_CRIACAO.map(d=> ({nome:d.nome, desc:d.efeito}));
+    const flat = DESVANTAGENS_CATALOGO_CRIACAO.map(d=> ({nome:d.nome, desc:d.efeito}));
+    (homebrewCache.defeitos||[]).forEach(d=> flat.push({nome:'🛠️ '+d.nome, desc:d.efeito, homebrew:true}));
+    return flat;
+  }
+
+  /* ============ catálogo homebrew de qualidades/defeitos ============
+     Um único documento por campanha ({qualidades:[{nome,efeito}], defeitos:[...]}), editável por
+     qualquer jogador ou pelo mestre. Itens daqui aparecem misturados às opções oficiais nos
+     seletores de qualidade/defeito da ficha (marcados com 🛠️), então casas/regras caseiras não
+     precisam ser digitadas do zero em cada personagem. */
+  let unsubHomebrew = null;
+  let homebrewCache = { qualidades: [], defeitos: [] };
+  function homebrewDoc(){
+    return db.collection(COLLECTION).doc(session.campaignId).collection('config').doc('homebrew');
+  }
+  function subscribeHomebrew(){
+    if(unsubHomebrew) unsubHomebrew();
+    unsubHomebrew = homebrewDoc().onSnapshot(doc=>{
+      const d = doc.data() || {};
+      homebrewCache = { qualidades: d.qualidades||[], defeitos: d.defeitos||[] };
+      if(homebrewManagerOpen) renderHomebrewManager();
+    }, err=>{ console.error(err); });
+  }
+  function addHomebrewItem(tipo, nome, efeito){
+    const chave = tipo==='qualidade' ? 'qualidades' : 'defeitos';
+    const lista = (homebrewCache[chave]||[]).concat([{nome, efeito}]);
+    homebrewDoc().set({[chave]: lista}, {merge:true}).catch(err=> toast('Erro ao salvar no catálogo homebrew: ' + err.message));
+  }
+  function removerHomebrewItem(tipo, idx){
+    const chave = tipo==='qualidade' ? 'qualidades' : 'defeitos';
+    const lista = (homebrewCache[chave]||[]).slice();
+    lista.splice(idx,1);
+    homebrewDoc().set({[chave]: lista}, {merge:true}).catch(err=> toast('Erro ao remover do catálogo homebrew: ' + err.message));
+  }
+  let homebrewManagerOpen = false;
+  function abrirHomebrewManager(){
+    homebrewManagerOpen = true;
+    const overlay = document.createElement('div');
+    overlay.id = 'homebrewManagerOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay){ overlay.remove(); homebrewManagerOpen=false; } });
+    document.body.appendChild(overlay);
+    renderHomebrewManager();
+  }
+  function renderHomebrewManager(){
+    const overlay = document.getElementById('homebrewManagerOverlay');
+    if(!overlay) return;
+    overlay.innerHTML = '';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:linear-gradient(160deg, var(--panel-2), var(--panel) 60%);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:10px;padding:1.4rem 1.6rem;max-width:520px;width:100%;max-height:85vh;overflow:auto;';
+    const linha = (tipo, item, idx)=> `
+      <div style="display:flex;align-items:flex-start;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--line);">
+        <div style="flex:1;">
+          <strong style="color:var(--gold-bright);">${escapeHtml(item.nome)}</strong>
+          <div style="font-size:.9rem;color:var(--muted);margin-top:.15rem;">${escapeHtml(item.efeito||'')}</div>
+        </div>
+        <button class="row-del" data-homebrewdel="${tipo}|${idx}" title="Remover do catálogo">×</button>
+      </div>`;
+    box.innerHTML = `
+      <h3 style="margin-top:0;">🛠️ Catálogo Homebrew da Campanha</h3>
+      <p style="font-size:.9rem;color:var(--muted);">Qualidades e defeitos caseiros ficam disponíveis pra todo mundo escolher na ficha (opção "🛠️ ..." dentro do seletor). Adicione um novo marcando a caixa "salvar no catálogo homebrew" ao criar uma qualidade/defeito personalizada na ficha.</p>
+      <div class="wizard-secao-titulo">✨ Qualidades (${homebrewCache.qualidades.length})</div>
+      ${homebrewCache.qualidades.length ? homebrewCache.qualidades.map((q,i)=> linha('qualidade', q, i)).join('') : '<div class="campanhas-empty-hint">Nenhuma qualidade homebrew ainda.</div>'}
+      <div class="wizard-secao-titulo" style="margin-top:.8rem;">⚠️ Defeitos (${homebrewCache.defeitos.length})</div>
+      ${homebrewCache.defeitos.length ? homebrewCache.defeitos.map((d,i)=> linha('defeito', d, i)).join('') : '<div class="campanhas-empty-hint">Nenhum defeito homebrew ainda.</div>'}
+      <div class="login-actions" style="margin-top:1rem;">
+        <button class="btn primary" id="btnFecharHomebrewManager" style="flex:1;">Fechar</button>
+      </div>`;
+    overlay.appendChild(box);
+    box.querySelectorAll('[data-homebrewdel]').forEach(btn=> btn.addEventListener('click', ()=>{
+      const [tipo, idxStr] = btn.dataset.homebrewdel.split('|');
+      if(!confirm('Remover este item do catálogo homebrew da campanha? Fichas que já usam ele não serão afetadas.')) return;
+      removerHomebrewItem(tipo, parseInt(idxStr,10));
+    }));
+    document.getElementById('btnFecharHomebrewManager').addEventListener('click', ()=>{ overlay.remove(); homebrewManagerOpen=false; });
   }
 
   /* Sistema financeiro simplificado: só 3 moedas.
      1 Dragão de Ouro = 200 Luas de Prata | 1 Lua de Prata = 50 Vinténs de Cobre
      (valores abaixo sempre em Vinténs de Cobre, a unidade-base) */
   const MOEDAS = [
-    {key:'vintem', label:'Vintém de Cobre (vc)', valor:1},
-    {key:'luaPrata', label:'Lua de Prata (lp)', valor:50},
-    {key:'dragaoOuro', label:'Dragão de Ouro (do)', valor:10000}
+    {key:'vintem', label:'Vintém de Cobre (vc)', abrev:'vc', valor:1},
+    {key:'luaPrata', label:'Lua de Prata (lp)', abrev:'lp', valor:50},
+    {key:'dragaoOuro', label:'Dragão de Ouro (do)', abrev:'do', valor:10000}
   ];
   function moedaValor(key){
     const c = MOEDAS.find(m=>m.key===key);
@@ -1845,11 +1951,11 @@
       nome:'', casa:'', idade:'', sexo:'', jogador: ownerName, descricaoMote:'', papel:'',
       foto:null, fotoPos:{x:50,y:50,zoom:1},
       habilidades: hab, especialidades: esp,
-      qualidadesDefeitos:'', qualidadesLista:[], pontosDestino:2, vitorias:'',
+      qualidadesDefeitos:'', qualidadesLista:[], pontosDestino:2, pontosDestinoUsos:[], vitorias:'',
       frustracoes:[false,false,false,false,false,false,false],
       ferimentos:[false,false,false,false,false,false,false],
       lesoes:[false,false,false,false,false,false,false],
-      bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0,
+      bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0, bonusSaude:0,
       armaduras:[], armas:[],
       magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0,
       altura:'', peso:'', olhos:'', cabelos:'', marcasDistincao:'', detalhes:'',
@@ -1870,11 +1976,11 @@
       nome:'', faccao:'',
       foto:null, fotoPos:{x:50,y:50,zoom:1},
       habilidades: {}, especialidades: {},
-      qualidadesDefeitos:'', qualidadesLista:[], pontosDestino:2, vitorias:'',
+      qualidadesDefeitos:'', qualidadesLista:[], pontosDestino:2, pontosDestinoUsos:[], vitorias:'',
       frustracoes:[false,false,false,false,false,false,false],
       ferimentos:[false,false,false,false,false,false,false],
       lesoes:[false,false,false,false,false,false,false],
-      bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0,
+      bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0, bonusSaude:0,
       armaduras:[], armas:[],
       magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0,
       moedas:{vintem:0,luaPrata:0,dragaoOuro:0}, equipamentosGerais:[], experiencia:0, experienciaTotal:0, experienciaGasta:0, historicoXP:[],
@@ -1932,6 +2038,13 @@
       snap.forEach(doc=> fichasCache[doc.id] = doc.data());
       renderFichasList();
       if(currentEditingId && fichasCache[currentEditingId]) refreshEditorReadonlyBits();
+      /* mantém a ficha resumida da aba Combate & Intriga sempre em dia com a ficha completa
+         (nome, stats, habilidades, armas, qualidades, ferimentos/lesões etc.), sem precisar
+         reabrir a aba. Ignoramos o eco da própria escrita ainda pendente de confirmação e
+         evitamos reconstruir a lista enquanto alguém estiver digitando nela (mesmo motivo do
+         fix do diário — não queremos tirar o foco de quem está adicionando um combatente avulso
+         ou editando um valor de iniciativa). */
+      if(!snap.metadata.hasPendingWrites) renderIniciativaTabPreservandoFoco();
     }, err=>{ console.error(err); toast('Erro de conexão: ' + err.message); });
   }
 
@@ -3437,6 +3550,13 @@
     el.textContent = kind==='saving' ? '● salvando…' : kind==='saved' ? '✓ salvo' : kind==='error' ? '⚠ falhou' : '';
   }
 
+  /* soma quantos Pontos de Destino estão "presos" em qualidades (a maioria custa 1 PD; algumas
+     custam mais e guardam isso em q.custo — ver criação de personagem). Defeitos não contam,
+     eles concedem PD, não consomem. Usado só como referência visual, não altera o campo
+     "Pontos de Destino" (que continua sendo o saldo livre, editado manualmente). */
+  function pdInvestidoEmVantagens(f){
+    return (f.qualidadesLista||[]).filter(q=> q.tipo==='qualidade').reduce((s,q)=> s + (q.custo||1), 0);
+  }
   function calc(f){
     const h = f.habilidades;
     const aeksio = (h.vontade||0) + (h.conhecimento||0) + Math.ceil((f.magiaBonusEspecialidade||0)/2);
@@ -3444,7 +3564,7 @@
       defesaIntriga: (h.astucia||0) + (h.percepcao||0) + (h.status||0),
       compostura: (h.vontade||0) * 3,
       defesaCombate: (h.agilidade||0) + (h.atletismo||0) + (h.percepcao||0) + (f.bonusDefesa||0) - (f.penalidadeArmadura||0),
-      saude: (h.vigor||0) * 3,
+      saude: (h.vigor||0) * 3 + (f.bonusSaude||0),
       movimento: 4 + Math.floor((f.corridaBonus||0)/2),
       corrida: (4 + Math.floor((f.corridaBonus||0)/2)) * 4,
       aeksio,
@@ -3474,7 +3594,20 @@
           <input type="number" min="1" max="5" class="esp-bonus-input" data-espfield="${h}.${i}.bonus" value="${e.bonus||1}" title="Dados de bônus" ${editable?'':'disabled'}>
           ${editable?`<button class="row-del" data-espdel="${h}.${i}" title="Remover especialidade">×</button>`:''}
         </div>`).join('');
-      return `<div class="esp-list" data-esplist="${h}">${itensHtml}${editable?`<button class="btn add-row-btn" data-espadd="${h}">+ Especialidade</button>`:''}</div>`;
+      const catalogo = ESPECIALIDADES_CATALOGO[h] || [];
+      const pickerHtml = editable ? `
+        <div class="esp-add-picker" id="espAddBox_${h}" style="display:none;margin-top:.3rem;background:rgba(0,0,0,.15);border:1px solid var(--line);border-radius:6px;padding:.4rem;">
+          <select id="espAddSelect_${h}" style="margin-bottom:.3rem;">
+            ${catalogo.map(nome=> `<option value="${escapeHtml(nome)}">${escapeHtml(nome)}</option>`).join('')}
+            <option value="__custom__">✏️ Personalizada…</option>
+          </select>
+          <input type="text" id="espAddCustom_${h}" placeholder="Nome da especialidade" style="display:${catalogo.length?'none':''};margin-bottom:.3rem;">
+          <div class="login-actions" style="margin:0;">
+            <button class="btn primary" data-espconfirm="${h}" style="flex:1;padding:.3rem .6rem;font-size:.88rem;">Adicionar</button>
+            <button class="btn" data-espcancel="${h}" style="padding:.3rem .6rem;font-size:.88rem;">Cancelar</button>
+          </div>
+        </div>` : '';
+      return `<div class="esp-list" data-esplist="${h}">${itensHtml}${pickerHtml}${editable?`<button class="btn add-row-btn" data-espadd="${h}">+ Especialidade</button>`:''}</div>`;
     }
 
     function habRowHtml(h){
@@ -3488,8 +3621,12 @@
     const habRows = isNPC ? '' : HABILIDADES.filter(h=> h!=='status').map(h=> habRowHtml(h)).join('');
 
     /* ---- ficha de NPC importante: só as habilidades que o mestre adicionou manualmente,
-       mais um teste destreinado padrão (2 dados) pra qualquer coisa que não foi listada ---- */
-    const npcHabKeys = isNPC ? Object.keys(f.habilidades||{}) : [];
+       mais um teste destreinado padrão (2 dados) pra qualquer coisa que não foi listada.
+       IMPORTANTE: a ordem vem do array canônico HABILIDADES (a mesma ordem da ficha de
+       jogador), nunca de Object.keys(f.habilidades) — a ordem das chaves de um mapa não
+       sobrevive de forma confiável a uma volta pelo Firestore, então usar Object.keys()
+       fazia a habilidade "saltar" de lugar na lista depois de salvar/recarregar. */
+    const npcHabKeys = isNPC ? HABILIDADES.filter(h=> Object.prototype.hasOwnProperty.call(f.habilidades||{}, h)) : [];
     const npcHabRows = npcHabKeys.map(h=>`
       <tr>
         <td><input type="number" min="0" max="8" data-field="habilidades.${h}" value="${f.habilidades[h]}" ${editable?'':'disabled'}></td>
@@ -3698,6 +3835,7 @@
                 <button class="btn" id="btnAddQualidade" style="flex:1;">✨ Adicionar Qualidade</button>
                 <button class="btn" id="btnAddDefeito" style="flex:1;">⚠️ Adicionar Defeito</button>
               </div>
+              <button class="btn ghost" id="btnHomebrewManager" style="width:100%;margin-top:.4rem;font-size:.87rem;">🛠️ Ver/gerenciar catálogo homebrew da campanha</button>
               <div id="qdPickerBox" style="display:none;margin-top:.6rem;">
                 <label id="qdPickerLabel">Escolha</label>
                 <select id="qdPickerSelect"></select>
@@ -3707,6 +3845,10 @@
                   <input type="text" id="qdCustomNome" placeholder="Nome da qualidade/defeito">
                   <label>Descrição</label>
                   <textarea id="qdCustomDesc" placeholder="O que ela faz…" style="min-height:70px;"></textarea>
+                  <label style="display:flex;align-items:center;gap:.4rem;text-transform:none;font-family:inherit;margin-top:.5rem;">
+                    <input type="checkbox" id="qdCustomSalvarHomebrew" checked>
+                    🛠️ Salvar no catálogo homebrew da campanha (fica disponível pra qualquer personagem escolher depois)
+                  </label>
                 </div>
                 <div class="login-actions" style="margin-top:.5rem;">
                   <button class="btn primary" id="btnConfirmarQd" style="flex:1;">Adicionar à ficha</button>
@@ -3717,7 +3859,16 @@
               <textarea data-field="qualidadesDefeitos" placeholder="observações livres, qualidades/defeitos caseiros etc." ${editable?'':'disabled'}>${escapeHtml(f.qualidadesDefeitos)}</textarea>
               <div class="field-row" style="margin-top:.5rem;">
                 <div style="max-width:140px;"><label>Pontos de Destino</label><input type="number" data-field="pontosDestino" value="${f.pontosDestino}" ${editable?'':'disabled'}></div>
+                <div style="max-width:200px;"><label title="Soma automática do custo (normalmente 1 PD cada) das qualidades listadas acima">Investidos em vantagens</label><input type="text" value="${pdInvestidoEmVantagens(f)}" disabled></div>
               </div>
+              <label style="margin-top:.7rem;">Registro de usos de Pontos de Destino</label>
+              <div id="pdUsosWrap">${(f.pontosDestinoUsos||[]).map((u,i)=> `
+                <div class="field-row" style="margin-bottom:.3rem;align-items:center;">
+                  <input type="text" style="flex:1;" data-arr="pontosDestinoUsos.${i}.texto" value="${escapeHtml(u.texto||'')}" placeholder="ex: gasto pra rerrolar teste de Luta no Vau Verde" ${editable?'':'disabled'}>
+                  ${editable?`<button class="row-del" data-delrow="pontosDestinoUsos.${i}" title="Remover">×</button>`:''}
+                </div>`).join('') || `<div class="campanhas-empty-hint" style="padding:.3rem 0;">Nenhum uso registrado ainda.</div>`}
+              </div>
+              ${editable?`<button class="btn add-row-btn" id="btnAddPdUso">+ Registrar uso</button>`:''}
             </div>
           </div>
 
@@ -3764,6 +3915,7 @@
                 <div><label>Bônus Defesa</label><input type="number" data-field="bonusDefesa" value="${f.bonusDefesa}" ${editable?'':'disabled'}></div>
                 <div><label>Penalidade Armadura</label><input type="number" data-field="penalidadeArmadura" value="${f.penalidadeArmadura}" ${editable?'':'disabled'}></div>
                 <div><label>2B em Corrida</label><input type="number" data-field="corridaBonus" value="${f.corridaBonus}" ${editable?'':'disabled'}></div>
+                <div><label>Bônus Saúde</label><input type="number" data-field="bonusSaude" value="${f.bonusSaude||0}" ${editable?'':'disabled'}></div>
               </div>
               <label>Ferimentos <span style="text-transform:none;">(≤ Vigor)</span></label>
               <div class="checkbox-row">${ferimCheckboxes}</div>
@@ -4061,6 +4213,16 @@
     if(btnAddQualidade) btnAddQualidade.addEventListener('click', ()=> abrirQdPicker('qualidade'));
     const btnAddDefeito = document.getElementById('btnAddDefeito');
     if(btnAddDefeito) btnAddDefeito.addEventListener('click', ()=> abrirQdPicker('defeito'));
+    const btnHomebrewManager = document.getElementById('btnHomebrewManager');
+    if(btnHomebrewManager) btnHomebrewManager.addEventListener('click', abrirHomebrewManager);
+    const btnAddPdUso = document.getElementById('btnAddPdUso');
+    if(btnAddPdUso) btnAddPdUso.addEventListener('click', ()=>{
+      const f2 = fichasCache[id];
+      if(!f2.pontosDestinoUsos) f2.pontosDestinoUsos = [];
+      f2.pontosDestinoUsos.push({texto:''});
+      scheduleFichaSave(id, f2);
+      renderEditor(id);
+    });
     if(qdPickerSelect) qdPickerSelect.addEventListener('change', ()=>{
       if(qdPickerSelect.value === 'custom'){
         qdPickerDescPreview.textContent = '';
@@ -4083,11 +4245,14 @@
         const desc = document.getElementById('qdCustomDesc').value.trim();
         if(!nome){ toast('Dê um nome pra essa qualidade/defeito personalizada.'); return; }
         f2.qualidadesLista.push({tipo: qdPickerTipo, nome, desc});
+        const salvarHomebrewChk = document.getElementById('qdCustomSalvarHomebrew');
+        if(salvarHomebrewChk && salvarHomebrewChk.checked) addHomebrewItem(qdPickerTipo, nome, desc);
       } else {
         const catalogo = qdPickerTipo==='qualidade' ? QUALIDADES_CATALOGO() : DEFEITOS_CATALOGO();
         const item = catalogo[parseInt(qdPickerSelect.value,10)];
         if(!item) return;
-        f2.qualidadesLista.push({tipo: qdPickerTipo, nome: item.nome, desc: item.desc});
+        const nomeFinal = item.homebrew ? item.nome.replace(/^🛠️\s*/,'') : item.nome;
+        f2.qualidadesLista.push({tipo: qdPickerTipo, nome: nomeFinal, desc: item.desc});
       }
       scheduleFichaSave(id, f2);
       renderEditor(id);
@@ -4238,13 +4403,41 @@
       });
     });
 
-    /* ---- especialidades (por habilidade): adicionar/remover/editar nome e bônus ---- */
+    /* ---- especialidades (por habilidade): escolher da Tabela 4-1 do livro ou digitar uma
+       personalizada, igual ao padrão já usado pra qualidades/defeitos ---- */
     editor.querySelectorAll('[data-espadd]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const h = btn.dataset.espadd;
+        const box = document.getElementById('espAddBox_'+h);
+        if(box) box.style.display = box.style.display==='none' ? '' : 'none';
+      });
+    });
+    editor.querySelectorAll('[id^="espAddSelect_"]').forEach(sel=>{
+      sel.addEventListener('change', ()=>{
+        const h = sel.id.replace('espAddSelect_','');
+        const custom = document.getElementById('espAddCustom_'+h);
+        if(custom) custom.style.display = sel.value === '__custom__' ? '' : 'none';
+      });
+    });
+    editor.querySelectorAll('[data-espcancel]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const box = document.getElementById('espAddBox_'+btn.dataset.espcancel);
+        if(box) box.style.display = 'none';
+      });
+    });
+    editor.querySelectorAll('[data-espconfirm]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const h = btn.dataset.espconfirm;
+        const sel = document.getElementById('espAddSelect_'+h);
+        let nome = sel ? sel.value : '';
+        if(nome === '__custom__'){
+          const custom = document.getElementById('espAddCustom_'+h);
+          nome = custom ? custom.value.trim() : '';
+          if(!nome){ toast('Dê um nome pra especialidade personalizada.'); return; }
+        }
         const f2 = fichasCache[id];
         const lista = getEspecialidadesList(f2, h);
-        lista.push({nome:'', bonus:1});
+        lista.push({nome, bonus:1});
         f2.especialidades[h] = lista;
         scheduleFichaSave(id, f2);
         renderEditor(id);
@@ -4338,6 +4531,7 @@
         <div>${diceHtml}</div>
         <div style="margin-top:.4rem;font-family:'Cinzel',serif;font-size:1.888rem;color:var(--gold-bright);">${total}</div>
         ${outcome}`;
+      recordRollHistoryMagia(f2.nome || 'Ficha', grad, bonus, penalidade, modificador + pen.mod, total, dificuldadeFinal, f2.rollVisibility==='privada', rolls, discarded);
       f2.magiaDificuldadeAcumulada = acumulada + 1;
       scheduleFichaSave(id, f2);
       const acumInput = editor.querySelector('[data-field="magiaDificuldadeAcumulada"]');
@@ -4359,7 +4553,7 @@
     if(el.type === 'number') val = parseFloat(val) || 0;
     setDeepValue(f, path, val);
     scheduleFichaSave(id, f);
-    if(path.startsWith('habilidades.') || ['bonusDefesa','penalidadeArmadura','corridaBonus','magiaBonusEspecialidade'].includes(path)){
+    if(path.startsWith('habilidades.') || ['bonusDefesa','penalidadeArmadura','corridaBonus','bonusSaude','magiaBonusEspecialidade'].includes(path)){
       refreshStatsOnly(id);
     }
   }
@@ -4415,15 +4609,16 @@
     }, err=>{ console.error(err); toast('Erro de conexão (iniciativa): ' + err.message); });
   }
 
-  /* monta a lista de combate: fichas de jogadores SEMPRE aparecem; NPCs só aparecem depois
-     que o mestre os adiciona ao combate; entradas avulsas antigas (sem ficha) continuam
-     valendo pra compatibilidade, mas não abrem ficha compacta (não têm fichaId) */
+  /* monta a lista de combate: agora TANTO jogadores quanto NPCs só aparecem depois que alguém
+     (o mestre, geralmente) os adiciona ao combate — antes os jogadores entravam automaticamente
+     e não podiam ser removidos. Rolar a própria iniciativa (rolarMinhaIniciativa) também adiciona
+     automaticamente quem rolou, então isso continua funcionando sem precisar "adicionar" antes. */
   function combateListaEntradas(){
     const all = [];
-    Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='npcImportante').forEach(id=>{
+    Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='npcImportante' && iniciativaCache[id]).forEach(id=>{
       const f = fichasCache[id];
       const ini = iniciativaCache[id];
-      all.push({id, fichaId:id, nome:f.nome||'Sem nome', valor: ini?(ini.valor||0):0, tipo:'pj', ownerName:f.ownerName});
+      all.push({id, fichaId:id, nome:f.nome||'Sem nome', valor: ini.valor||0, tipo:'pj', ownerName:f.ownerName});
     });
     Object.keys(iniciativaCache).forEach(id=>{
       const ini = iniciativaCache[id];
@@ -4437,6 +4632,17 @@
     });
     all.sort((a,b)=> (b.valor||0)-(a.valor||0));
     return all;
+  }
+
+  /* preserva o foco de quem estiver digitando em algum campo dentro da aba de Combate (nome/valor
+     do combatente avulso, ou o valor de iniciativa em edição) — sem isso, uma atualização vinda de
+     qualquer ficha da campanha (ex: alguém editando outro personagem) reconstruiria a aba inteira
+     e tiraria o foco de quem estivesse digitando, no mesmo estilo do bug já corrigido no diário */
+  function renderIniciativaTabPreservandoFoco(){
+    const wrap = document.getElementById('iniciativaWrap');
+    if(wrap && document.activeElement && wrap.contains(document.activeElement) &&
+       (document.activeElement.tagName==='INPUT' || document.activeElement.tagName==='TEXTAREA')) return;
+    renderIniciativaTab();
   }
 
   function renderIniciativaTab(){
@@ -4460,7 +4666,7 @@
     const addManualHtml = session.role==='mestre' ? `
       <div class="panel-box" style="border-left:3px solid var(--crimson-bright);">
         <h3>➕ Adicionar ao combate</h3>
-        <button class="btn primary" id="btnAbrirAddNpcCombate" style="width:100%;">👑 Adicionar NPC Importante</button>
+        <button class="btn primary" id="btnAbrirAddCombatente" style="width:100%;">🗡️ Adicionar jogador ou NPC</button>
         <div class="field-row" style="margin-top:.6rem;">
           <div style="flex:2;"><label>Combatente avulso (sem ficha)</label><input type="text" id="iniciativaNovoNome" placeholder="ex: Lobo-guerreiro"></div>
           <div style="max-width:100px;"><label>Valor</label><input type="number" id="iniciativaNovoValor" value="0"></div>
@@ -4474,12 +4680,14 @@
     const listHtml = entries.length ? entries.map(e=>{
       const isMine = e.ownerName === session.playerName;
       const podeAbrir = !!e.fichaId && (session.role==='mestre' || isMine);
+      const podeEditarValor = session.role==='mestre' || isMine;
+      const podeRemover = session.role==='mestre';
       const selecionado = e.fichaId && e.fichaId===combateFichaSelecionada;
       const icone = e.tipo==='npc' ? '👑' : (e.tipo==='pj' ? '🗡️' : '👹');
       return `<div class="campanha-item combate-item ${podeAbrir?'combate-item-clicavel':''} ${selecionado?'combate-item-ativa':''}" ${podeAbrir?`data-selectcombate="${e.fichaId}"`:''} style="${isMine?'border-color:var(--gold);':''}">
         <span class="campanha-nome">${icone} ${escapeHtml(e.nome)}${e.ownerName && e.tipo!=='npc' ? ' <span style="font-size:.826rem;color:var(--muted);">('+escapeHtml(e.ownerName)+')</span>' : ''}</span>
-        <span class="campanha-role mestre"${session.role==='mestre'?` data-edititem="${e.id}" style="cursor:pointer;" title="Clique pra editar (só o Mestre pode)"`:''}>${e.valor}</span>
-        ${session.role==='mestre' && e.tipo!=='pj' ? `<button class="btn" data-removeitem="${e.id}" title="Remover do combate" style="padding:.2rem .5rem;margin-left:.3rem;">✕</button>` : ''}
+        <span class="campanha-role mestre"${podeEditarValor?` data-edititem="${e.id}" style="cursor:pointer;" title="Clique pra editar"`:''}>${e.valor}</span>
+        ${podeRemover ? `<button class="btn" data-removeitem="${e.id}" title="Remover do combate" style="padding:.2rem .5rem;margin-left:.3rem;">✕</button>` : ''}
       </div>`;
     }).join('') : `<div class="campanhas-empty-hint">Ninguém entrou na ordem de combate ainda.</div>`;
 
@@ -4523,8 +4731,8 @@
       const fichaId = document.getElementById('iniciativaFichaSelect').value;
       rolarMinhaIniciativa(fichaId);
     });
-    const btnAbrirAddNpcCombate = document.getElementById('btnAbrirAddNpcCombate');
-    if(btnAbrirAddNpcCombate) btnAbrirAddNpcCombate.addEventListener('click', abrirAddNpcCombate);
+    const btnAbrirAddCombatente = document.getElementById('btnAbrirAddCombatente');
+    if(btnAbrirAddCombatente) btnAbrirAddCombatente.addEventListener('click', abrirAddCombatente);
     const btnAdd = document.getElementById('btnAddIniciativaManual');
     if(btnAdd) btnAdd.addEventListener('click', ()=>{
       const nome = document.getElementById('iniciativaNovoNome').value.trim();
@@ -4549,53 +4757,56 @@
         iniciativaCol().doc(remId).delete().catch(err=> toast('Erro: '+err.message));
       });
     });
-    if(session.role==='mestre'){
-      wrap.querySelectorAll('[data-edititem]').forEach(span=>{
-        span.addEventListener('click', (ev)=>{
-          ev.stopPropagation();
-          const id = span.dataset.edititem;
-          const atual = iniciativaCache[id] ? iniciativaCache[id].valor : 0;
-          const input = document.createElement('input');
-          input.type = 'number';
-          input.value = atual;
-          input.style.cssText = 'width:60px;padding:.2rem .3rem;border:1px solid var(--gold);border-radius:4px;background:#1c1712;color:var(--gold-bright);text-align:center;';
-          span.replaceWith(input);
-          input.focus(); input.select();
-          const salvar = ()=>{
-            const novo = parseInt(input.value,10);
-            if(!isNaN(novo)) iniciativaCol().doc(id).set({valor: novo}, {merge:true}).catch(err=> toast('Erro: '+err.message));
-          };
-          input.addEventListener('blur', salvar);
-          input.addEventListener('keydown', ev2=>{ if(ev2.key==='Enter') input.blur(); });
-        });
+    wrap.querySelectorAll('[data-edititem]').forEach(span=>{
+      span.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const id = span.dataset.edititem;
+        const atual = iniciativaCache[id] ? iniciativaCache[id].valor : 0;
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = atual;
+        input.style.cssText = 'width:60px;padding:.2rem .3rem;border:1px solid var(--gold);border-radius:4px;background:#1c1712;color:var(--gold-bright);text-align:center;';
+        span.replaceWith(input);
+        input.focus(); input.select();
+        const salvar = ()=>{
+          const novo = parseInt(input.value,10);
+          if(!isNaN(novo)) iniciativaCol().doc(id).set({valor: novo}, {merge:true}).catch(err=> toast('Erro: '+err.message));
+        };
+        input.addEventListener('blur', salvar);
+        input.addEventListener('keydown', ev2=>{ if(ev2.key==='Enter') input.blur(); });
       });
-    }
+    });
     wireFichaCompacta();
   }
 
-  /* mestre escolhe, entre as fichas de NPC Importante ainda fora do combate, qual entra na lista */
-  function abrirAddNpcCombate(){
+  /* mestre escolhe, entre jogadores e NPCs Importantes ainda fora do combate, quem entra na lista */
+  function abrirAddCombatente(){
+    const jogadorIds = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='npcImportante' && !iniciativaCache[id]);
     const npcIds = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo==='npcImportante' && !iniciativaCache[id]);
     const overlay = document.createElement('div');
     overlay.id = 'addNpcCombateOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:460;display:flex;align-items:center;justify-content:center;padding:1rem;';
     const box = document.createElement('div');
     box.style.cssText = 'background:linear-gradient(160deg, var(--panel-2), var(--panel) 60%);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:10px;padding:1.4rem 1.6rem;max-width:420px;width:100%;max-height:80vh;overflow:auto;';
+    const itemHtml = (id)=> `
+      <div class="campanha-item" data-escolhercombatente="${id}" style="cursor:pointer;">
+        <span class="campanha-nome">${escapeHtml(fichasCache[id].nome||'Sem nome')}${fichasCache[id].ownerName?' <span style="font-size:.826rem;color:var(--muted);">('+escapeHtml(fichasCache[id].ownerName)+')</span>':''}</span>
+      </div>`;
     box.innerHTML = `
-      <h3 style="margin-top:0;">👑 Adicionar NPC ao combate</h3>
-      ${npcIds.length ? npcIds.map(id=> `
-        <div class="campanha-item" data-escolhernpc="${id}" style="cursor:pointer;">
-          <span class="campanha-nome">${escapeHtml(fichasCache[id].nome||'Sem nome')}</span>
-        </div>`).join('') : `<div class="campanhas-empty-hint">Todos os NPCs Importantes já estão em combate, ou nenhum foi criado ainda.</div>`}
+      <h3 style="margin-top:0;">🗡️ Adicionar ao combate</h3>
+      <div class="wizard-secao-titulo">Jogadores</div>
+      ${jogadorIds.length ? jogadorIds.map(itemHtml).join('') : `<div class="campanhas-empty-hint">Todos os jogadores já estão em combate, ou nenhuma ficha foi criada ainda.</div>`}
+      <div class="wizard-secao-titulo" style="margin-top:.6rem;">NPCs Importantes</div>
+      ${npcIds.length ? npcIds.map(itemHtml).join('') : `<div class="campanhas-empty-hint">Todos os NPCs Importantes já estão em combate, ou nenhum foi criado ainda.</div>`}
       <div class="login-actions" style="margin-top:1rem;"><button class="btn" id="addNpcCombateCancelar" style="flex:1;">Fechar</button></div>`;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay) overlay.remove(); });
     document.getElementById('addNpcCombateCancelar').addEventListener('click', ()=> overlay.remove());
-    box.querySelectorAll('[data-escolhernpc]').forEach(el=> el.addEventListener('click', ()=>{
-      const id = el.dataset.escolhernpc;
+    box.querySelectorAll('[data-escolhercombatente]').forEach(el=> el.addEventListener('click', ()=>{
+      const id = el.dataset.escolhercombatente;
       const f = fichasCache[id];
-      iniciativaCol().doc(id).set({ nome: f.nome||'Sem nome', valor: 0, tipo:'npc', clientTime: Date.now() })
+      iniciativaCol().doc(id).set({ nome: f.nome||'Sem nome', valor: 0, tipo: f.tipo==='npcImportante'?'npc':'pj', clientTime: Date.now() })
         .then(()=>{ overlay.remove(); combateFichaSelecionada = id; })
         .catch(err=> toast('Erro: ' + err.message));
     }));
@@ -4800,10 +5011,21 @@
     }
     return `<div style="color:#e06060;font-weight:700;font-size:1.274rem;margin-top:.4rem;">✗ Falha</div>`;
   }
-  function recordRollHistory(fichaNome, hab, grad, bonus, penalty, mod, total, difficulty, secret){
+  function recordRollHistory(fichaNome, hab, grad, bonus, penalty, mod, total, difficulty, secret, rolls, discarded){
     rolagensCol().doc().set({
       fichaNome, ownerName: session.playerName, rollerRole: session.role,
       hab, grad, bonus, penalty, mod, total, difficulty,
+      rolls: rolls||[], discarded: discarded ? Array.from(discarded) : [],
+      secret: !!secret, clientTime: Date.now()
+    }).catch(err=> toast('Erro ao registrar rolagem: ' + err.message));
+  }
+  /* rolagem de conjuração (magia) — registrada com tipo próprio pra aparecer no histórico
+     junto com as demais (antes ela só era mostrada no result box da própria ficha) */
+  function recordRollHistoryMagia(fichaNome, grad, bonus, penalty, mod, total, difficulty, secret, rolls, discarded){
+    rolagensCol().doc().set({
+      tipo:'magia', fichaNome, ownerName: session.playerName, rollerRole: session.role,
+      hab:'conhecimento', grad, bonus, penalty, mod, total, difficulty,
+      rolls: rolls||[], discarded: discarded ? Array.from(discarded) : [],
       secret: !!secret, clientTime: Date.now()
     }).catch(err=> toast('Erro ao registrar rolagem: ' + err.message));
   }
@@ -4860,7 +5082,7 @@
     const pen = penalidadesFerimentosLesoes(f);
     const {rolls, discarded, total} = rollDiceCore(grad, 0, pen.penalty, pen.mod);
     showQuickRollPopup(f.nome || 'Ficha', HABILIDADE_LABEL[habKey], rolls, discarded, total, ev);
-    recordRollHistory(f.nome || 'Ficha', habKey, grad, 0, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada');
+    recordRollHistory(f.nome || 'Ficha', habKey, grad, 0, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada', rolls, discarded);
   }
 
   /* rola com uma especialidade: soma grad (da habilidade) + bônus da especialidade em dados,
@@ -4878,7 +5100,7 @@
     const {rolls, discarded, total} = rollDiceCore(grad, bonus, pen.penalty, pen.mod);
     const label = HABILIDADE_LABEL[habKey] + (esp.nome ? ' (' + esp.nome + ')' : '');
     showQuickRollPopup(f.nome || 'Ficha', label, rolls, discarded, total, ev);
-    recordRollHistory(f.nome || 'Ficha', habKey, grad, bonus, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada');
+    recordRollHistory(f.nome || 'Ficha', habKey, grad, bonus, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada', rolls, discarded);
   }
 
   /* teste destreinado (NPC importante): sempre 2 dados fixos, sem vínculo com nenhuma habilidade específica */
@@ -4888,7 +5110,7 @@
     const pen = penalidadesFerimentosLesoes(f);
     const {rolls, discarded, total} = rollDiceCore(2, 0, pen.penalty, pen.mod);
     showQuickRollPopup(f.nome || 'Ficha', 'Teste destreinado', rolls, discarded, total, ev);
-    recordRollHistory(f.nome || 'Ficha', null, 2, 0, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada');
+    recordRollHistory(f.nome || 'Ficha', null, 2, 0, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada', rolls, discarded);
   }
 
   /* ataque direto pela linha da arma: usa a habilidade escolhida pra essa arma (e a especialização,
@@ -4908,7 +5130,7 @@
     const {rolls, discarded, total} = rollDiceCore(grad, bonus, pen.penalty, pen.mod);
     const label = (arma.nome||'Arma') + ' — ' + HABILIDADE_LABEL[habKey] + (esp ? ' ('+(esp.nome||'especialização')+')' : '');
     showQuickRollPopup(f.nome || 'Ficha', label, rolls, discarded, total, ev);
-    recordRollHistory(f.nome || 'Ficha', habKey, grad, bonus, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada');
+    recordRollHistory(f.nome || 'Ficha', habKey, grad, bonus, pen.penalty, pen.mod, total, null, f.rollVisibility==='privada', rolls, discarded);
   }
 
   function showQuickRollPopup(fichaNome, habLabel, rolls, discarded, total, ev){
@@ -4949,10 +5171,84 @@
     if(r.tipo === 'livre'){
       return `<span style="color:var(--muted);">${timeStr}</span> — <span style="color:var(--gold-bright);">${rollerTag}</span> · 🎲 ${r.qtd}d${r.faces}${r.mod?(r.mod>0?' +'+r.mod:' '+r.mod):''}${r.desc?' ('+escapeHtml(r.desc)+')':''} → <strong style="color:var(--gold-bright);">${r.total}</strong>${secretTag}`;
     }
+    if(r.tipo === 'magia'){
+      return `<span style="color:var(--muted);">${timeStr}</span> — <span style="color:var(--gold-bright);">${rollerTag}</span> · 🔮 ${escapeHtml(r.fichaNome)}: Conjuração (Magia) → <strong style="color:var(--gold-bright);">${r.total}</strong>${outcome}${secretTag}`;
+    }
     return `<span style="color:var(--muted);">${timeStr}</span> — <span style="color:var(--gold-bright);">${rollerTag}</span> · ${escapeHtml(r.fichaNome)}: ${HABILIDADE_LABEL[r.hab] || 'Teste destreinado'} → <strong style="color:var(--gold-bright);">${r.total}</strong>${outcome}${secretTag}`;
   }
 
-  /* histórico completo, dentro do painel do balão flutuante — filtra o que não pode ser visto */
+  /* rótulo curto do teste (usado no cabeçalho do card de detalhe dos dados) */
+  function rollLabelFor(r){
+    if(r.tipo === 'livre') return `🎲 ${r.qtd}d${r.faces}${r.mod?(r.mod>0?' +'+r.mod:' '+r.mod):''}${r.desc?' — '+escapeHtml(r.desc):''}`;
+    if(r.tipo === 'magia') return '🔮 Conjuração (Magia)';
+    return HABILIDADE_LABEL[r.hab] || 'Teste destreinado';
+  }
+
+  /* card de detalhe que aparece ao passar o mouse (ou tocar) sobre uma rolagem: mostra cada
+     dado individual rolado (os descartados aparecem riscados) e os modificadores aplicados,
+     não só o resultado final. */
+  function diceDetailCardHtml(r){
+    const rolls = r.rolls || [];
+    const discarded = new Set(r.discarded || []);
+    if(!rolls.length){
+      return `<div style="font-size:.87rem;color:var(--muted);">Sem detalhe de dados pra essa rolagem.</div>`;
+    }
+    const modParts = [];
+    if(r.bonus) modParts.push('+'+r.bonus+'B (especialidade)');
+    if(r.penalty) modParts.push('-'+r.penalty+'D (lesões)');
+    if(r.mod) modParts.push((r.mod>0?'+':'')+r.mod+' (ferimentos/modificador)');
+    return `
+      <div style="font-size:.87rem;color:var(--muted);margin-bottom:.4rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+        <span>${escapeHtml(r.fichaNome||'')} — ${rollLabelFor(r)}</span>
+        <button class="dice-detail-close" title="Fechar" aria-label="Fechar">✕</button>
+      </div>
+      <div>${buildDiceHtml(rolls, discarded)}</div>
+      ${modParts.length ? `<div style="font-size:.8rem;color:var(--muted);margin-top:.4rem;">${modParts.join(' · ')}</div>` : ''}
+      <div style="margin-top:.4rem;font-family:'Cinzel',serif;font-size:1.6rem;color:var(--gold-bright);">= ${r.total}</div>`;
+  }
+
+  let diceDetailEl = null;
+  function hideDiceDetail(){
+    if(diceDetailEl){ diceDetailEl.remove(); diceDetailEl = null; }
+  }
+  /* mostra o card de detalhe dos dados ancorado perto do elemento (linha do histórico ou toast) */
+  function showDiceDetail(r, anchorEl){
+    hideDiceDetail();
+    const el = document.createElement('div');
+    el.id = 'diceDetailCard';
+    el.style.cssText = 'position:fixed;z-index:650;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--crimson-bright);border-radius:8px;padding:.7rem .9rem;box-shadow:0 10px 30px rgba(0,0,0,.6);max-width:320px;';
+    el.innerHTML = diceDetailCardHtml(r);
+    document.body.appendChild(el);
+    const rect = anchorEl.getBoundingClientRect();
+    let x = rect.left, y = rect.bottom + 6;
+    if(x + 320 > window.innerWidth) x = window.innerWidth - 328;
+    if(y + 180 > window.innerHeight) y = rect.top - 186;
+    el.style.left = Math.max(6,x) + 'px';
+    el.style.top = Math.max(6,y) + 'px';
+    const closeBtn = el.querySelector('.dice-detail-close');
+    if(closeBtn) closeBtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); hideDiceDetail(); });
+    diceDetailEl = el;
+  }
+  /* conecta o hover (mouse) e o toque (mobile) de detalhe de dados numa linha do histórico/toast */
+  function wireDiceDetailHover(el, r){
+    if(!r.rolls || !r.rolls.length) return;
+    el.style.cursor = 'help';
+    let hoverTimer = null;
+    el.addEventListener('mouseenter', ()=>{
+      hoverTimer = setTimeout(()=> showDiceDetail(r, el), 120);
+    });
+    el.addEventListener('mouseleave', ()=>{
+      if(hoverTimer) clearTimeout(hoverTimer);
+      hideDiceDetail();
+    });
+    el.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      if(diceDetailEl){ hideDiceDetail(); } else { showDiceDetail(r, el); }
+    });
+  }
+
+  /* histórico completo, dentro do painel do balão flutuante — filtra o que não pode ser visto.
+     Passar o mouse (ou clicar, no touch) sobre qualquer linha mostra o detalhe dos dados. */
   function renderRollHistory(){
     const list = document.getElementById('rollBubbleList');
     if(!list) return;
@@ -4963,24 +5259,36 @@
       return;
     }
     const nearBottom = (list.scrollHeight - list.scrollTop - list.clientHeight) < 40;
-    list.innerHTML = all.map(r=> `<div style="font-size:.968rem;padding:.4rem 0;border-bottom:1px solid var(--line);">${rollRowContentHtml(r)}</div>`).join('');
+    list.innerHTML = all.map((r,i)=> `<div class="roll-history-row" data-rollidx="${i}" style="font-size:.968rem;padding:.4rem 0;border-bottom:1px solid var(--line);">${rollRowContentHtml(r)}</div>`).join('');
+    list.querySelectorAll('[data-rollidx]').forEach(row=>{
+      const r = all[parseInt(row.dataset.rollidx,10)];
+      if(r) wireDiceDetailHover(row, r);
+    });
     if(nearBottom) list.scrollTop = list.scrollHeight;
   }
 
   /* caixinha que aparece perto do balão quando uma rolagem nova chega — pública pra todos,
-     ou só pro dono se for privada (o filtro de quem chega até chamar essa função já garantiu isso) */
+     ou só pro dono se for privada (o filtro de quem chega até chamar essa função já garantiu isso).
+     Passar o mouse mostra o detalhe dos dados rolados; a setinha (✕) no canto fecha na hora,
+     sem precisar esperar ela desvanecer sozinha. */
   function showRollToast(r){
     const stack = document.getElementById('rollToastStack');
     if(!stack) return;
     const el = document.createElement('div');
     el.className = 'roll-toast';
-    el.innerHTML = rollRowContentHtml(r);
+    el.innerHTML = rollRowContentHtml(r) + `<button class="roll-toast-close" title="Fechar" aria-label="Fechar">✕</button>`;
     stack.appendChild(el);
-    el.addEventListener('click', ()=> el.remove());
-    setTimeout(()=>{
+    wireDiceDetailHover(el, r);
+    const fadeTimer = setTimeout(()=>{
       el.style.opacity = '0';
       setTimeout(()=> el.remove(), 400);
-    }, 5500);
+    }, 6500);
+    el.querySelector('.roll-toast-close').addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      clearTimeout(fadeTimer);
+      hideDiceDetail();
+      el.remove();
+    });
     const dot = document.getElementById('rollBubbleDot');
     if(dot && !rollBubbleOpen) dot.style.display = '';
   }
@@ -5231,7 +5539,8 @@
           </div>
           <div class="field-row">
             <div style="max-width:120px;"><label>Peso</label><input type="text" id="lojaCustomPeso" placeholder="Ex: 2 kg"></div>
-            <div><label>Preço</label><input type="text" id="lojaCustomPreco" placeholder="Ex: 2.000 gp"></div>
+            <div style="max-width:110px;"><label>Quantidade</label><input type="number" min="0" step="any" id="lojaCustomPrecoQtd" placeholder="Ex: 2000" value="0"></div>
+            <div style="max-width:160px;"><label>Moeda</label><select id="lojaCustomPrecoMoeda">${MOEDAS.map(m=> `<option value="${m.key}">${escapeHtml(m.label)}</option>`).join('')}</select></div>
           </div>
           <div class="login-actions" style="margin-top:.6rem;">
             <button class="btn primary" id="btnAddCustomItem" style="flex:1;">+ Adicionar item personalizado</button>
@@ -5359,7 +5668,10 @@
       if(!nome){ toast('Digite o nome do item.'); return; }
       const categoria = document.getElementById('lojaCustomCategoria').value.trim();
       const peso = document.getElementById('lojaCustomPeso').value.trim();
-      const preco = document.getElementById('lojaCustomPreco').value.trim();
+      const qtd = document.getElementById('lojaCustomPrecoQtd').value.trim();
+      const moedaKey = document.getElementById('lojaCustomPrecoMoeda').value;
+      const moeda = MOEDAS.find(m=> m.key===moedaKey);
+      const preco = (qtd && parseFloat(qtd)) ? (qtd + ' ' + (moeda?moeda.abrev:'')) : '';
       const novoItem = { nome, categoria, peso, preco, custom:true };
       const itens = (l.itens||[]).concat([novoItem]);
       lojasCol().doc(id).set({itens}, {merge:true}).then(()=>{
@@ -5367,7 +5679,8 @@
         document.getElementById('lojaCustomNome').value = '';
         document.getElementById('lojaCustomCategoria').value = '';
         document.getElementById('lojaCustomPeso').value = '';
-        document.getElementById('lojaCustomPreco').value = '';
+        document.getElementById('lojaCustomPrecoQtd').value = '0';
+        document.getElementById('lojaCustomPrecoMoeda').value = 'vintem';
       }).catch(err=> toast('Erro: '+err.message));
     });
   }
@@ -5975,6 +6288,14 @@
   function subscribeDiarios(){
     if(unsubDiarios) unsubDiarios();
     unsubDiarios = diarioPaginasCol().onSnapshot(snap=>{
+      /* ignora o "eco" da própria escrita: a cada tecla, scheduleDiarioSave salva o bloco no
+         Firestore, e isso dispara este listener imediatamente com a escrita ainda pendente de
+         confirmação do servidor. Sem esse filtro, isso reconstruía a página inteira
+         (renderDiarioTab) bem no meio da digitação, tirando o foco da caixa de texto — daí a
+         sensação de que era preciso clicar de novo pra continuar escrevendo (mais perceptível
+         justo ao pausar pra usar Caps Lock/Shift antes de uma letra maiúscula, que é quando o
+         debounce de 450ms costuma disparar). Só re-renderiza quando a mudança vier confirmada. */
+      if(snap.metadata.hasPendingWrites) return;
       diarioPaginasCache = {};
       snap.forEach(doc=> diarioPaginasCache[doc.id] = doc.data());
       renderDiarioTab();
@@ -6733,6 +7054,31 @@
       .then(()=>{ linhaTempoSelecionadaId = doc.id; subscribeEventosDaLinhaSelecionada(); renderLinhaTempoSidebar(); })
       .catch(err=> toast('Erro: ' + err.message));
   }
+  /* exclui uma linha do tempo inteira (a linha da "mestre" nunca pode ser excluída, ela é
+     recriada automaticamente por subscribeLinhaTempo caso não exista) junto com todos os
+     eventos dela, e volta a seleção pra linha do mestre */
+  function excluirLinhaTempo(linhaId, overlay){
+    if(linhaId === 'mestre') return;
+    const l = linhasTempoCache[linhaId];
+    if(!l) return;
+    if(!confirm(`Excluir a linha do tempo "${l.nome||'Sem nome'}" e todos os seus eventos? Essa ação não pode ser desfeita.`)) return;
+    linhaTempoEventosCol(linhaId).get().then(snap=>{
+      const batchDel = snap.docs.map(doc=> doc.ref.delete());
+      return Promise.all(batchDel);
+    }).then(()=> linhasTempoCol().doc(linhaId).delete())
+      .then(()=>{
+        if(overlay) overlay.remove();
+        if(linhaTempoSelecionadaId === linhaId){
+          linhaTempoSelecionadaId = 'mestre';
+          subscribeEventosDaLinhaSelecionada();
+          const label = document.getElementById('ltLinhaAtualLabel');
+          if(label && linhasTempoCache['mestre']) label.textContent = linhasTempoCache['mestre'].nome;
+        }
+        renderLinhaTempoSidebar();
+        toast('Linha do tempo excluída.');
+      }).catch(err=> toast('Erro ao excluir: ' + err.message));
+  }
+
   /* lista (única, ordenada) de todos os jogadores com ficha na campanha — usada pra escolher
      quem pode ver/editar uma linha do tempo privada */
   function nomesJogadoresDaCampanha(){
@@ -6808,11 +7154,15 @@
       <div class="login-actions" style="margin-top:1rem;">
         <button class="btn" id="ltConfigCancelar">Cancelar</button>
         <button class="btn primary" id="ltConfigSalvar" style="flex:1;">Salvar</button>
-      </div>`;
+      </div>
+      ${linhaTempoSelecionadaId !== 'mestre' ? `
+      <button class="btn danger" id="ltConfigExcluirLinha" style="width:100%;margin-top:.8rem;">🗑 Excluir esta linha do tempo</button>` : ''}`;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay) overlay.remove(); });
     document.getElementById('ltConfigCancelar').addEventListener('click', ()=> overlay.remove());
+    const btnExcluirLinha = document.getElementById('ltConfigExcluirLinha');
+    if(btnExcluirLinha) btnExcluirLinha.addEventListener('click', ()=> excluirLinhaTempo(linhaTempoSelecionadaId, overlay));
     let visAtual = visibilidade;
     document.getElementById('ltVisPublica').addEventListener('click', ()=>{
       visAtual = 'publica';
@@ -7114,7 +7464,13 @@
     galeriaPastasCol().doc(id).set(Object.assign({}, patch, {updatedAt: serverTimestampValue()}), {merge:true})
       .catch(err=> toast('Erro ao salvar galeria: ' + err.message));
   }
-  function galeriaCanEdit(pasta){ return session.role === 'mestre' || pasta.ownerName === session.playerName; }
+  function galeriaCanEdit(pasta){
+    if(session.role === 'mestre') return true;
+    if(pasta.ownerName === session.playerName) return true;
+    /* dono habilitou "colaborativa": qualquer pessoa que consiga VER a pasta também pode
+       adicionar/remover imagens dela (precisa estar visível pra fazer sentido) */
+    return !!pasta.colaborativa && galeriaCanView(pasta);
+  }
   function galeriaCanView(pasta){ return session.role === 'mestre' || pasta.ownerName === session.playerName || !!pasta.visivel; }
 
   function criarPastaGaleria(){
@@ -7161,7 +7517,7 @@
       const n = (pasta.imagens||[]).length;
       card.innerHTML = `<div class="fc-name">🖼️ ${escapeHtml(pasta.nome||'Sem nome')}</div>
         <div class="fc-meta">${n} imagem${n===1?'':'ns'} · ${escapeHtml(pasta.ownerName||'?')}</div>
-        ${pasta.ownerName===session.playerName ? `<div class="fc-meta">${pasta.visivel?'👁️ Visível para outros':'🚫 Só você (e o Mestre)'}</div>` : ''}`;
+        ${pasta.ownerName===session.playerName ? `<div class="fc-meta">${pasta.visivel?'👁️ Visível para outros':'🚫 Só você (e o Mestre)'}${pasta.colaborativa?' · 🤝 colaborativa':''}</div>` : ''}`;
       card.addEventListener('click', ()=>{ currentPastaGaleriaId = id; renderGaleriasTab(); });
       return card;
     }
@@ -7194,6 +7550,9 @@
         ${pasta.ownerName===session.playerName ? `
           <label style="display:flex;align-items:center;gap:.4rem;font-size:.92rem;color:var(--muted);text-transform:none;font-family:inherit;">
             <input type="checkbox" id="galeriaVisivelCheckbox" ${pasta.visivel?'checked':''}> visível p/ outros
+          </label>
+          <label style="display:flex;align-items:center;gap:.4rem;font-size:.92rem;color:var(--muted);text-transform:none;font-family:inherit;" title="Precisa estar visível pra outros também poderem editar">
+            <input type="checkbox" id="galeriaColaborativaCheckbox" ${pasta.colaborativa?'checked':''}> 🤝 permitir que outros editem
           </label>` : ''}
         ${(session.role==='mestre'||pasta.ownerName===session.playerName) ? `<button class="btn danger" id="btnDelPastaGaleria">Excluir pasta</button>`:''}
       </div>
@@ -7214,6 +7573,8 @@
     document.getElementById('btnBackToGalerias').addEventListener('click', ()=>{ currentPastaGaleriaId = null; renderGaleriasTab(); });
     const visivelChk = document.getElementById('galeriaVisivelCheckbox');
     if(visivelChk) visivelChk.addEventListener('change', ()=> saveGaleriaPasta(id, {visivel: visivelChk.checked}));
+    const colaborativaChk = document.getElementById('galeriaColaborativaCheckbox');
+    if(colaborativaChk) colaborativaChk.addEventListener('change', ()=> saveGaleriaPasta(id, {colaborativa: colaborativaChk.checked}));
     const btnDel = document.getElementById('btnDelPastaGaleria');
     if(btnDel) btnDel.addEventListener('click', ()=>{
       if(!confirm('Excluir esta pasta e todas as imagens dentro dela? Essa ação não pode ser desfeita.')) return;
@@ -8530,6 +8891,7 @@
       if(ev.target.classList.contains('del') || ev.target.classList.contains('resize-handle')) return;
       ev.stopPropagation();
       if(linkMode){ handleLinkClick(n.id); return; }
+      if(pickChildForCoupleId){ handlePickChildClick(n.id); return; }
       if(boardPermission!=='edit') return;
       const node = state.nodes.find(x=>x.id===n.id);
       pushUndo();
@@ -8541,7 +8903,7 @@
     });
 
     el.addEventListener('dblclick', (ev)=>{ ev.stopPropagation(); openNodeModal(n.id); });
-    el.addEventListener('mouseenter', ()=>{ if(linkMode) el.classList.add('linkable'); });
+    el.addEventListener('mouseenter', ()=>{ if(linkMode || pickChildForCoupleId) el.classList.add('linkable'); });
     el.addEventListener('mouseleave', ()=>{ el.classList.remove('linkable'); });
 
     /* ---- redimensionar a largura do quadro ---- */
@@ -8736,7 +9098,9 @@
     if(on) linkBannerText.textContent = 'Clique no primeiro personagem…';
   }
   btnLink.addEventListener('click', ()=> setLinkMode(!linkMode));
-  document.getElementById('btnCancelLink').addEventListener('click', ()=> setLinkMode(false));
+  document.getElementById('btnCancelLink').addEventListener('click', ()=>{
+    if(pickChildForCoupleId){ cancelPickChildForCouple(); } else { setLinkMode(false); }
+  });
 
   function handleLinkClick(nodeId){
     if(!linkFirst){
@@ -8756,6 +9120,48 @@
         linkBannerText.textContent = 'Clique no primeiro personagem…';
       });
     }
+  }
+
+  /* ============ "adicionar filho a este casal": puxa a ligação de filiação a partir da própria
+     ligação do casal (não sempre a partir dos dois personagens um a um) — assim um casal pode
+     ter quantos filhos forem, todos saindo do mesmo laço/tronco, sem precisar redesenhar a
+     mesclagem manualmente pra cada filho além do primeiro ============ */
+  let pickChildForCoupleId = null;
+  function startPickChildForCouple(coupleEdgeId){
+    if(boardPermission!=='edit') return;
+    setLinkMode(false);
+    pickChildForCoupleId = coupleEdgeId;
+    canvasEl.classList.add('linking');
+    linkBanner.classList.remove('hidden');
+    linkBannerText.textContent = 'Clique no personagem que é filho deste casal…';
+  }
+  function cancelPickChildForCouple(){
+    pickChildForCoupleId = null;
+    canvasEl.classList.remove('linking');
+    linkBanner.classList.add('hidden');
+  }
+  function handlePickChildClick(nodeId){
+    const couple = state.edges.find(e=> e.id===pickChildForCoupleId);
+    if(!couple){ cancelPickChildForCouple(); return; }
+    if(nodeId===couple.from || nodeId===couple.to){
+      showToast('Escolha um personagem diferente dos dois do casal.');
+      return;
+    }
+    const g = mergeGroups.find(x=> x.key===couple.id);
+    if(g && g.children.some(c=> c.childId===nodeId)){
+      showToast('Esse personagem já é filho deste casal.');
+      cancelPickChildForCouple();
+      return;
+    }
+    /* reaproveita o tipo de filiação já usado pelos outros filhos deste casal (se houver);
+       senão usa o primeiro tipo de família disponível como padrão */
+    const tipoExistente = g && g.children[0] && g.children[0].parentAEdge.typeId;
+    const tipoPadrao = tipoExistente || (state.types.find(t=> isFamilyParentType(t)) || {}).id;
+    if(!tipoPadrao){ showToast('Nenhum tipo de ligação de família disponível ainda.'); cancelPickChildForCouple(); return; }
+    addEdge(couple.from, nodeId, tipoPadrao);
+    addEdge(couple.to, nodeId, tipoPadrao);
+    cancelPickChildForCouple();
+    showToast('Filho adicionado ao casal.');
   }
 
   /* ============ legenda ============ */
@@ -8999,8 +9405,13 @@
     const toName = (state.nodes.find(n=>n.id===e.to)||{}).name || '?';
     const curStyle = e.curveStyle === 'straight' ? 'straight' : 'curve';
     const wpCount = (e.waypoints || []).length;
+    const podeSerCasal = !isFamilyParentType(typeById(e.typeId));
     modalBox.innerHTML = `
       <h3>${escapeHtml(fromName)} ⇄ ${escapeHtml(toName)}</h3>
+      ${podeSerCasal ? `
+      <div class="modal-actions" style="justify-content:flex-start;margin:0 0 1rem;">
+        <button class="btn primary" id="mAddFilhoCasal">+ Adicionar filho a este casal</button>
+      </div>` : ''}
       <label>Estilo da linha</label>
       <div class="modal-actions" style="justify-content:flex-start;gap:.5rem;margin:0 0 1rem;">
         <button class="btn ${curStyle==='curve'?'primary':''}" id="mLineCurve">〜 Curva</button>
@@ -9019,6 +9430,11 @@
         <button class="btn" id="mEdgeCancel">Fechar</button>
       </div>`;
     modalOverlay.classList.remove('hidden');
+    const addFilhoCasalBtn = modalBox.querySelector('#mAddFilhoCasal');
+    if(addFilhoCasalBtn) addFilhoCasalBtn.addEventListener('click', ()=>{
+      closeModal();
+      startPickChildForCouple(e.id);
+    });
     modalBox.querySelectorAll('.type-chip').forEach(chip=>{
       chip.addEventListener('click', ()=>{ updateEdgeType(edgeId, chip.dataset.type); closeModal(); });
     });
@@ -9099,8 +9515,9 @@
     const trunkWpCount = (g.coupleEdge.mergeTrunkWaypoints || []).length;
     modalBox.innerHTML = `
       <h3>Filhos de ${escapeHtml(parentAName)} e ${escapeHtml(parentBName)}</h3>
-      <p style="font-size:.968rem;color:#c9d0de;margin:0 0 .8rem;">Todas as ligações de filiação saem num único tronco a partir do laço do casal, com uma ramificação para cada filho. Escolha reta ou curva, e adicione pontos de rota para desviar a linha pra onde quiser.</p>
+      <p style="font-size:.968rem;color:#c9d0de;margin:0 0 .8rem;">Todas as ligações de filiação saem num único tronco a partir do laço do casal, com uma ramificação para cada filho. Use "+ Adicionar filho a este casal" pra puxar uma nova ramificação direto do laço (sem precisar religar os dois pais de novo). Escolha reta ou curva, e adicione pontos de rota para desviar a linha pra onde quiser.</p>
       <div class="modal-actions" style="justify-content:flex-start;gap:.5rem;margin:0 0 .8rem;flex-wrap:wrap;">
+        <button class="btn primary" id="mAddFilho">+ Adicionar filho a este casal</button>
         <button class="btn" id="mAddTrunkWaypoint">+ Ponto no tronco${trunkWpCount ? ' ('+trunkWpCount+')' : ''}</button>
         ${trunkWpCount ? '<button class="btn danger" id="mClearTrunkWaypoints">Limpar pontos do tronco</button>' : ''}
         ${g.coupleEdge.mergeOriginOffset ? '<button class="btn" id="mResetOrigin">Recentralizar ponto de origem</button>' : ''}
@@ -9110,6 +9527,10 @@
         <button class="btn" id="mCloseMerge">Fechar</button>
       </div>`;
     modalOverlay.classList.remove('hidden');
+    modalBox.querySelector('#mAddFilho').addEventListener('click', ()=>{
+      closeModal();
+      startPickChildForCouple(g.key);
+    });
     const resetOriginBtn = modalBox.querySelector('#mResetOrigin');
     if(resetOriginBtn) resetOriginBtn.addEventListener('click', ()=>{
       pushUndo();
