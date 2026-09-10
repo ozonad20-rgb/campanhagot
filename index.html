@@ -1650,6 +1650,9 @@
     if(unsubLojas){ unsubLojas(); unsubLojas=null; }
     if(unsubDiarios){ unsubDiarios(); unsubDiarios=null; }
     if(unsubGalerias){ unsubGalerias(); unsubGalerias=null; }
+    if(unsubGaleriaImagens){ unsubGaleriaImagens(); unsubGaleriaImagens=null; }
+    galeriaImagensAssinandoId = null;
+    galeriaImagensCache = {};
     if(unsubHomebrew){ unsubHomebrew(); unsubHomebrew=null; }
     currentPastaGaleriaId = null;
     currentPaginaId = null;
@@ -3559,7 +3562,7 @@
   }
   function calc(f){
     const h = f.habilidades;
-    const aeksio = (h.vontade||0) + (h.conhecimento||0) + Math.ceil((f.magiaBonusEspecialidade||0)/2);
+    const aeksio = (h.vontade||0)*4 + Math.ceil((f.magiaBonusEspecialidade||0)/2);
     return {
       defesaIntriga: (h.astucia||0) + (h.percepcao||0) + (h.status||0),
       compostura: (h.vontade||0) * 3,
@@ -3936,7 +3939,7 @@
               </label>
               ${f.magiaFeiticeiro ? `
               <div class="field-row">
-                <div class="stat-box"><div class="stat-value" id="statAeksio">${d.aeksio}</div><div class="stat-label">Aeksio</div><div class="stat-formula">Vontade+Conhec.+½ bônus (↑)</div></div>
+                <div class="stat-box"><div class="stat-value" id="statAeksio">${d.aeksio}</div><div class="stat-label">Aeksio</div><div class="stat-formula">Vontade×4+½ bônus (↑)</div></div>
                 <div class="stat-box"><div class="stat-value" id="statDefesaMagica">${d.defesaMagica}</div><div class="stat-label">Defesa Mágica</div><div class="stat-formula">= Aeksio</div></div>
               </div>
               <div class="field-row" style="margin-top:.5rem;">
@@ -3944,7 +3947,7 @@
                 <div class="stat-box"><div class="stat-value" id="statLimiteAprimoramento">${d.limiteAprimoramento}</div><div class="stat-label">Limite de Aprimoramento</div><div class="stat-formula">½ do Aeksio (↑)</div></div>
               </div>
               <div class="field-row" style="margin-top:.5rem;">
-                <div><label>Dados bônus em magia</label><input type="number" data-field="magiaBonusEspecialidade" value="${f.magiaBonusEspecialidade||0}" min="0" ${editable?'':'disabled'}></div>
+                <div><label>Dados de bônus da especialidade Feitiçaria de Fogo e Sangue (Conhecimento)</label><input type="number" data-field="magiaBonusEspecialidade" value="${f.magiaBonusEspecialidade||0}" min="0" ${editable?'':'disabled'}></div>
               </div>
 
               <label style="margin-top:.7rem;display:block;">Conjuração</label>
@@ -6322,14 +6325,24 @@
     if(!titulo) return;
     const doc = diarioPaginasCol().doc();
     const irmaos = Object.values(diarioPaginasCache).filter(p=> (p.parentId||null) === (parentId||null));
-    doc.set({
+    const dados = {
       titulo, icone:'📄', parentId: parentId||null, ownerName: session.playerName, criadoPorRole: session.role, visivel:false,
       ordem: irmaos.length, blocos: [], createdAt: serverTimestampValue()
-    }).then(()=>{
-      if(parentId) diarioExpanded.add(parentId);
-      currentPaginaId = doc.id;
+    };
+    /* atualiza o cache local na hora (otimista), sem esperar o snapshot do Firestore voltar:
+       antes, renderDiarioTab() rodava (via .then()) antes do onSnapshot confirmar a escrita,
+       via de regra achava que a página "não existia" ainda em diarioPaginasCache e zerava
+       currentPaginaId de volta pra null — dando a impressão de que criar diário não funcionava */
+    diarioPaginasCache[doc.id] = dados;
+    if(parentId) diarioExpanded.add(parentId);
+    currentPaginaId = doc.id;
+    renderDiarioTab();
+    doc.set(dados).catch(err=>{
+      delete diarioPaginasCache[doc.id];
+      if(currentPaginaId === doc.id) currentPaginaId = null;
+      toast('Erro: ' + err.message);
       renderDiarioTab();
-    }).catch(err=> toast('Erro: ' + err.message));
+    });
   }
 
   function excluirPaginaDiario(id){
@@ -7444,13 +7457,25 @@
     linhaTempoEventosCol(linhaTempoSelecionadaId).doc(id).delete().catch(err=> toast('Erro ao excluir: ' + err.message));
   }
 
-  /* ============ galerias (pastas de imagens livres — anotação some ao fechar) ============ */
+  /* ============ galerias (pastas de imagens livres — anotação some ao fechar) ============
+     as imagens de cada pasta ficam numa SUBCOLEÇÃO própria (um documento por imagem), em vez
+     de um único campo array "imagens" dentro do documento da pasta. Isso é o que corrige o
+     "limite de quantidade de imagens": o Firestore limita cada DOCUMENTO a ~1MB, e como cada
+     imagem em base64 pesa uns bons KB, empilhar todas num campo só do mesmo documento estourava
+     esse teto rapidamente (a galeria "travava" depois de poucas fotos). Com um documento por
+     imagem, cada upload é independente e o teto de 1MB deixa de ser um problema prático. */
   let unsubGalerias = null;
   let galeriaPastasCache = {};
   let currentPastaGaleriaId = null;
+  let unsubGaleriaImagens = null;
+  let galeriaImagensAssinandoId = null;
+  let galeriaImagensCache = {}; // imagens só da pasta atualmente aberta
 
   function galeriaPastasCol(){
     return db.collection(COLLECTION).doc(session.campaignId).collection('galeriaPastas');
+  }
+  function galeriaImagensCol(pastaId){
+    return galeriaPastasCol().doc(pastaId).collection('imagens');
   }
   function subscribeGalerias(){
     if(unsubGalerias) unsubGalerias();
@@ -7459,6 +7484,21 @@
       snap.forEach(doc=> galeriaPastasCache[doc.id] = doc.data());
       renderGaleriasTab();
     }, err=>{ console.error(err); toast('Erro de conexão (galerias): ' + err.message); });
+  }
+  function subscribeGaleriaImagens(pastaId){
+    if(unsubGaleriaImagens) unsubGaleriaImagens();
+    galeriaImagensAssinandoId = pastaId;
+    galeriaImagensCache = {};
+    unsubGaleriaImagens = galeriaImagensCol(pastaId).onSnapshot(snap=>{
+      galeriaImagensCache = {};
+      snap.forEach(doc=> galeriaImagensCache[doc.id] = doc.data());
+      if(currentPastaGaleriaId === pastaId) renderGaleriasTab();
+    }, err=>{ console.error(err); toast('Erro de conexão (imagens da galeria): ' + err.message); });
+  }
+  function pararAssinaturaGaleriaImagens(){
+    if(unsubGaleriaImagens){ unsubGaleriaImagens(); unsubGaleriaImagens=null; }
+    galeriaImagensAssinandoId = null;
+    galeriaImagensCache = {};
   }
   function saveGaleriaPasta(id, patch){
     galeriaPastasCol().doc(id).set(Object.assign({}, patch, {updatedAt: serverTimestampValue()}), {merge:true})
@@ -7477,9 +7517,18 @@
     const nome = prompt('Nome da pasta (ex: Mapas, Retratos, Vilões):');
     if(!nome) return;
     const doc = galeriaPastasCol().doc();
-    doc.set({ nome, ownerName: session.playerName, criadoPorRole: session.role, visivel:false, imagens:[], createdAt: serverTimestampValue() })
-      .then(()=>{ currentPastaGaleriaId = doc.id; renderGaleriasTab(); })
-      .catch(err=> toast('Erro: ' + err.message));
+    const dados = { nome, ownerName: session.playerName, criadoPorRole: session.role, visivel:false, colaborativa:false, imagensCount:0, createdAt: serverTimestampValue() };
+    /* cache atualizado na hora (otimista), pra não depender da corrida com o onSnapshot —
+       mesma correção aplicada à criação de diários */
+    galeriaPastasCache[doc.id] = dados;
+    currentPastaGaleriaId = doc.id;
+    renderGaleriasTab();
+    doc.set(dados).catch(err=>{
+      delete galeriaPastasCache[doc.id];
+      if(currentPastaGaleriaId === doc.id) currentPastaGaleriaId = null;
+      toast('Erro: ' + err.message);
+      renderGaleriasTab();
+    });
   }
 
   function renderGaleriasTab(){
@@ -7488,6 +7537,7 @@
     if(currentPastaGaleriaId && galeriaPastasCache[currentPastaGaleriaId]){
       renderGaleriaPastaEditor(currentPastaGaleriaId);
     } else {
+      pararAssinaturaGaleriaImagens();
       currentPastaGaleriaId = null;
       renderGaleriaPastasList();
     }
@@ -7514,7 +7564,7 @@
       const pasta = galeriaPastasCache[id];
       const card = document.createElement('div');
       card.className = 'ficha-card';
-      const n = (pasta.imagens||[]).length;
+      const n = (pasta.imagensCount || 0) + (pasta.imagens ? pasta.imagens.length : 0);
       card.innerHTML = `<div class="fc-name">🖼️ ${escapeHtml(pasta.nome||'Sem nome')}</div>
         <div class="fc-meta">${n} imagem${n===1?'':'ns'} · ${escapeHtml(pasta.ownerName||'?')}</div>
         ${pasta.ownerName===session.playerName ? `<div class="fc-meta">${pasta.visivel?'👁️ Visível para outros':'🚫 Só você (e o Mestre)'}${pasta.colaborativa?' · 🤝 colaborativa':''}</div>` : ''}`;
@@ -7540,9 +7590,16 @@
   function renderGaleriaPastaEditor(id){
     const pasta = galeriaPastasCache[id];
     if(!pasta){ currentPastaGaleriaId = null; renderGaleriasTab(); return; }
+    if(galeriaImagensAssinandoId !== id) subscribeGaleriaImagens(id);
     const wrap = document.getElementById('galeriasWrap');
     const editable = galeriaCanEdit(pasta);
-    const imgs = pasta.imagens || [];
+    /* compatibilidade: pastas criadas antes desta correção guardavam as imagens num array
+       dentro do próprio documento da pasta (pasta.imagens) — elas continuam aparecendo aqui,
+       misturadas com as novas (que já vêm da subcoleção), até serem removidas ou recriadas */
+    const imgsLegado = (pasta.imagens||[]).map(im=> Object.assign({legado:true}, im));
+    const imgsNovas = Object.keys(galeriaImagensCache)
+      .map(imgId=> Object.assign({id:imgId}, galeriaImagensCache[imgId]));
+    const imgs = imgsLegado.concat(imgsNovas.sort((a,b)=> (a.createdAt&&a.createdAt.seconds||0) - (b.createdAt&&b.createdAt.seconds||0)));
     wrap.innerHTML = `<div style="max-width:900px;margin:0 auto;padding:1.2rem;">
       <div class="editor-header" style="padding:0 0 .8rem;flex-wrap:wrap;">
         <button class="btn" id="btnBackToGalerias">← Galerias</button>
@@ -7558,14 +7615,15 @@
       </div>
       ${editable?`
       <div style="margin-bottom:1rem;">
-        <label class="btn primary" style="cursor:pointer;display:inline-block;margin:0;" for="galeriaUpload">📷 Adicionar imagem</label>
-        <input type="file" id="galeriaUpload" accept="image/*" style="display:none;">
+        <label class="btn primary" style="cursor:pointer;display:inline-block;margin:0;" for="galeriaUpload">📷 Adicionar imagens</label>
+        <input type="file" id="galeriaUpload" accept="image/*" multiple style="display:none;">
+        <span id="galeriaUploadStatus" style="margin-left:.6rem;color:var(--muted);font-size:.92rem;"></span>
       </div>`:''}
       <div class="diario-galeria-grid">
-        ${imgs.map(img=> `<div class="diario-galeria-item" data-galeriaimgview="${img.id}" style="width:230px;height:230px;" title="Clique para ampliar e anotar">
+        ${imgs.map(img=> `<div class="diario-galeria-item" data-galeriaimgview="${img.id}" data-legado="${img.legado?'1':''}" style="width:230px;height:230px;" title="Clique para ampliar e anotar">
           <img src="${img.data}">
           ${img.legenda?'<span class="diario-galeria-item-nota" title="Tem anotação salva">📝</span>':''}
-          ${editable?`<div class="diario-imagem-del" data-galeriaimgdel="${img.id}" title="Remover">×</div>`:''}
+          ${editable?`<div class="diario-imagem-del" data-galeriaimgdel="${img.id}" data-legado="${img.legado?'1':''}" title="Remover">×</div>`:''}
         </div>`).join('') || '<div class="empty-hint">Nenhuma imagem ainda.</div>'}
       </div>
     </div>`;
@@ -7578,33 +7636,67 @@
     const btnDel = document.getElementById('btnDelPastaGaleria');
     if(btnDel) btnDel.addEventListener('click', ()=>{
       if(!confirm('Excluir esta pasta e todas as imagens dentro dela? Essa ação não pode ser desfeita.')) return;
-      galeriaPastasCol().doc(id).delete().then(()=>{ currentPastaGaleriaId = null; }).catch(err=> toast('Erro: '+err.message));
+      galeriaImagensCol(id).get().then(snap=> Promise.all(snap.docs.map(d=> d.ref.delete())))
+        .then(()=> galeriaPastasCol().doc(id).delete())
+        .then(()=>{ pararAssinaturaGaleriaImagens(); currentPastaGaleriaId = null; renderGaleriasTab(); })
+        .catch(err=> toast('Erro: '+err.message));
     });
     const uploadInput = document.getElementById('galeriaUpload');
+    const uploadStatus = document.getElementById('galeriaUploadStatus');
     if(uploadInput) uploadInput.addEventListener('change', ()=>{
-      const file = uploadInput.files[0];
-      if(!file) return;
-      resizeImageFile(file, 1100, 0.8).then(dataUrl=>{
-        pasta.imagens = (pasta.imagens||[]).concat([{id: uid('img'), data: dataUrl}]);
-        saveGaleriaPasta(id, {imagens: pasta.imagens});
-        renderGaleriasTab();
-      }).catch(err=> toast('Erro ao processar imagem: ' + err.message));
+      /* input com "multiple": arrastar/selecionar várias fotos de uma vez na janela do sistema
+         operacional manda todas aqui em uploadInput.files — processa e sobe uma por uma */
+      const files = Array.from(uploadInput.files || []);
+      if(!files.length) return;
+      uploadInput.disabled = true;
+      let feitas = 0;
+      if(uploadStatus) uploadStatus.textContent = `Enviando 0/${files.length}…`;
+      Promise.all(files.map(file=> resizeImageFile(file, 1100, 0.8).then(dataUrl=>{
+        const imgRef = galeriaImagensCol(id).doc();
+        return imgRef.set({ data: dataUrl, legenda:'', ownerName: session.playerName, createdAt: serverTimestampValue() }).then(()=>{
+          feitas++;
+          if(uploadStatus) uploadStatus.textContent = `Enviando ${feitas}/${files.length}…`;
+        });
+      }))).then(()=>{
+        saveGaleriaPasta(id, { imagensCount: firebase.firestore.FieldValue.increment(files.length) });
+        if(uploadStatus) uploadStatus.textContent = '';
+        uploadInput.disabled = false;
+        uploadInput.value = '';
+      }).catch(err=>{
+        toast('Erro ao processar imagem: ' + err.message);
+        if(uploadStatus) uploadStatus.textContent = '';
+        uploadInput.disabled = false;
+        uploadInput.value = '';
+      });
     });
     wrap.querySelectorAll('[data-galeriaimgview]').forEach(el=> el.addEventListener('click', (ev)=>{
       if(ev.target.closest('[data-galeriaimgdel]')) return;
-      const img = (pasta.imagens||[]).find(im=> im.id===el.dataset.galeriaimgview);
+      const imgId = el.dataset.galeriaimgview;
+      const ehLegado = el.dataset.legado === '1';
+      const img = ehLegado ? (pasta.imagens||[]).find(im=> im.id===imgId) : galeriaImagensCache[imgId];
       if(!img) return;
       abrirImagemComAnotacao(img.data, img.legenda, (novoTexto)=>{
-        img.legenda = novoTexto;
-        saveGaleriaPasta(id, {imagens: pasta.imagens});
-        renderGaleriasTab();
+        if(ehLegado){
+          pasta.imagens = (pasta.imagens||[]).map(im=> im.id===imgId ? Object.assign({}, im, {legenda: novoTexto}) : im);
+          saveGaleriaPasta(id, {imagens: pasta.imagens});
+        } else {
+          galeriaImagensCol(id).doc(imgId).set({legenda: novoTexto}, {merge:true}).catch(err=> toast('Erro: '+err.message));
+        }
       });
     }));
     wrap.querySelectorAll('[data-galeriaimgdel]').forEach(btn=> btn.addEventListener('click', (ev)=>{
       ev.stopPropagation();
-      pasta.imagens = (pasta.imagens||[]).filter(im=> im.id!==btn.dataset.galeriaimgdel);
-      saveGaleriaPasta(id, {imagens: pasta.imagens});
-      renderGaleriasTab();
+      const imgId = btn.dataset.galeriaimgdel;
+      const ehLegado = btn.dataset.legado === '1';
+      if(ehLegado){
+        pasta.imagens = (pasta.imagens||[]).filter(im=> im.id!==imgId);
+        saveGaleriaPasta(id, {imagens: pasta.imagens});
+        renderGaleriasTab();
+      } else {
+        galeriaImagensCol(id).doc(imgId).delete()
+          .then(()=> saveGaleriaPasta(id, { imagensCount: firebase.firestore.FieldValue.increment(-1) }))
+          .catch(err=> toast('Erro: '+err.message));
+      }
     }));
   }
 
