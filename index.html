@@ -992,6 +992,8 @@
   .diario-galeria-item{position:relative;width:130px;height:130px;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:#1c1712;}
   .diario-galeria-item-nota{position:absolute;bottom:2px;left:2px;background:rgba(20,15,10,.75);border-radius:4px;padding:1px 4px;font-size:.85rem;}
   .diario-galeria-item img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;}
+  .diario-imagem-del{position:absolute;top:4px;right:4px;z-index:2;background:var(--danger);color:#ffe9e0;border:1px solid var(--danger-bright);border-radius:50%;width:22px;height:22px;line-height:20px;text-align:center;font-size:1rem;cursor:pointer;}
+  .diario-imagem-del:hover{background:var(--danger-bright);}
   .diario-galeria-add{width:130px;height:130px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:6px;cursor:pointer;color:var(--muted);font-size:1.534rem;}
   .diario-galeria-add:hover{color:var(--gold-bright);border-color:var(--gold);}
 </style>
@@ -1960,7 +1962,7 @@
       lesoes:[false,false,false,false,false,false,false],
       bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0, bonusSaude:0,
       armaduras:[], armas:[],
-      magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0,
+      magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0, magiaModificadores:0,
       altura:'', peso:'', olhos:'', cabelos:'', marcasDistincao:'', detalhes:'',
       objetivo:'', motivacao:'', virtude:'', vicio:'', personalidadeExtra:'',
       historia:'', juramentos:'', obrigacoes:'', aliados:'', inimigos:'',
@@ -1985,7 +1987,7 @@
       lesoes:[false,false,false,false,false,false,false],
       bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0, bonusSaude:0,
       armaduras:[], armas:[],
-      magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0,
+      magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0, magiaModificadores:0,
       moedas:{vintem:0,luaPrata:0,dragaoOuro:0}, equipamentosGerais:[], experiencia:0, experienciaTotal:0, experienciaGasta:0, historicoXP:[],
       updatedAt: null
     };
@@ -3081,6 +3083,89 @@
       </div>`;
     }).join('');
   }
+  /* bloco reaproveitável de "Experiência" até "Inimigos" — normalmente fica na 2ª coluna,
+     logo depois de Magia, mas quando o personagem é feiticeiro (painel de Magia mais longo,
+     com as tabelas de dificuldade e área) ele é movido pra 1ª coluna, logo após Qualidades e
+     Defeitos, pra equilibrar melhor o tamanho das duas colunas. */
+  function renderExtraSecoesHtml(f, id, isNPC, editable, historicoAberto, evoDraft){
+    return `
+            <div class="panel-box">
+              <h3>⭐ Experiência</h3>
+              <div class="xp-totais-row">
+                <div class="xp-stat-box"><div class="xp-stat-value">${f.experienciaTotal||0}</div><div class="xp-stat-label">Total</div></div>
+                <div class="xp-stat-box"><div class="xp-stat-value">${(f.experienciaTotal||0)-(f.experienciaGasta||0)}</div><div class="xp-stat-label">Atual (disponível)</div></div>
+              </div>
+              ${editable && evoDraft && evoDraft.fichaId===id ? renderEvoDraftHtml(f,id) : `
+              <div class="login-actions" style="margin-top:.6rem;">
+                ${editable?'<button class="btn primary" id="btnEvoluir" style="flex:1;">📈 Evoluir</button>':''}
+                <button class="btn" id="btnHistoricoXP" title="Histórico de avanços">💬</button>
+              </div>`}
+              <div id="historicoXPPainel" style="${historicoAberto===id?'':'display:none;'}margin-top:.7rem;max-height:260px;overflow-y:auto;">
+                ${historicoAberto===id ? renderHistoricoXPHtml(f) : ''}
+              </div>
+            </div>
+
+            <div class="panel-box">
+              <h3>💰 Carteira</h3>
+              <table class="sub-table" style="font-size:.944rem;">
+                <tbody>
+                  ${MOEDAS.slice().reverse().map(m=>`
+                  <tr>
+                    <td style="white-space:nowrap;">${m.label}</td>
+                    <td><input type="number" min="0" data-field="moedas.${m.key}" value="${(f.moedas&&f.moedas[m.key])||0}" style="width:80px;" ${editable?'':'disabled'}></td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+              <div style="font-size:.897rem;color:var(--muted);margin-top:.5rem;">Total: <strong style="color:var(--gold-bright);">${moedaTotalVintens(f.moedas)}</strong> vinténs de cobre</div>
+              ${editable?`<button class="btn add-row-btn" id="btnAbrirCalculadora" style="width:100%;margin-top:.6rem;">🧮 Calculadora de Compra</button>`:''}
+            </div>
+
+            ${isNPC ? '' : `
+            <div class="panel-box">
+              <h3>Aparência</h3>
+              <div class="field-row">
+                <div><label>Altura</label><input type="text" data-field="altura" value="${escapeHtml(f.altura)}" ${editable?'':'disabled'}></div>
+                <div><label>Peso</label><input type="text" data-field="peso" value="${escapeHtml(f.peso)}" ${editable?'':'disabled'}></div>
+              </div>
+              <div class="field-row">
+                <div><label>Olhos</label><input type="text" data-field="olhos" value="${escapeHtml(f.olhos)}" ${editable?'':'disabled'}></div>
+                <div><label>Cabelos</label><input type="text" data-field="cabelos" value="${escapeHtml(f.cabelos)}" ${editable?'':'disabled'}></div>
+              </div>
+              <label>Marcas de Distinção</label>
+              <textarea data-field="marcasDistincao" style="min-height:40px;" ${editable?'':'disabled'}>${escapeHtml(f.marcasDistincao)}</textarea>
+              <label>Detalhes</label>
+              <textarea data-field="detalhes" style="min-height:40px;" ${editable?'':'disabled'}>${escapeHtml(f.detalhes)}</textarea>
+            </div>
+
+            <div class="panel-box">
+              <h3>Personalidade</h3>
+              <div class="field-row">
+                <div><label>Objetivo</label><input type="text" data-field="objetivo" value="${escapeHtml(f.objetivo)}" ${editable?'':'disabled'}></div>
+                <div><label>Motivação</label><input type="text" data-field="motivacao" value="${escapeHtml(f.motivacao)}" ${editable?'':'disabled'}></div>
+              </div>
+              <div class="field-row">
+                <div><label>Virtude</label><input type="text" data-field="virtude" value="${escapeHtml(f.virtude)}" ${editable?'':'disabled'}></div>
+                <div><label>Vício</label><input type="text" data-field="vicio" value="${escapeHtml(f.vicio)}" ${editable?'':'disabled'}></div>
+              </div>
+              <textarea data-field="personalidadeExtra" placeholder="Notas adicionais de personalidade…" ${editable?'':'disabled'}>${escapeHtml(f.personalidadeExtra)}</textarea>
+            </div>
+
+            <div class="panel-box">
+              <h3>História</h3>
+              <textarea data-field="historia" style="min-height:120px;" ${editable?'':'disabled'}>${escapeHtml(f.historia)}</textarea>
+            </div>
+
+            <div class="panel-box">
+              <h3>Juramentos</h3>
+              <textarea data-field="juramentos" ${editable?'':'disabled'}>${escapeHtml(f.juramentos)}</textarea>
+              <h3 style="margin-top:.7rem;">Obrigações</h3>
+              <textarea data-field="obrigacoes" ${editable?'':'disabled'}>${escapeHtml(f.obrigacoes)}</textarea>
+              <h3 style="margin-top:.7rem;">Aliados</h3>
+              <textarea data-field="aliados" ${editable?'':'disabled'}>${escapeHtml(f.aliados)}</textarea>
+              <h3 style="margin-top:.7rem;">Inimigos</h3>
+              <textarea data-field="inimigos" ${editable?'':'disabled'}>${escapeHtml(f.inimigos)}</textarea>
+            </div>`}`;
+  }
   function wireExperienciaPainel(id){
     const btnEvoluir = document.getElementById('btnEvoluir');
     if(btnEvoluir) btnEvoluir.addEventListener('click', ()=>{
@@ -3553,13 +3638,6 @@
     el.textContent = kind==='saving' ? '● salvando…' : kind==='saved' ? '✓ salvo' : kind==='error' ? '⚠ falhou' : '';
   }
 
-  /* soma quantos Pontos de Destino estão "presos" em qualidades (a maioria custa 1 PD; algumas
-     custam mais e guardam isso em q.custo — ver criação de personagem). Defeitos não contam,
-     eles concedem PD, não consomem. Usado só como referência visual, não altera o campo
-     "Pontos de Destino" (que continua sendo o saldo livre, editado manualmente). */
-  function pdInvestidoEmVantagens(f){
-    return (f.qualidadesLista||[]).filter(q=> q.tipo==='qualidade').reduce((s,q)=> s + (q.custo||1), 0);
-  }
   function calc(f){
     const h = f.habilidades;
     const aeksio = (h.vontade||0)*4 + Math.ceil((f.magiaBonusEspecialidade||0)/2);
@@ -3823,6 +3901,7 @@
                   <div class="qd-row" data-toggleqd="${i}">
                     <span class="qd-toggle-icon">▸</span>
                     <span class="qd-nome">${q.tipo==='qualidade'?'✨':'⚠️'} ${escapeHtml(q.nome)}</span>
+                    ${q.tipo==='qualidade'?`<input type="number" class="qd-custo-input" data-arr="qualidadesLista.${i}.custo" value="${q.custo!=null?q.custo:1}" min="0" step="1" title="Pontos de Destino investidos nesta vantagem" ${editable?'':'disabled'} style="width:50px;text-align:center;flex-shrink:0;">`:''}
                     ${editable?`<button class="qd-notas-btn" data-notasqd="${i}" title="Adicionar/editar notas">✎</button>`:''}
                     ${editable?`<button class="row-del" data-delqd="${i}" title="Remover">×</button>`:''}
                   </div>
@@ -3862,7 +3941,6 @@
               <textarea data-field="qualidadesDefeitos" placeholder="observações livres, qualidades/defeitos caseiros etc." ${editable?'':'disabled'}>${escapeHtml(f.qualidadesDefeitos)}</textarea>
               <div class="field-row" style="margin-top:.5rem;">
                 <div style="max-width:140px;"><label>Pontos de Destino</label><input type="number" data-field="pontosDestino" value="${f.pontosDestino}" ${editable?'':'disabled'}></div>
-                <div style="max-width:200px;"><label title="Soma automática do custo (normalmente 1 PD cada) das qualidades listadas acima">Investidos em vantagens</label><input type="text" value="${pdInvestidoEmVantagens(f)}" disabled></div>
               </div>
               <label style="margin-top:.7rem;">Registro de usos de Pontos de Destino</label>
               <div id="pdUsosWrap">${(f.pontosDestinoUsos||[]).map((u,i)=> `
@@ -3873,6 +3951,8 @@
               </div>
               ${editable?`<button class="btn add-row-btn" id="btnAddPdUso">+ Registrar uso</button>`:''}
             </div>
+
+            ${f.magiaFeiticeiro ? renderExtraSecoesHtml(f, id, isNPC, editable, historicoAberto, evoDraft) : ''}
           </div>
 
           <div>
@@ -3958,6 +4038,7 @@
               </div>
               <div class="field-row">
                 <div><label>Dificuldade acumulada atual</label><input type="number" data-field="magiaDificuldadeAcumulada" value="${f.magiaDificuldadeAcumulada||0}" min="0" ${editable?'':'disabled'}></div>
+                <div><label title="Cada ponto aqui vale 1 grau de sucesso: +1 soma +3 ao resultado do teste, -1 subtrai 3. Fica salvo na ficha e entra em toda rolagem de conjuração até você mudar.">Modificadores (graus de sucesso)</label><input type="number" data-field="magiaModificadores" value="${f.magiaModificadores||0}" ${editable?'':'disabled'}></div>
               </div>
               ${editable?`
               <div class="login-actions" style="margin-top:.5rem;">
@@ -3967,7 +4048,7 @@
               <div class="field-row" style="margin-top:.6rem;">
                 <div><label>Dificuldade (DT)</label><input type="number" id="magiaDtInput" value="6" min="0"></div>
                 <div><label>Dados de penalidade extra</label><input type="number" id="magiaPenalidadeInput" value="0" min="0" title="Ferimentos e lesões já entram automaticamente — isso é só uma penalidade adicional, se houver"></div>
-                <div><label>Modificador</label><input type="number" id="magiaModificadorInput" value="0"></div>
+                <div><label title="Ajuste avulso só pra esta rolagem (some direto ao resultado, não é salvo).">Modificador único (esta rolagem)</label><input type="number" id="magiaModificadorInput" value="0"></div>
               </div>
               <button class="btn primary" id="btnRolarMagia" type="button" style="margin-top:.4rem;width:100%;">🎲 Rolar conjuração</button>
               <div id="magiaRollResult" style="margin-top:.5rem;"></div>`:''}
@@ -3982,87 +4063,57 @@
                   <tr><td>12</td><td>Magia poderosa</td><td>Derrubar porta, afetar vários alvos, curar uma lesão.</td></tr>
                   <tr><td>15</td><td>Magia extraordinária</td><td>Controlar alguém, tempestade pequena, transformar um corpo.</td></tr>
                   <tr><td>18</td><td>Magia lendária</td><td>Ressuscitação imperfeita, alterar memórias, destruir construção.</td></tr>
-                  <tr><td>21+</td><td>Magia mítica</td><td>Criar vida, mudar o clima de uma região, despertar um dragão.</td></tr>
+                  <tr><td>21</td><td>Magia mítica</td><td>Criar vida simples; alterar drasticamente o terreno; levantar uma construção inteira do chão; mudar o clima de uma cidade; despertar uma criatura ancestral.</td></tr>
+                  <tr><td>24</td><td>Magia mítica maior</td><td>Ressuscitar alguém sem sequelas graves; criar uma criatura inteligente; destruir uma fortaleza; provocar uma tempestade sobre uma grande região.</td></tr>
+                  <tr><td>27</td><td>Magia transcendental</td><td>Alterar permanentemente uma região; criar uma espécie de criatura; destruir uma pequena cidade; abrir um portal de grande escala; modificar um fenômeno natural.</td></tr>
+                  <tr><td>30</td><td>Magia colossal</td><td>Alterar o curso de um rio; devastar uma cidade; criar uma montanha ou vale; provocar uma tempestade que cobre uma região inteira; manter um enorme encantamento por anos.</td></tr>
+                  <tr><td>33</td><td>Magia apocalíptica</td><td>Destruir uma cidade inteira; alterar permanentemente o clima de uma região; criar um desastre natural de grandes proporções; abrir uma passagem entre planos.</td></tr>
+                  <tr><td>36</td><td>Magia divina</td><td>Alterar uma região inteira de maneira permanente; ressuscitar multidões; mudar radicalmente um ecossistema; destruir uma cidade sem esforço direto; subjugar uma criatura colossal.</td></tr>
+                  <tr><td>39</td><td>Milagre</td><td>Alterar uma grande região do mundo; modificar uma lei natural local; criar vida complexa do nada; trazer de volta alguém cuja morte já se tornou um fato histórico.</td></tr>
+                  <tr><td>42</td><td>Milagre impossível</td><td>Alterar permanentemente uma parte do mundo; mudar o clima de um continente; criar uma nova forma de vida; destruir uma metrópole com um único efeito; realizar algo que deveria estar além das capacidades de qualquer mortal.</td></tr>
+                  <tr><td>45+</td><td>Poder divino</td><td>Alterações em escala continental ou maior; criação ou destruição de fenômenos naturais gigantescos; intervenção direta sobre forças fundamentais do mundo.</td></tr>
+                </tbody>
+              </table>
+
+              <label style="margin-top:.7rem;display:block;">Área de efeito (Aeksio)</label>
+              <table class="sub-table" style="margin-top:.3rem;font-size:.897rem;">
+                <thead><tr><th>Aeksio</th><th>Alvos</th><th>Área aproximada</th><th>Exemplos de área</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><td>Próprio mago</td><td>1 m²</td><td>Corpo</td></tr>
+                  <tr><td>2</td><td>Próprio mago</td><td>2 m²</td><td>Corpo + espaço imediato</td></tr>
+                  <tr><td>3</td><td>Próprio mago</td><td>3 m²</td><td>Espaço ao redor do corpo</td></tr>
+                  <tr><td>4</td><td>1 pessoa</td><td>4 m²</td><td>Uma pessoa</td></tr>
+                  <tr><td>5</td><td>1 pessoa</td><td>5 m²</td><td>Uma pessoa + espaço próximo</td></tr>
+                  <tr><td>6</td><td>1 pessoa</td><td>6 m²</td><td>Uma pessoa / criatura</td></tr>
+                  <tr><td>7</td><td>1 pessoa</td><td>8 m²</td><td>Pequeno espaço</td></tr>
+                  <tr><td>8</td><td>1 pessoa</td><td>10 m²</td><td>Pequeno cômodo</td></tr>
+                  <tr><td>9</td><td>1 pessoa</td><td>12 m²</td><td>Quarto pequeno</td></tr>
+                  <tr><td>10</td><td>1–2 pessoas</td><td>15 m²</td><td>Quarto</td></tr>
+                  <tr><td>11</td><td>1–2 pessoas</td><td>20 m²</td><td>Quarto grande</td></tr>
+                  <tr><td>12</td><td>1–2 pessoas</td><td>25 m²</td><td>Sala pequena</td></tr>
+                  <tr><td>13</td><td>1–3 pessoas</td><td>30 m²</td><td>Sala</td></tr>
+                  <tr><td>14</td><td>1–3 pessoas</td><td>40 m²</td><td>Sala grande</td></tr>
+                  <tr><td>15</td><td>1–3 pessoas</td><td>50 m²</td><td>Salão pequeno</td></tr>
+                  <tr><td>16</td><td>1–4 pessoas</td><td>60 m²</td><td>Salão</td></tr>
+                  <tr><td>17</td><td>1–4 pessoas</td><td>75 m²</td><td>Salão grande</td></tr>
+                  <tr><td>18</td><td>1–4 pessoas</td><td>100 m²</td><td>Casa pequena</td></tr>
+                  <tr><td>19</td><td>1–4 pessoas</td><td>125 m²</td><td>Casa</td></tr>
+                  <tr><td>20</td><td>1–5 pessoas</td><td>150 m²</td><td>Casa grande</td></tr>
+                  <tr><td>21</td><td>1–5 pessoas</td><td>200 m²</td><td>Casa muito grande</td></tr>
+                  <tr><td>22</td><td>2–5 pessoas</td><td>250 m²</td><td>Pequena construção / grande salão</td></tr>
+                  <tr><td>23</td><td>3–7 pessoas</td><td>300 m²</td><td>Construção pequena</td></tr>
+                  <tr><td>24</td><td>5–10 pessoas</td><td>400 m²</td><td>Construção média</td></tr>
+                  <tr><td>25</td><td>5–10 pessoas</td><td>500 m²</td><td>Casa enorme / pequeno pátio</td></tr>
+                  <tr><td>26</td><td>10–20 pessoas</td><td>750 m²</td><td>Grande edifício</td></tr>
+                  <tr><td>27</td><td>10–25 pessoas</td><td>1.000 m²</td><td>Pequeno complexo</td></tr>
+                  <tr><td>28</td><td>20–40 pessoas</td><td>1.500 m²</td><td>Grande complexo / pátio</td></tr>
+                  <tr><td>29</td><td>25–50 pessoas</td><td>2.000 m²</td><td>Praça / grande construção</td></tr>
+                  <tr><td>30</td><td>50–100 pessoas</td><td>2.500 m²</td><td>Grande praça / pequeno campo / complexo inteiro</td></tr>
                 </tbody>
               </table>` : ''}
             </div>
 
-            <div class="panel-box">
-              <h3>⭐ Experiência</h3>
-              <div class="xp-totais-row">
-                <div class="xp-stat-box"><div class="xp-stat-value">${f.experienciaTotal||0}</div><div class="xp-stat-label">Total</div></div>
-                <div class="xp-stat-box"><div class="xp-stat-value">${(f.experienciaTotal||0)-(f.experienciaGasta||0)}</div><div class="xp-stat-label">Atual (disponível)</div></div>
-              </div>
-              ${editable && evoDraft && evoDraft.fichaId===id ? renderEvoDraftHtml(f,id) : `
-              <div class="login-actions" style="margin-top:.6rem;">
-                ${editable?'<button class="btn primary" id="btnEvoluir" style="flex:1;">📈 Evoluir</button>':''}
-                <button class="btn" id="btnHistoricoXP" title="Histórico de avanços">💬</button>
-              </div>`}
-              <div id="historicoXPPainel" style="${historicoAberto===id?'':'display:none;'}margin-top:.7rem;max-height:260px;overflow-y:auto;">
-                ${historicoAberto===id ? renderHistoricoXPHtml(f) : ''}
-              </div>
-            </div>
-
-            <div class="panel-box">
-              <h3>💰 Carteira</h3>
-              <table class="sub-table" style="font-size:.944rem;">
-                <tbody>
-                  ${MOEDAS.slice().reverse().map(m=>`
-                  <tr>
-                    <td style="white-space:nowrap;">${m.label}</td>
-                    <td><input type="number" min="0" data-field="moedas.${m.key}" value="${(f.moedas&&f.moedas[m.key])||0}" style="width:80px;" ${editable?'':'disabled'}></td>
-                  </tr>`).join('')}
-                </tbody>
-              </table>
-              <div style="font-size:.897rem;color:var(--muted);margin-top:.5rem;">Total: <strong style="color:var(--gold-bright);">${moedaTotalVintens(f.moedas)}</strong> vinténs de cobre</div>
-              ${editable?`<button class="btn add-row-btn" id="btnAbrirCalculadora" style="width:100%;margin-top:.6rem;">🧮 Calculadora de Compra</button>`:''}
-            </div>
-
-            ${isNPC ? '' : `
-            <div class="panel-box">
-              <h3>Aparência</h3>
-              <div class="field-row">
-                <div><label>Altura</label><input type="text" data-field="altura" value="${escapeHtml(f.altura)}" ${editable?'':'disabled'}></div>
-                <div><label>Peso</label><input type="text" data-field="peso" value="${escapeHtml(f.peso)}" ${editable?'':'disabled'}></div>
-              </div>
-              <div class="field-row">
-                <div><label>Olhos</label><input type="text" data-field="olhos" value="${escapeHtml(f.olhos)}" ${editable?'':'disabled'}></div>
-                <div><label>Cabelos</label><input type="text" data-field="cabelos" value="${escapeHtml(f.cabelos)}" ${editable?'':'disabled'}></div>
-              </div>
-              <label>Marcas de Distinção</label>
-              <textarea data-field="marcasDistincao" style="min-height:40px;" ${editable?'':'disabled'}>${escapeHtml(f.marcasDistincao)}</textarea>
-              <label>Detalhes</label>
-              <textarea data-field="detalhes" style="min-height:40px;" ${editable?'':'disabled'}>${escapeHtml(f.detalhes)}</textarea>
-            </div>
-
-            <div class="panel-box">
-              <h3>Personalidade</h3>
-              <div class="field-row">
-                <div><label>Objetivo</label><input type="text" data-field="objetivo" value="${escapeHtml(f.objetivo)}" ${editable?'':'disabled'}></div>
-                <div><label>Motivação</label><input type="text" data-field="motivacao" value="${escapeHtml(f.motivacao)}" ${editable?'':'disabled'}></div>
-              </div>
-              <div class="field-row">
-                <div><label>Virtude</label><input type="text" data-field="virtude" value="${escapeHtml(f.virtude)}" ${editable?'':'disabled'}></div>
-                <div><label>Vício</label><input type="text" data-field="vicio" value="${escapeHtml(f.vicio)}" ${editable?'':'disabled'}></div>
-              </div>
-              <textarea data-field="personalidadeExtra" placeholder="Notas adicionais de personalidade…" ${editable?'':'disabled'}>${escapeHtml(f.personalidadeExtra)}</textarea>
-            </div>
-
-            <div class="panel-box">
-              <h3>História</h3>
-              <textarea data-field="historia" style="min-height:120px;" ${editable?'':'disabled'}>${escapeHtml(f.historia)}</textarea>
-            </div>
-
-            <div class="panel-box">
-              <h3>Juramentos</h3>
-              <textarea data-field="juramentos" ${editable?'':'disabled'}>${escapeHtml(f.juramentos)}</textarea>
-              <h3 style="margin-top:.7rem;">Obrigações</h3>
-              <textarea data-field="obrigacoes" ${editable?'':'disabled'}>${escapeHtml(f.obrigacoes)}</textarea>
-              <h3 style="margin-top:.7rem;">Aliados</h3>
-              <textarea data-field="aliados" ${editable?'':'disabled'}>${escapeHtml(f.aliados)}</textarea>
-              <h3 style="margin-top:.7rem;">Inimigos</h3>
-              <textarea data-field="inimigos" ${editable?'':'disabled'}>${escapeHtml(f.inimigos)}</textarea>
-            </div>`}
+            ${f.magiaFeiticeiro ? '' : renderExtraSecoesHtml(f, id, isNPC, editable, historicoAberto, evoDraft)}
           </div>
         </div>
       </div>`;
@@ -4102,7 +4153,7 @@
     if(btnRolagemLivre) btnRolagemLivre.addEventListener('click', ()=> rolarLivreDaFicha(id));
     editor.querySelectorAll('[data-toggleqd]').forEach(row=>{
       row.addEventListener('click', (ev)=>{
-        if(ev.target.closest('.row-del') || ev.target.closest('.qd-notas-btn')) return;
+        if(ev.target.closest('.row-del') || ev.target.closest('.qd-notas-btn') || ev.target.closest('.qd-custo-input')) return;
         const item = row.closest('.qd-item');
         const desc = item.querySelector('.qd-desc');
         const abrindo = desc.style.display === 'none';
@@ -4520,21 +4571,24 @@
       const bonus = f2.magiaBonusEspecialidade || 0;
       const penalidadeManual = parseInt(document.getElementById('magiaPenalidadeInput').value,10) || 0;
       const modificador = parseInt(document.getElementById('magiaModificadorInput').value,10) || 0;
+      const modGraus = f2.magiaModificadores || 0;
+      const modGrausBonus = modGraus * 3;
       const pen = penalidadesFerimentosLesoes(f2);
       const penalidade = penalidadeManual + pen.penalty;
       const dt = parseInt(document.getElementById('magiaDtInput').value,10) || 0;
       const acumulada = f2.magiaDificuldadeAcumulada || 0;
       const dificuldadeFinal = dt + acumulada;
-      const {rolls, discarded, total} = rollDiceCore(grad, bonus, penalidade, modificador + pen.mod);
+      const modTotal = modificador + pen.mod + modGrausBonus;
+      const {rolls, discarded, total} = rollDiceCore(grad, bonus, penalidade, modTotal);
       const diceHtml = buildDiceHtml(rolls, discarded);
       const outcome = outcomeHtmlFor(total, dificuldadeFinal);
       const resultEl = document.getElementById('magiaRollResult');
       if(resultEl) resultEl.innerHTML = `
-        <div style="font-size:.944rem;color:var(--muted);margin-bottom:.3rem;">Conhecimento ${grad}${bonus?' +'+bonus+'B':''}${penalidade?' -'+penalidade+'D':''}${modificador?(modificador>0?' +'+modificador:' '+modificador):''} vs Dificuldade ${dificuldadeFinal} (DT ${dt} + acumulada ${acumulada})</div>
+        <div style="font-size:.944rem;color:var(--muted);margin-bottom:.3rem;">Conhecimento ${grad}${bonus?' +'+bonus+'B':''}${penalidade?' -'+penalidade+'D':''}${modificador?(modificador>0?' +'+modificador:' '+modificador):''}${modGrausBonus?(modGrausBonus>0?' +'+modGrausBonus+' (modificador)':' '+modGrausBonus+' (modificador)'):''} vs Dificuldade ${dificuldadeFinal} (DT ${dt} + acumulada ${acumulada})</div>
         <div>${diceHtml}</div>
         <div style="margin-top:.4rem;font-family:'Cinzel',serif;font-size:1.888rem;color:var(--gold-bright);">${total}</div>
         ${outcome}`;
-      recordRollHistoryMagia(f2.nome || 'Ficha', grad, bonus, penalidade, modificador + pen.mod, total, dificuldadeFinal, f2.rollVisibility==='privada', rolls, discarded);
+      recordRollHistoryMagia(f2.nome || 'Ficha', grad, bonus, penalidade, modTotal, total, dificuldadeFinal, f2.rollVisibility==='privada', rolls, discarded);
       f2.magiaDificuldadeAcumulada = acumulada + 1;
       scheduleFichaSave(id, f2);
       const acumInput = editor.querySelector('[data-field="magiaDificuldadeAcumulada"]');
@@ -4571,7 +4625,8 @@
     const f = fichasCache[id];
     const path = el.dataset.arr; // ex: armaduras.0.nome
     const parts = path.split('.');
-    f[parts[0]][parseInt(parts[1],10)][parts[2]] = el.value;
+    const val = el.type === 'number' ? (parseFloat(el.value) || 0) : el.value;
+    f[parts[0]][parseInt(parts[1],10)][parts[2]] = val;
     scheduleFichaSave(id, f);
   }
 
@@ -7031,6 +7086,16 @@
   function linhaTempoAtualEhEditavel(){
     return linhaTempoPodeEditar(linhasTempoCache[linhaTempoSelecionadaId]);
   }
+  /* excluir é mais restrito que editar: editores convidados podem adicionar/editar eventos,
+     mas só o Mestre ou quem criou aquela linha do tempo pode excluir eventos dela */
+  function linhaTempoPodeExcluir(l){
+    if(!l) return false;
+    if(session.role === 'mestre') return true;
+    return l.ownerName === session.playerName;
+  }
+  function linhaTempoAtualPodeExcluir(){
+    return linhaTempoPodeExcluir(linhasTempoCache[linhaTempoSelecionadaId]);
+  }
 
   function subscribeLinhaTempo(){
     if(unsubLinhasTempo) unsubLinhasTempo();
@@ -7074,6 +7139,7 @@
     if(linhaId === 'mestre') return;
     const l = linhasTempoCache[linhaId];
     if(!l) return;
+    if(!linhaTempoPodeExcluir(l)){ toast('Só o Mestre ou quem criou esta linha do tempo pode excluí-la.'); return; }
     if(!confirm(`Excluir a linha do tempo "${l.nome||'Sem nome'}" e todos os seus eventos? Essa ação não pode ser desfeita.`)) return;
     linhaTempoEventosCol(linhaId).get().then(snap=>{
       const batchDel = snap.docs.map(doc=> doc.ref.delete());
@@ -7336,6 +7402,7 @@
     const itemsRow = document.getElementById('ltItemsRow');
     if(!itemsRow) return; // aba ainda não foi aberta nesta sessão
     const podeEditar = linhaTempoAtualEhEditavel();
+    const podeExcluir = linhaTempoAtualPodeExcluir();
     const eventos = Object.keys(linhaTempoEventosCache)
       .map(id=> Object.assign({id}, linhaTempoEventosCache[id]))
       .sort((a,b)=> ltChaveOrdenacao(a) - ltChaveOrdenacao(b));
@@ -7369,9 +7436,9 @@
         <div class="lt-card">
           <div class="lt-card-title">${escapeHtml(ev.titulo || 'Sem título')}</div>
           ${ev.descricao ? `<div class="lt-card-desc">${escapeHtml(ev.descricao)}</div>` : ''}
-          ${podeEditar ? `<div class="lt-card-actions">
-            <button class="lt-icon-btn" data-ltedit="${ev.id}" title="Editar">✎</button>
-            <button class="lt-icon-btn" data-ltdel="${ev.id}" title="Excluir">🗑</button>
+          ${(podeEditar || podeExcluir) ? `<div class="lt-card-actions">
+            ${podeEditar ? `<button class="lt-icon-btn" data-ltedit="${ev.id}" title="Editar">✎</button>` : ''}
+            ${podeExcluir ? `<button class="lt-icon-btn" data-ltdel="${ev.id}" title="Excluir">🗑</button>` : ''}
           </div>` : ''}
         </div>
       </div>`;
@@ -7412,7 +7479,7 @@
       <label>Cor de destaque (opcional)</label>
       <input type="color" id="ltCor" value="${editando && ev.cor ? ev.cor : '#d4a017'}" style="width:60px;height:32px;padding:2px;cursor:pointer;">
       <div class="login-actions" style="margin-top:1rem;">
-        ${editando ? '<button class="btn danger" id="ltDelBtn">Excluir</button>' : ''}
+        ${(editando && linhaTempoAtualPodeExcluir()) ? '<button class="btn danger" id="ltDelBtn">Excluir</button>' : ''}
         <button class="btn" id="ltCancelBtn">Cancelar</button>
         <button class="btn primary" id="ltSaveBtn">Salvar</button>
       </div>`;
@@ -7420,8 +7487,9 @@
     document.body.appendChild(overlay);
     overlay.addEventListener('mousedown', (ev2)=>{ if(ev2.target===overlay) overlay.remove(); });
     document.getElementById('ltCancelBtn').addEventListener('click', ()=> overlay.remove());
-    if(editando){
-      document.getElementById('ltDelBtn').addEventListener('click', ()=>{ overlay.remove(); ltExcluirEvento(id); });
+    const ltDelBtn = document.getElementById('ltDelBtn');
+    if(ltDelBtn){
+      ltDelBtn.addEventListener('click', ()=>{ overlay.remove(); ltExcluirEvento(id); });
     }
     document.getElementById('ltSaveBtn').addEventListener('click', ()=>{
       const titulo = document.getElementById('ltTitulo').value.trim();
@@ -7450,7 +7518,7 @@
   }
 
   function ltExcluirEvento(id){
-    if(!linhaTempoAtualEhEditavel()) return;
+    if(!linhaTempoAtualPodeExcluir()){ toast('Só o Mestre ou quem criou esta linha do tempo pode excluir eventos dela.'); return; }
     const ev = linhaTempoEventosCache[id];
     if(!ev) return;
     if(!confirm(`Excluir o evento "${ev.titulo}" da crônica?`)) return;
@@ -7512,6 +7580,11 @@
     return !!pasta.colaborativa && galeriaCanView(pasta);
   }
   function galeriaCanView(pasta){ return session.role === 'mestre' || pasta.ownerName === session.playerName || !!pasta.visivel; }
+  /* excluir é mais restrito que editar: numa galeria colaborativa, colaboradores podem
+     adicionar imagens, mas só o Mestre ou quem criou aquela galeria pode excluí-las */
+  function galeriaCanDelete(pasta){
+    return session.role === 'mestre' || pasta.ownerName === session.playerName;
+  }
 
   function criarPastaGaleria(){
     const nome = prompt('Nome da pasta (ex: Mapas, Retratos, Vilões):');
@@ -7596,6 +7669,7 @@
     /* compatibilidade: pastas criadas antes desta correção guardavam as imagens num array
        dentro do próprio documento da pasta (pasta.imagens) — elas continuam aparecendo aqui,
        misturadas com as novas (que já vêm da subcoleção), até serem removidas ou recriadas */
+    const podeExcluirImg = galeriaCanDelete(pasta);
     const imgsLegado = (pasta.imagens||[]).map(im=> Object.assign({legado:true}, im));
     const imgsNovas = Object.keys(galeriaImagensCache)
       .map(imgId=> Object.assign({id:imgId}, galeriaImagensCache[imgId]));
@@ -7623,7 +7697,7 @@
         ${imgs.map(img=> `<div class="diario-galeria-item" data-galeriaimgview="${img.id}" data-legado="${img.legado?'1':''}" style="width:230px;height:230px;" title="Clique para ampliar e anotar">
           <img src="${img.data}">
           ${img.legenda?'<span class="diario-galeria-item-nota" title="Tem anotação salva">📝</span>':''}
-          ${editable?`<div class="diario-imagem-del" data-galeriaimgdel="${img.id}" data-legado="${img.legado?'1':''}" title="Remover">×</div>`:''}
+          ${podeExcluirImg?`<div class="diario-imagem-del" data-galeriaimgdel="${img.id}" data-legado="${img.legado?'1':''}" title="Remover">×</div>`:''}
         </div>`).join('') || '<div class="empty-hint">Nenhuma imagem ainda.</div>'}
       </div>
     </div>`;
@@ -7635,6 +7709,7 @@
     if(colaborativaChk) colaborativaChk.addEventListener('change', ()=> saveGaleriaPasta(id, {colaborativa: colaborativaChk.checked}));
     const btnDel = document.getElementById('btnDelPastaGaleria');
     if(btnDel) btnDel.addEventListener('click', ()=>{
+      if(!galeriaCanDelete(pasta)){ toast('Só o Mestre ou quem criou esta galeria pode excluí-la.'); return; }
       if(!confirm('Excluir esta pasta e todas as imagens dentro dela? Essa ação não pode ser desfeita.')) return;
       galeriaImagensCol(id).get().then(snap=> Promise.all(snap.docs.map(d=> d.ref.delete())))
         .then(()=> galeriaPastasCol().doc(id).delete())
@@ -7686,6 +7761,7 @@
     }));
     wrap.querySelectorAll('[data-galeriaimgdel]').forEach(btn=> btn.addEventListener('click', (ev)=>{
       ev.stopPropagation();
+      if(!galeriaCanDelete(pasta)){ toast('Só o Mestre ou quem criou esta galeria pode excluir imagens dela.'); return; }
       const imgId = btn.dataset.galeriaimgdel;
       const ehLegado = btn.dataset.legado === '1';
       if(ehLegado){
