@@ -298,7 +298,7 @@
   .compra-aviso-insuficiente{color:var(--danger-bright);font-size:.897rem;margin-top:.7rem;text-align:center;}
 
   /* ===== criador de personagem (assistente passo a passo) ===== */
-  #wizardOverlay{position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:460;display:flex;align-items:center;justify-content:center;padding:1.2rem;}
+  #wizardOverlay, #wizardDragaoOverlay{position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:460;display:flex;align-items:center;justify-content:center;padding:1.2rem;}
   .wizard-box{
     width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
     background-color:var(--panel);
@@ -342,6 +342,11 @@
     padding:.6rem .8rem;font-size:.88rem;line-height:1.4;margin-bottom:.8rem;color:var(--ink-soft,var(--muted));
   }
   .intriga-lembrete strong{color:var(--gold-bright);}
+  .reput-hist-row{display:flex;align-items:flex-start;gap:.5rem;padding:.4rem 0;border-bottom:1px solid var(--line);font-size:.92rem;}
+  .reput-hist-row:last-child{border-bottom:none;}
+  .reput-hist-row .row-del{flex-shrink:0;}
+  .reput-tag-renome{color:var(--gold-bright);font-family:'Cinzel',serif;font-size:.88rem;}
+  .reput-tag-infamia{color:var(--danger-bright);font-family:'Cinzel',serif;font-size:.88rem;}
   .wizard-box-largo{max-width:920px;}
   .wizard-xp-tracker{
     background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--gold);
@@ -1093,7 +1098,8 @@
 
   <nav id="tabbar">
     <button class="tab-btn active" id="tabBtnFichas" data-tab="fichas">📜 Fichas</button>
-    <button class="tab-btn" id="tabBtnIniciativa" data-tab="iniciativa">⚔️ Combate &amp; Intriga</button>
+    <button class="tab-btn" id="tabBtnIniciativa" data-tab="iniciativa">⚔️ Combate</button>
+    <button class="tab-btn" id="tabBtnIntriga" data-tab="intriga">🎭 Intriga</button>
     <button class="tab-btn" id="tabBtnLoja" data-tab="loja">🛒 Loja</button>
     <button class="tab-btn" id="tabBtnRecompensas" data-tab="recompensas">🎁 Recompensas</button>
     <button class="tab-btn" id="tabBtnLinhaTempo" data-tab="linhatempo">🕰️ Linha do Tempo</button>
@@ -1109,6 +1115,9 @@
     </div>
     <div class="tab-pane" id="paneIniciativa">
       <div id="iniciativaWrap"></div>
+    </div>
+    <div class="tab-pane" id="paneIntriga">
+      <div id="intrigaWrap"></div>
     </div>
     <div class="tab-pane" id="paneLinhaTempo">
       <div id="linhaTempoWrap" style="position:relative;width:100%;height:100%;overflow:hidden;"></div>
@@ -1692,6 +1701,7 @@
     subscribeFichas();
     subscribeMapas();
     subscribeIniciativa();
+    subscribeIntriga();
     subscribeRolagens();
     subscribeLojas();
     subscribeDiarios();
@@ -1762,7 +1772,7 @@
   }
 
   /* ============ abas ============ */
-  const TAB_PANE_MAP = { fichas:'paneFichas', iniciativa:'paneIniciativa', loja:'paneLoja', recompensas:'paneRecompensas', linhatempo:'paneLinhaTempo', diario:'paneDiario', galerias:'paneGalerias', quadro:'paneQuadro' };
+  const TAB_PANE_MAP = { fichas:'paneFichas', iniciativa:'paneIniciativa', intriga:'paneIntriga', loja:'paneLoja', recompensas:'paneRecompensas', linhatempo:'paneLinhaTempo', diario:'paneDiario', galerias:'paneGalerias', quadro:'paneQuadro' };
   function switchTab(tabName){
     const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
     if(!btn || btn.style.display==='none') return;
@@ -1771,6 +1781,7 @@
     document.querySelectorAll('.tab-pane').forEach(p=> p.classList.remove('active'));
     document.getElementById(TAB_PANE_MAP[tabName]).classList.add('active');
     if(tabName==='iniciativa') renderIniciativaTab();
+    if(tabName==='intriga') renderIntrigaTab();
     if(tabName==='loja') renderLojaTab();
     if(tabName==='recompensas') renderRecompensasTab();
     if(tabName==='linhatempo') renderLinhaTempoTab();
@@ -1793,6 +1804,12 @@
     lidarAnimais:'Lidar com Animais', luta:'Luta', percepcao:'Percepção', persuasao:'Persuasão', pontaria:'Pontaria',
     sobrevivencia:'Sobrevivência', status:'Status', vigor:'Vigor', vontade:'Vontade'
   };
+  /* Dragões não têm as habilidades "humanas demais" pra sua natureza — sem mãos pra ladinagem,
+     sem fala pra idioma ou persuasão articulada, sem instrução formal pra conhecimento/cura, e
+     sem sutileza pra enganação ou empatia detalhada pra lidar com animais (eles PRÓPRIOS são o
+     animal). Usado tanto no criador de dragão quanto na ficha completa pra esconder essas linhas. */
+  const HABILIDADES_EXCLUIDAS_DRAGAO = ['conhecimento','cura','enganacao','idioma','ladinagem','lidarAnimais','persuasao'];
+  const HABILIDADES_DRAGAO = HABILIDADES.filter(h=> !HABILIDADES_EXCLUIDAS_DRAGAO.includes(h));
   /* Tabela 4-1 do livro: especialidades oficiais de cada habilidade, usadas pra popular o
      seletor de "+ Especialidade" na ficha (além da opção de digitar uma personalizada). */
   const ESPECIALIDADES_CATALOGO = {
@@ -1967,6 +1984,7 @@
       objetivo:'', motivacao:'', virtude:'', vicio:'', personalidadeExtra:'',
       historia:'', juramentos:'', obrigacoes:'', aliados:'', inimigos:'',
       moedas:{vintem:0,luaPrata:0,dragaoOuro:0}, equipamentosGerais:[], experiencia:0, experienciaTotal:0, experienciaGasta:0, historicoXP:[],
+      reputacao:{renome:0, infamia:0, historico:[]},
       updatedAt: null
     };
   }
@@ -1989,6 +2007,7 @@
       armaduras:[], armas:[],
       magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0, magiaModificadores:0,
       moedas:{vintem:0,luaPrata:0,dragaoOuro:0}, equipamentosGerais:[], experiencia:0, experienciaTotal:0, experienciaGasta:0, historicoXP:[],
+      reputacao:{renome:0, infamia:0, historico:[]},
       updatedAt: null
     };
   }
@@ -2043,13 +2062,13 @@
       snap.forEach(doc=> fichasCache[doc.id] = doc.data());
       renderFichasList();
       if(currentEditingId && fichasCache[currentEditingId]) refreshEditorReadonlyBits();
-      /* mantém a ficha resumida da aba Combate & Intriga sempre em dia com a ficha completa
+      /* mantém a ficha resumida das abas Combate e Intriga sempre em dia com a ficha completa
          (nome, stats, habilidades, armas, qualidades, ferimentos/lesões etc.), sem precisar
          reabrir a aba. Ignoramos o eco da própria escrita ainda pendente de confirmação e
          evitamos reconstruir a lista enquanto alguém estiver digitando nela (mesmo motivo do
          fix do diário — não queremos tirar o foco de quem está adicionando um combatente avulso
          ou editando um valor de iniciativa). */
-      if(!snap.metadata.hasPendingWrites) renderIniciativaTabPreservandoFoco();
+      if(!snap.metadata.hasPendingWrites){ renderIniciativaTabPreservandoFoco(); renderIntrigaTabPreservandoFoco(); }
     }, err=>{ console.error(err); toast('Erro de conexão: ' + err.message); });
   }
 
@@ -2069,6 +2088,11 @@
       addCard.textContent = '+ Nova ficha';
       addCard.addEventListener('click', ()=> createFicha());
       cardsEl.appendChild(addCard);
+      const addCardDragao = document.createElement('div');
+      addCardDragao.className = 'new-ficha-card';
+      addCardDragao.textContent = '🐉 + Ficha de Dragão';
+      addCardDragao.addEventListener('click', ()=> createFichaDragao());
+      cardsEl.appendChild(addCardDragao);
       if(!mine.length){
         const hint = document.createElement('div');
         hint.className='empty-hint';
@@ -2125,6 +2149,11 @@
       addCard.textContent = '+ Nova ficha';
       addCard.addEventListener('click', ()=> createFicha());
       addWrapMestre.appendChild(addCard);
+      const addCardDragao = document.createElement('div');
+      addCardDragao.className = 'new-ficha-card';
+      addCardDragao.textContent = '🐉 + Ficha de Dragão';
+      addCardDragao.addEventListener('click', ()=> createFichaDragao());
+      addWrapMestre.appendChild(addCardDragao);
       const addCardNPC = document.createElement('div');
       addCardNPC.className = 'new-ficha-card';
       addCardNPC.textContent = '👑 + Ficha de NPC Importante';
@@ -2156,21 +2185,27 @@
   function buildFichaCard(id){
     const f = fichasCache[id];
     const isNPC = f.tipo === 'npcImportante';
+    const isDragao = f.tipo === 'dragao';
     const card = document.createElement('div');
     card.className = 'ficha-card with-photo';
     const photoHtml = f.foto
       ? `<div class="fc-photo"><img src="${f.foto}" style="object-position:${(f.fotoPos&&f.fotoPos.x)||50}% ${(f.fotoPos&&f.fotoPos.y)||50}%;transform:scale(${(f.fotoPos&&f.fotoPos.zoom)||1});"></div>`
-      : `<div class="fc-photo" style="display:flex;align-items:center;justify-content:center;font-size:1.534rem;color:var(--muted);">${isNPC?'👑':'👤'}</div>`;
+      : `<div class="fc-photo" style="display:flex;align-items:center;justify-content:center;font-size:1.534rem;color:var(--muted);">${isNPC?'👑':(isDragao?'🐉':'👤')}</div>`;
     card.innerHTML = isNPC ? `${photoHtml}
       <div class="fc-body">
         <div class="fc-name">👑 ${escapeHtml(f.nome || 'Sem nome')}</div>
         <div class="fc-meta">${escapeHtml(f.faccao||'')}</div>
+      </div>` : (isDragao ? `${photoHtml}
+      <div class="fc-body">
+        <div class="fc-name">🐉 ${escapeHtml(f.nome || 'Sem nome')}</div>
+        <div class="fc-meta">${escapeHtml(f.casa||'')} ${f.idade ? '· '+escapeHtml(String(f.idade)):''}</div>
+        <div class="fc-meta">${escapeHtml(f.descricaoMote||'')}</div>
       </div>` : `${photoHtml}
       <div class="fc-body">
         <div class="fc-name">${escapeHtml(f.nome || 'Sem nome')}</div>
         <div class="fc-meta">${escapeHtml(f.casa||'')} ${f.idade ? '· '+escapeHtml(String(f.idade))+' anos':''}</div>
         <div class="fc-meta">${escapeHtml(f.descricaoMote||'')}</div>
-      </div>`;
+      </div>`);
     card.addEventListener('click', ()=> openEditor(id));
     return card;
   }
@@ -2470,6 +2505,572 @@
       // deve ser o nome de outra qualidade
       return qualidadesEscolhidas.some(q=> q.toLowerCase() === parte.toLowerCase());
     });
+  }
+
+  /* ============================================================================
+     ============ CRIADOR DE DRAGÃO (assistente passo a passo dedicado) ==========
+     ============================================================================
+     Dragões são criados como se fossem personagens (mesmas 19 habilidades,
+     mesma lógica de XP acumulado), mas não usam armas manufaturadas — só armas
+     e defesas naturais. À medida que crescem, investem XP exclusivamente em
+     Armadura Natural, Baforada, Presas/Garras e outras Vantagens de Dragão.
+     Possuem 4 idades (Pequeno → Jovem → Adulto → Ancião): ficam mais fortes e
+     resistentes, mas perdem o teto máximo de Agilidade a cada estágio. A Saúde
+     de um dragão usa Vigor × 4 (um multiplicador a mais que um humano, ×3). */
+
+  const DRAGAO_IDADES = ['Pequeno','Jovem','Adulto','Ancião'];
+  const DRAGAO_IDADE_INFO = {
+    'Pequeno': {
+      agilidadeMax: 7, gradMax: 10, xpHabilidades: 210, xpEspecialidades: 50, xpVantagens: 40,
+      desc: 'Recém-saído do ovo ou com poucos anos de vida — do tamanho de um cavalo grande. Ainda ágil e veloz, mas mal começou a desenvolver escamas resistentes ou fogo de verdade.'
+    },
+    'Jovem': {
+      agilidadeMax: 6, gradMax: 12, xpHabilidades: 280, xpEspecialidades: 70, xpVantagens: 90,
+      desc: 'Já voa com folga e caça sozinho — do tamanho de uma casa pequena. Mais forte e perigoso que um filhote, mas ainda rápido no ar e no chão.'
+    },
+    'Adulto': {
+      agilidadeMax: 5, gradMax: 14, xpHabilidades: 360, xpEspecialidades: 100, xpVantagens: 150,
+      desc: 'Um terror consagrado nos céus, massivo o bastante pra esmagar muralhas. Sua mobilidade já não é o que era quando filhote, mas seu poder de fogo e sua blindagem natural compensam.'
+    },
+    'Ancião': {
+      agilidadeMax: 4, gradMax: 16, xpHabilidades: 460, xpEspecialidades: 140, xpVantagens: 220,
+      desc: 'Uma lenda viva, tão grande quanto castelos inteiros. Lento e pesado perto do que já foi, mas quase indestrutível e capaz de decidir guerras sozinho.'
+    }
+  };
+
+  /* Dragões não têm objetivos, motivações, virtudes ou vícios como personagens — suas emoções
+     são mais simples e mais viscerais, resumidas num único Temperamento. */
+  const TEMPERAMENTOS_DRAGAO = [
+    {chave:'sanguineo',   nome:'Sanguíneo',   emoji:'🩸', tracos:'Impulso, paixão, curiosidade',        desc:'Age primeiro, pensa depois; ama caçar, voar, brincar e testar seus limites.'},
+    {chave:'melancolico', nome:'Melancólico', emoji:'🌑', tracos:'Intensidade, memória, introspecção',   desc:'Guarda rancores, vínculos e experiências por décadas; observa antes de agir.'},
+    {chave:'fleumatico',  nome:'Fleumático',  emoji:'🌊', tracos:'Calma, paciência, estabilidade',       desc:'Quase impossível de provocar; espera o momento certo e conserva energia.'},
+    {chave:'colerico',    nome:'Colérico',    emoji:'🔥', tracos:'Dominação, agressividade, vontade',    desc:'Quer impor sua presença; responde a desafios com força esmagadora.'}
+  ];
+  function temperamentoInfo(chave){
+    return TEMPERAMENTOS_DRAGAO.find(t=> t.chave===chave) || null;
+  }
+
+  const DESVANTAGENS_CATALOGO_DRAGAO = [
+    {nome:'Fome Insaciável', efeito:'Precisa se alimentar com frequência incomum; passar mais de dois dias sem caçar ou comer lhe custa -1D em todos os testes até se alimentar novamente.'},
+    {nome:'Orgulho Feroz', efeito:'Nunca recua nem pede ajuda, mesmo em desvantagem clara — encara fuga como humilhação inaceitável.'},
+    {nome:'Vínculo Frágil', efeito:'Depende emocionalmente de um único cavaleiro, guardião ou companheiro. Se ele for ferido, capturado ou morto, sofre -2 em todos os testes até superar a perda.'},
+    {nome:'Temor a Aço Valiriano', efeito:'Hesita instintivamente diante de armas de aço valiriano ou chifres de dragão — precisa de um teste de Vontade Desafiador (9) pra atacar quem as porta abertamente.'},
+    {nome:'Escamas Imaturas', efeito:'Sua couraça natural ainda não está completamente formada. Reduz sua Saúde em -2.'},
+    {nome:'Fúria Cega', efeito:'Uma vez provocado além do limite, ataca o alvo mais próximo — aliado ou não — até se acalmar ou ser subjugado.'},
+    {nome:'Marca de Nascença Fraca', efeito:'Nasceu menor ou mais frágil que o normal da ninhada. Escolha uma habilidade física (Agilidade, Atletismo ou Vigor): sofre -1D em todos os testes com ela.'},
+    {nome:'Desconfiado de Forasteiros', efeito:'Não se deixa montar ou comandar por ninguém fora de seu vínculo original — qualquer tentativa exige um teste de Lidar com Animais ou Persuasão Formidável (12).'}
+  ];
+
+  /* Tabela de Vantagens de Dragão — o equivalente às Qualidades humanas, mas comprado com XP em vez
+     de Pontos de Destino. "arma" gera automaticamente uma arma natural na ficha; "bonusDefesa" e
+     "bonusSaude" somam diretamente aos campos já existentes na ficha (mesmos usados por humanos). */
+  const DRAGAO_VANTAGENS_CATALOGO = {
+    'Armas Naturais': [
+      {nome:'Presas Afiadas', exigencia:'—', custo:20, efeito:'Presas grandes e cortantes, já capazes de rasgar carne e armadura leve.', arma:{nome:'Mordida', habilidade:'luta', dano:'Atletismo+1', qualidades:'Ataque natural — não pode ser desarmado.'}},
+      {nome:'Presas Devastadoras', exigencia:'Presas Afiadas', custo:40, efeito:'A mordida se torna capaz de partir ossos e couraças inteiras.', arma:{nome:'Mordida', habilidade:'luta', dano:'Atletismo+3', qualidades:'Ataque natural, Cruel — não pode ser desarmado.'}},
+      {nome:'Garras Retráteis', exigencia:'—', custo:20, efeito:'Garras longas o bastante pra prender e rasgar presas em movimento.', arma:{nome:'Garras', habilidade:'luta', dano:'Atletismo+1', qualidades:'Ataque natural, Rápida — não pode ser desarmado.'}},
+      {nome:'Garras Trituradoras', exigencia:'Garras Retráteis', custo:40, efeito:'Suas garras conseguem despedaçar escudos, portões e armaduras pesadas.', arma:{nome:'Garras', habilidade:'luta', dano:'Atletismo+3', qualidades:'Ataque natural, Cruel, Rápida — não pode ser desarmado.'}},
+      {nome:'Chicotada de Cauda', exigencia:'—', custo:25, efeito:'Um golpe de cauda largo o bastante pra varrer vários inimigos ao redor.', arma:{nome:'Rabada', habilidade:'luta', dano:'Atletismo', qualidades:'Ataque natural, Comprida — empurra o alvo 1 passo em caso de acerto.'}}
+    ],
+    'Armadura & Resistência': [
+      {nome:'Escamas Endurecidas I', exigencia:'—', custo:20, efeito:'Escamas mais grossas que o normal da espécie. +1 Defesa em Combate, +2 Saúde.', bonusDefesa:1, bonusSaude:2},
+      {nome:'Escamas Endurecidas II', exigencia:'Escamas Endurecidas I', custo:40, efeito:'A couraça natural se aprofunda ainda mais. +1 Defesa em Combate adicional, +2 Saúde adicional.', bonusDefesa:1, bonusSaude:2},
+      {nome:'Escamas Endurecidas III', exigencia:'Escamas Endurecidas II', custo:60, efeito:'Praticamente impenetrável a armas comuns. +1 Defesa em Combate adicional, +2 Saúde adicional.', bonusDefesa:1, bonusSaude:2},
+      {nome:'Couraça Draconica', exigencia:'Escamas Endurecidas II', custo:50, efeito:'Só aço valiriano, magia ou outro dragão conseguem realmente feri-lo. +2 Defesa em Combate, +4 Saúde.', bonusDefesa:2, bonusSaude:4},
+      {nome:'Vitalidade Colossal', exigencia:'—', custo:45, efeito:'Um corpo descomunalmente resistente, mesmo pros padrões da espécie. +6 Saúde.', bonusSaude:6},
+      {nome:'Regeneração Rápida', exigencia:'Vigor 5', custo:60, efeito:'Ferimentos leves se fecham em horas, não em dias. Uma vez por dia de descanso completo, remove automaticamente 1 Ferimento marcado.'}
+    ],
+    'Baforada': [
+      {nome:'Baforada de Fogo', exigencia:'—', custo:50, efeito:'Um jato de fogo abrasador, capaz de incinerar tudo à frente.', arma:{nome:'Baforada de Fogo', habilidade:'pontaria', dano:'Vigor+3', qualidades:'Área, Longo Alcance — exige uma ação menor pra recuperar o fôlego antes de usar de novo.'}},
+      {nome:'Baforada Ampliada', exigencia:'Baforada de Fogo', custo:70, efeito:'O alcance e o volume de fogo aumentam drasticamente.', arma:{nome:'Baforada de Fogo', habilidade:'pontaria', dano:'Vigor+5', qualidades:'Área Grande, Longo Alcance — exige uma ação menor pra recuperar o fôlego antes de usar de novo.'}},
+      {nome:'Sopro Ancestral', exigencia:'Baforada Ampliada', idadeMin:'Ancião', custo:100, efeito:'Um fogo lendário, quase impossível de conter — dizem que derrete aço e pedra. Ignora Armadura Natural e a maior parte das defesas mágicas comuns.', arma:{nome:'Baforada de Fogo', habilidade:'pontaria', dano:'Vigor+7', qualidades:'Área Grande, Longo Alcance, Cruel — ignora armadura natural e a maioria das defesas mágicas.'}}
+    ],
+    'Voo & Mobilidade': [
+      {nome:'Voo', exigencia:'—', custo:30, efeito:'Asas fortes o bastante pra voos curtos, caça aérea e manobras básicas. Some +4 metros ao Movimento quando estiver voando.'},
+      {nome:'Voo Veloz', exigencia:'Voo', custo:50, efeito:'Alcança grandes altitudes e velocidades de perseguição. Some mais +4 metros ao Movimento quando voando (total +8).'},
+      {nome:'Mergulho Predatório', exigencia:'Voo', custo:35, efeito:'Um ataque feito em mergulho é devastador: some sua graduação em Atletismo ao dano da primeira Mordida, Garras ou Rabada usada no combate.'}
+    ],
+    'Instinto & Presença': [
+      {nome:'Sentidos Aguçados', exigencia:'—', custo:25, efeito:'Visão, olfato e audição muito acima do normal. Some +2 aos testes de Percepção usando Notar.'},
+      {nome:'Medo Ancestral', exigencia:'—', custo:40, efeito:'Sua simples presença apavora mortais e animais comuns. Testes de Vontade ou Coragem feitos contra você sofrem -2.'},
+      {nome:'Fúria Draconica', exigencia:'—', custo:35, efeito:'Uma vez por combate, ao sofrer um Ferimento, pode entrar em fúria: +1D em todos os testes de Luta e Atletismo até o fim da cena.'},
+      {nome:'Memória Milenar', exigencia:'—', idadeMin:'Adulto', custo:30, efeito:'Guarda lembranças de eras passadas. Some +2 aos testes de Astúcia envolvendo história, magia antiga ou seus próprios feitos.'}
+    ],
+    'Vantagens Raras': [
+      {nome:'Vínculo de Sangue', exigencia:'—', custo:30, efeito:'Reconhece e aceita o comando de um único cavaleiro, guardião ou companheiro; ninguém mais consegue montá-lo ou comandá-lo sem sua permissão.'},
+      {nome:'Sangue de Fogo', exigencia:'—', idadeMin:'Ancião', custo:50, efeito:'Imune a fogo e calor extremo de qualquer origem, incluindo o próprio.'},
+      {nome:'Terror dos Céus', exigencia:'—', idadeMin:'Adulto', custo:60, efeito:'Exércitos inteiros rompem formação ao vê-lo se aproximar. Tropas comuns precisam de um teste de Vontade Desafiador (9) pra não fugir em pânico.'}
+    ]
+  };
+
+  function atendeExigenciaDragao(exigenciaTxt, idadeMin, hab, nomesEscolhidos, idadeAtual){
+    if(idadeMin && DRAGAO_IDADES.indexOf(idadeAtual) < DRAGAO_IDADES.indexOf(idadeMin)) return false;
+    return atendeExigencia(exigenciaTxt, hab, nomesEscolhidos);
+  }
+
+  function freshFichaDragao(ownerName){
+    const hab = {}; const esp = {};
+    HABILIDADES.forEach(h=>{ hab[h]=2; esp[h]=[]; });
+    HABILIDADES_EXCLUIDAS_DRAGAO.forEach(h=>{ hab[h]=0; });
+    return {
+      tipo:'dragao',
+      ownerName: ownerName,
+      rollVisibility:'publica',
+      nome:'', casa:'', idade:'', sexo:'', jogador: ownerName, descricaoMote:'', papel:'',
+      foto:null, fotoPos:{x:50,y:50,zoom:1},
+      habilidades: hab, especialidades: esp,
+      qualidadesDefeitos:'', qualidadesLista:[], pontosDestino:0, pontosDestinoUsos:[], vitorias:'',
+      frustracoes:[false,false,false,false,false,false,false],
+      ferimentos:[false,false,false,false,false,false,false],
+      lesoes:[false,false,false,false,false,false,false],
+      bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0, bonusSaude:0,
+      armaduras:[], armas:[],
+      magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0, magiaModificadores:0,
+      altura:'', peso:'', olhos:'', cabelos:'', marcasDistincao:'', detalhes:'',
+      temperamento:'', objetivo:'', motivacao:'', virtude:'', vicio:'', personalidadeExtra:'',
+      historia:'', juramentos:'', obrigacoes:'', aliados:'', inimigos:'',
+      moedas:{vintem:0,luaPrata:0,dragaoOuro:0}, equipamentosGerais:[], experiencia:0, experienciaTotal:0, experienciaGasta:0, historicoXP:[],
+      updatedAt: null
+    };
+  }
+
+  let wizStateDragao = null;
+
+  function abrirCriadorDragao(){
+    wizStateDragao = {
+      step: 1,
+      nome:'', montador:'', idade:'Jovem', cor:'', foto:null, descricaoMote:'',
+      temperamento:'',
+      habilidadesCompradas:{},
+      especialidadesCompradas:{},
+      desvantagensEscolhidas:[],
+      vantagensEscolhidas:[]
+    };
+    HABILIDADES_DRAGAO.forEach(h=>{ wizStateDragao.habilidadesCompradas[h] = 2; });
+    renderWizardDragao();
+  }
+  function fecharWizardDragao(){
+    const overlay = document.getElementById('wizardDragaoOverlay');
+    if(overlay) overlay.remove();
+    wizStateDragao = null;
+  }
+  function confirmarCancelarWizardDragao(){
+    if(confirm('Cancelar a criação deste dragão? Nada foi salvo ainda.')) fecharWizardDragao();
+  }
+
+  function renderWizardDragao(){
+    let overlay = document.getElementById('wizardDragaoOverlay');
+    const prevBody = document.querySelector('#wizardDragaoOverlay .wizard-body');
+    const scrollAntes = prevBody ? prevBody.scrollTop : 0;
+    if(!overlay){
+      overlay = document.createElement('div');
+      overlay.id = 'wizardDragaoOverlay';
+      document.body.appendChild(overlay);
+    }
+    const titulos = ['Biografia','Temperamento','Habilidades','Especialidades','Desvantagens','Vantagens de Dragão'];
+    const renderers = [wizardDragaoStep1Html, wizardDragaoStep2Html, wizardDragaoStep3Html, wizardDragaoStep4Html, wizardDragaoStep5Html, wizardDragaoStep6Html];
+    const wirers = [wireWizardDragaoStep1, wireWizardDragaoStep2, wireWizardDragaoStep3, wireWizardDragaoStep4, wireWizardDragaoStep5, wireWizardDragaoStep6];
+    let inner = renderers[wizStateDragao.step-1]();
+    overlay.innerHTML = `<div class="wizard-box wizard-box-largo">
+      <div class="wizard-header">
+        <h2>🐉 Criador de Dragão</h2>
+        <button class="loja-modal-close" id="btnFecharWizardDragao">×</button>
+      </div>
+      <div class="wizard-steps-indicator">
+        ${titulos.map((t,i)=> `<span class="${wizStateDragao.step===i+1?'ativo':''} ${wizStateDragao.step>i+1?'concluido':''}">${i+1}. ${t}</span>`).join('<span class="wizard-step-sep">→</span>')}
+      </div>
+      <div class="wizard-body">${inner}</div>
+    </div>`;
+    document.getElementById('btnFecharWizardDragao').addEventListener('click', confirmarCancelarWizardDragao);
+    overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay) confirmarCancelarWizardDragao(); }, {once:false});
+    wirers[wizStateDragao.step-1]();
+    const novoBody = document.querySelector('#wizardDragaoOverlay .wizard-body');
+    if(novoBody) novoBody.scrollTop = scrollAntes;
+  }
+
+  /* ---- Passo 1: Biografia + Idade (define os tetos de Agilidade e as tabelas de XP) ---- */
+  function wizardDragaoStep1Html(){
+    const w = wizStateDragao;
+    return `
+      <p class="wizard-intro">Vamos montar a ficha do dragão passo a passo, do mesmo jeito que se cria um personagem — só que dragões não usam armas manufaturadas, apenas suas armas e defesas naturais (compradas no Passo 6).</p>
+      <div class="field-row">
+        <div><label>Nome *</label><input type="text" id="wdNome" value="${escapeHtml(w.nome)}" placeholder="Nome do dragão"></div>
+        <div><label>Montador</label><input type="text" id="wdMontador" value="${escapeHtml(w.montador)}" placeholder="Ex: Aegon Targaryen, sem montador…"></div>
+      </div>
+      <div class="field-row">
+        <div><label>Cor das Escamas</label><input type="text" id="wdCor" value="${escapeHtml(w.cor)}" placeholder="Ex: negro como carvão, vermelho-sangue…"></div>
+      </div>
+      <div class="wizard-secao-titulo" style="margin-top:1rem;">Idade — define o quanto o dragão já cresceu</div>
+      <div class="wizard-status-grid">
+        ${DRAGAO_IDADES.map(id=>{
+          const info = DRAGAO_IDADE_INFO[id];
+          return `<div class="wizard-status-card ${w.idade===id?'selecionado':''}" data-dragidade="${id}">
+            <div class="wizard-status-nome">🐉 ${id}</div>
+            <div class="wizard-status-desc">${escapeHtml(info.desc)}</div>
+            <div class="wizard-status-exemplos">Agilidade máx.: ${info.agilidadeMax} · Outras habilidades máx.: ${info.gradMax}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <label style="margin-top:1rem;">Foto (opcional)</label>
+      <div style="display:flex;align-items:center;gap:.9rem;margin-bottom:.6rem;">
+        <div id="wdFotoPreviewBox" style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--panel-2);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          ${w.foto ? `<img src="${w.foto}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="color:var(--muted);font-size:.68rem;text-align:center;">sem foto</span>`}
+        </div>
+        <input type="file" id="wdFotoInput" accept="image/*">
+      </div>
+      <label>Descrição / Mote</label>
+      <input type="text" id="wdDescricaoMote" value="${escapeHtml(w.descricaoMote)}" placeholder="Uma frase que resume esse dragão">
+      <div class="wizard-actions">
+        <button class="btn" id="wdCancelar1">Cancelar</button>
+        <div class="topbar-fill"></div>
+        <button class="btn primary" id="wdAvancar1">Avançar →</button>
+      </div>`;
+  }
+  function wireWizardDragaoStep1(){
+    const nomeInp = document.getElementById('wdNome'), montadorInp = document.getElementById('wdMontador');
+    const corInp = document.getElementById('wdCor'), descInp = document.getElementById('wdDescricaoMote');
+    document.querySelectorAll('[data-dragidade]').forEach(card=> card.addEventListener('click', ()=>{
+      wizStateDragao.idade = card.dataset.dragidade;
+      document.querySelectorAll('[data-dragidade]').forEach(c=> c.classList.toggle('selecionado', c===card));
+    }));
+    const fotoInput = document.getElementById('wdFotoInput');
+    fotoInput.addEventListener('change', (ev)=>{
+      const file = ev.target.files[0];
+      if(!file) return;
+      resizeImageFile(file, 800, 0.85).then(dataUrl=>{
+        wizStateDragao.foto = dataUrl;
+        wizStateDragao.nome = nomeInp.value; wizStateDragao.montador = montadorInp.value;
+        wizStateDragao.cor = corInp.value; wizStateDragao.descricaoMote = descInp.value;
+        renderWizardDragao();
+      }).catch(()=> toast('Não foi possível carregar essa imagem.'));
+    });
+    document.getElementById('wdCancelar1').addEventListener('click', confirmarCancelarWizardDragao);
+    document.getElementById('wdAvancar1').addEventListener('click', ()=>{
+      wizStateDragao.nome = nomeInp.value.trim();
+      wizStateDragao.montador = montadorInp.value.trim();
+      wizStateDragao.cor = corInp.value.trim();
+      wizStateDragao.descricaoMote = descInp.value.trim();
+      if(!wizStateDragao.nome){ toast('Digite o nome do dragão.'); return; }
+      wizStateDragao.step = 2;
+      renderWizardDragao();
+    });
+  }
+
+  /* ---- Passo 2: Temperamento — dragões não têm objetivo/motivação/virtude/vício como personagens;
+     suas emoções são resumidas num único traço, mais visceral e simples. ---- */
+  function wizardDragaoStep2Html(){
+    const w = wizStateDragao;
+    return `
+      <p class="wizard-intro">Dragões não têm objetivos, motivações, virtudes ou vícios como os personagens — seus instintos são mais simples e mais intensos. Escolha o Temperamento que melhor descreve esse dragão.</p>
+      <div class="wizard-status-grid">
+        ${TEMPERAMENTOS_DRAGAO.map(t=> `<div class="wizard-status-card ${w.temperamento===t.chave?'selecionado':''}" data-dragtemperamento="${t.chave}">
+          <div class="wizard-status-nome">${t.emoji} ${t.nome}</div>
+          <div class="wizard-status-desc">${escapeHtml(t.desc)}</div>
+          <div class="wizard-status-exemplos">${escapeHtml(t.tracos)}</div>
+        </div>`).join('')}
+      </div>
+      <div class="wizard-actions">
+        <button class="btn" id="wdVoltar2">← Voltar</button>
+        <div class="topbar-fill"></div>
+        <button class="btn primary" id="wdAvancar2">Avançar →</button>
+      </div>`;
+  }
+  function wireWizardDragaoStep2(){
+    document.querySelectorAll('[data-dragtemperamento]').forEach(card=> card.addEventListener('click', ()=>{
+      wizStateDragao.temperamento = card.dataset.dragtemperamento;
+      document.querySelectorAll('[data-dragtemperamento]').forEach(c=> c.classList.toggle('selecionado', c===card));
+    }));
+    document.getElementById('wdVoltar2').addEventListener('click', ()=>{ wizStateDragao.step=1; renderWizardDragao(); });
+    document.getElementById('wdAvancar2').addEventListener('click', ()=>{
+      if(!wizStateDragao.temperamento){ toast('Escolha um temperamento.'); return; }
+      wizStateDragao.step=3; renderWizardDragao();
+    });
+  }
+
+  /* ---- Passo 3: Comprando Habilidades — Agilidade tem teto próprio por idade ---- */
+  function wizDragaoXpHabilidadesGasto(){
+    return HABILIDADES_DRAGAO.reduce((soma,h)=> soma + custoAcumuladoHabilidade(wizStateDragao.habilidadesCompradas[h]||2), 0);
+  }
+  function wizardDragaoStep3Html(){
+    const faixa = wizStateDragao.idade;
+    const info = DRAGAO_IDADE_INFO[faixa] || DRAGAO_IDADE_INFO['Adulto'];
+    const gasto = wizDragaoXpHabilidadesGasto();
+    const restante = info.xpHabilidades - gasto;
+    return `
+      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP para habilidades: <strong style="color:var(--gold-bright);">${info.xpHabilidades}</strong> · Graduação máxima: <strong style="color:var(--gold-bright);">${info.gradMax}</strong>. Agilidade tem um teto próprio de <strong style="color:var(--gold-bright);">${info.agilidadeMax}</strong> — dragões maiores são mais fortes, mas mais lentos (nem todo dragão chega nesse máximo). Dragões não têm Conhecimento, Cura, Enganação, Idioma, Ladinagem, Lidar com Animais nem Persuasão — não aparecem aqui.</p>
+      <div class="wizard-xp-tracker ${restante<0?'estourado':''}">XP gasto: <strong>${gasto}</strong> / ${info.xpHabilidades} — ${restante>=0?`restam ${restante}`:`estourou em ${-restante}`}</div>
+      <table class="hab-table">
+        <thead><tr><th>Habilidade</th><th>Graduação</th><th>Custo acumulado</th></tr></thead>
+        <tbody>
+          ${HABILIDADES_DRAGAO.map(h=>{
+            const grad = wizStateDragao.habilidadesCompradas[h]||2;
+            const custo = custoAcumuladoHabilidade(grad);
+            const max = h==='agilidade' ? info.agilidadeMax : info.gradMax;
+            return `<tr>
+              <td class="hab-name">${HABILIDADE_LABEL[h]}${h==='agilidade'?' 🪽':''}</td>
+              <td><input type="number" min="1" max="${max}" data-wdhab="${h}" value="${grad}" style="width:64px;"></td>
+              <td style="color:var(--muted);">${custo>=0?'+':''}${custo} XP</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      <div class="wizard-actions">
+        <button class="btn" id="wdVoltar3">← Voltar</button>
+        <div class="topbar-fill"></div>
+        <button class="btn primary" id="wdAvancar3">Avançar →</button>
+      </div>`;
+  }
+  function wireWizardDragaoStep3(){
+    document.querySelectorAll('[data-wdhab]').forEach(inp=> inp.addEventListener('input', ()=>{
+      const h = inp.dataset.wdhab;
+      const faixa = wizStateDragao.idade;
+      const info = DRAGAO_IDADE_INFO[faixa]||DRAGAO_IDADE_INFO['Adulto'];
+      const max = h==='agilidade' ? info.agilidadeMax : info.gradMax;
+      let v = parseInt(inp.value,10); if(isNaN(v)) v = 2;
+      v = Math.max(1, Math.min(max, v));
+      wizStateDragao.habilidadesCompradas[h] = v;
+      renderWizardDragao();
+    }));
+    document.getElementById('wdVoltar3').addEventListener('click', ()=>{ wizStateDragao.step=2; renderWizardDragao(); });
+    document.getElementById('wdAvancar3').addEventListener('click', ()=>{ wizStateDragao.step=4; renderWizardDragao(); });
+  }
+
+  /* ---- Passo 4: Comprando Especialidades ---- */
+  function wizDragaoXpEspecialidadesGasto(){
+    let soma = 0;
+    Object.values(wizStateDragao.especialidadesCompradas).forEach(lista=> lista.forEach(e=> soma += custoEspecialidade(e.bonus)));
+    return soma;
+  }
+  function wizardDragaoStep4Html(){
+    const faixa = wizStateDragao.idade;
+    const info = DRAGAO_IDADE_INFO[faixa] || DRAGAO_IDADE_INFO['Adulto'];
+    const xpTotal = info.xpEspecialidades;
+    const gasto = wizDragaoXpEspecialidadesGasto();
+    const restante = xpTotal - gasto;
+    return `
+      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP para especialidades: <strong style="color:var(--gold-bright);">${xpTotal}</strong> (1 dado de bônus = 10 XP, 2 = 20 XP, e assim por diante).</p>
+      <div class="wizard-xp-tracker ${restante<0?'estourado':''}">XP gasto: <strong>${gasto}</strong> / ${xpTotal} — ${restante>=0?`restam ${restante}`:`estourou em ${-restante}`}</div>
+      <div id="wizDragaoEspecialidadesWrap">
+        ${HABILIDADES_DRAGAO.map(h=>{
+          const lista = wizStateDragao.especialidadesCompradas[h] || [];
+          return `<div class="wizard-esp-hab-block">
+            <div class="wizard-esp-hab-titulo">${HABILIDADE_LABEL[h]} <span style="color:var(--muted);font-weight:400;">(grad. ${wizStateDragao.habilidadesCompradas[h]||2})</span></div>
+            ${lista.map((e,i)=> `
+              <div class="compra-gorjeta-linha">
+                <div style="flex:1;"><input type="text" data-wdesp-nome="${h}.${i}" value="${escapeHtml(e.nome)}" placeholder="nome da especialidade"></div>
+                <div style="max-width:90px;"><input type="number" min="1" max="5" data-wdesp-bonus="${h}.${i}" value="${e.bonus}"></div>
+                <button class="row-del" data-wdesp-del="${h}.${i}" title="Remover">×</button>
+              </div>`).join('')}
+            <button class="btn add-row-btn" data-wdesp-add="${h}">+ Especialidade em ${HABILIDADE_LABEL[h]}</button>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="wizard-actions">
+        <button class="btn" id="wdVoltar4">← Voltar</button>
+        <div class="topbar-fill"></div>
+        <button class="btn primary" id="wdAvancar4">Avançar →</button>
+      </div>`;
+  }
+  function wireWizardDragaoStep4(){
+    document.querySelectorAll('[data-wdesp-add]').forEach(btn=> btn.addEventListener('click', ()=>{
+      const h = btn.dataset.wdespAdd;
+      if(!wizStateDragao.especialidadesCompradas[h]) wizStateDragao.especialidadesCompradas[h] = [];
+      wizStateDragao.especialidadesCompradas[h].push({nome:'', bonus:1});
+      renderWizardDragao();
+    }));
+    document.querySelectorAll('[data-wdesp-del]').forEach(btn=> btn.addEventListener('click', ()=>{
+      const [h,i] = btn.dataset.wdespDel.split('.');
+      wizStateDragao.especialidadesCompradas[h].splice(parseInt(i,10),1);
+      renderWizardDragao();
+    }));
+    document.querySelectorAll('[data-wdesp-nome]').forEach(inp=> inp.addEventListener('input', ()=>{
+      const [h,i] = inp.dataset.wdespNome.split('.');
+      wizStateDragao.especialidadesCompradas[h][parseInt(i,10)].nome = inp.value;
+    }));
+    document.querySelectorAll('[data-wdesp-bonus]').forEach(inp=> inp.addEventListener('input', ()=>{
+      const [h,i] = inp.dataset.wdespBonus.split('.');
+      wizStateDragao.especialidadesCompradas[h][parseInt(i,10)].bonus = Math.max(1, parseInt(inp.value,10)||1);
+      renderWizardDragao();
+    }));
+    document.getElementById('wdVoltar4').addEventListener('click', ()=>{ wizStateDragao.step=3; renderWizardDragao(); });
+    document.getElementById('wdAvancar4').addEventListener('click', ()=>{ wizStateDragao.step=5; renderWizardDragao(); });
+  }
+
+  /* ---- Passo 5: Desvantagens (opcionais — cada uma dá +15 XP pra gastar em Vantagens de Dragão) ---- */
+  function wizardDragaoStep5Html(){
+    const escolhidas = wizStateDragao.desvantagensEscolhidas;
+    return `
+      <p class="wizard-intro">Desvantagens são opcionais, mas cada uma escolhida concede <strong style="color:var(--gold-bright);">+15 XP</strong> extra pra gastar em Vantagens de Dragão no próximo passo.</p>
+      <div class="wizard-xp-tracker">Desvantagens escolhidas: <strong>${escolhidas.length}</strong> — bônus: +${escolhidas.length*15} XP</div>
+      <button class="btn add-row-btn" id="btnWdDvPersonalizada">✏️ Adicionar Personalizada</button>
+      <div class="wizard-qual-grid" style="margin-top:.6rem;">
+        ${DESVANTAGENS_CATALOGO_DRAGAO.map(dv=>{
+          const jaEscolhida = escolhidas.some(e=>e.nome===dv.nome);
+          return `<div class="wizard-qual-item ${jaEscolhida?'escolhida':''}">
+            <div class="wizard-qual-row" data-wdtoggledv="${escapeHtml(dv.nome)}">
+              <span class="qd-toggle-icon">▸</span>
+              <span class="wizard-qual-nome">${escapeHtml(dv.nome)}</span>
+              <button class="btn" data-wddv-toggle="${escapeHtml(dv.nome)}" style="padding:.2rem .55rem;font-size:.8rem;margin:0;">${jaEscolhida?'✓ Escolhida':'+ Escolher'}</button>
+            </div>
+            <div class="wizard-qual-detail" style="display:none;">${escapeHtml(dv.efeito)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="wizard-actions">
+        <button class="btn" id="wdVoltar5">← Voltar</button>
+        <div class="topbar-fill"></div>
+        <button class="btn primary" id="wdAvancar5">Avançar →</button>
+      </div>`;
+  }
+  function wireWizardDragaoStep5(){
+    document.querySelectorAll('[data-wdtoggledv]').forEach(row=> row.addEventListener('click', (ev)=>{
+      if(ev.target.closest('button')) return;
+      const item = row.closest('.wizard-qual-item');
+      const detail = item.querySelector('.wizard-qual-detail');
+      const abrindo = detail.style.display === 'none';
+      detail.style.display = abrindo ? '' : 'none';
+      row.querySelector('.qd-toggle-icon').style.transform = abrindo ? 'rotate(90deg)' : '';
+    }));
+    document.querySelectorAll('[data-wddv-toggle]').forEach(btn=> btn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const nome = btn.dataset.wddvToggle;
+      const idx = wizStateDragao.desvantagensEscolhidas.findIndex(d=>d.nome===nome);
+      if(idx>=0) wizStateDragao.desvantagensEscolhidas.splice(idx,1);
+      else {
+        const dv = DESVANTAGENS_CATALOGO_DRAGAO.find(d=>d.nome===nome);
+        wizStateDragao.desvantagensEscolhidas.push({nome:dv.nome, efeito:dv.efeito});
+      }
+      renderWizardDragao();
+    }));
+    const btnPersonalizada = document.getElementById('btnWdDvPersonalizada');
+    if(btnPersonalizada) btnPersonalizada.addEventListener('click', ()=>{
+      const nome = prompt('Nome da desvantagem personalizada:');
+      if(!nome) return;
+      const efeito = prompt('Descrição — o que ela faz:') || '';
+      wizStateDragao.desvantagensEscolhidas.push({nome, efeito});
+      renderWizardDragao();
+    });
+    document.getElementById('wdVoltar5').addEventListener('click', ()=>{ wizStateDragao.step=4; renderWizardDragao(); });
+    document.getElementById('wdAvancar5').addEventListener('click', ()=>{ wizStateDragao.step=6; renderWizardDragao(); });
+  }
+
+  /* ---- Passo 6: Vantagens de Dragão — armadura natural, baforada, presas/garras etc. ---- */
+  function wizDragaoXpVantagensPool(){
+    const faixa = wizStateDragao.idade;
+    const info = DRAGAO_IDADE_INFO[faixa]||DRAGAO_IDADE_INFO['Adulto'];
+    return info.xpVantagens + wizStateDragao.desvantagensEscolhidas.length*15;
+  }
+  function wizardDragaoStep6Html(){
+    const faixa = wizStateDragao.idade;
+    const pool = wizDragaoXpVantagensPool();
+    const escolhidas = wizStateDragao.vantagensEscolhidas;
+    const nomesEscolhidos = escolhidas.map(v=>v.nome);
+    const gasto = escolhidas.reduce((s,v)=> s+(v.custo||0),0);
+    const restante = pool - gasto;
+    return `
+      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP disponível pra Vantagens de Dragão: <strong style="color:var(--gold-bright);">${pool}</strong>${wizStateDragao.desvantagensEscolhidas.length?` (${DRAGAO_IDADE_INFO[faixa].xpVantagens} base + ${wizStateDragao.desvantagensEscolhidas.length*15} de desvantagens)`:''}. É aqui que o dragão investe em armadura natural, baforada, presas, garras e outras vantagens exclusivas — dragões não compram armas manufaturadas.</p>
+      <div class="wizard-xp-tracker ${restante<0?'estourado':''}">XP gasto: <strong>${gasto}</strong> / ${pool} — ${restante>=0?`restam ${restante}`:`estourou em ${-restante}`}</div>
+      ${escolhidas.length ? `<div class="wizard-escolhidos-lista">${escolhidas.map((v,i)=> `<span class="wizard-escolhido-tag">${escapeHtml(v.nome)} (${v.custo} XP) <button data-wdvant-remover="${i}" title="Remover">×</button></span>`).join('')}</div>` : ''}
+      ${Object.keys(DRAGAO_VANTAGENS_CATALOGO).map(categoria=>{
+        const itens = DRAGAO_VANTAGENS_CATALOGO[categoria].filter(v=> atendeExigenciaDragao(v.exigencia, v.idadeMin, wizStateDragao.habilidadesCompradas, nomesEscolhidos, faixa));
+        if(!itens.length) return '';
+        return `<div class="wizard-secao-titulo" style="margin-top:1rem;">${categoria}</div>
+          <div class="wizard-qual-grid">
+            ${itens.map(v=>{
+              const jaEscolhida = nomesEscolhidos.includes(v.nome);
+              return `<div class="wizard-qual-item ${jaEscolhida?'escolhida':''}">
+                <div class="wizard-qual-row" data-wdtogglevant="${categoria}.${escapeHtml(v.nome)}">
+                  <span class="qd-toggle-icon">▸</span>
+                  <span class="wizard-qual-nome">${escapeHtml(v.nome)} <span style="color:var(--gold-bright);font-size:.8em;">(${v.custo} XP)</span></span>
+                  ${v.idadeMin?`<span class="wizard-qual-exig">Exige idade ${v.idadeMin}+</span>`:(v.exigencia!=='—'?`<span class="wizard-qual-exig">${escapeHtml(v.exigencia)}</span>`:'')}
+                  <button class="btn" data-wdvant-toggle="${categoria}|${escapeHtml(v.nome)}" style="padding:.2rem .55rem;font-size:.8rem;margin:0;">${jaEscolhida?'✓ Escolhida':'+ Escolher'}</button>
+                </div>
+                <div class="wizard-qual-detail" style="display:none;">${escapeHtml(v.efeito)}</div>
+              </div>`;
+            }).join('')}
+          </div>`;
+      }).join('')}
+      <div class="wizard-actions">
+        <button class="btn" id="wdVoltar6">← Voltar</button>
+        <div class="topbar-fill"></div>
+        <button class="btn primary" id="wdFinalizar">✅ Criar Ficha de Dragão</button>
+      </div>`;
+  }
+  function wireWizardDragaoStep6(){
+    document.querySelectorAll('[data-wdtogglevant]').forEach(row=> row.addEventListener('click', (ev)=>{
+      if(ev.target.closest('button')) return;
+      const item = row.closest('.wizard-qual-item');
+      const detail = item.querySelector('.wizard-qual-detail');
+      const abrindo = detail.style.display === 'none';
+      detail.style.display = abrindo ? '' : 'none';
+      row.querySelector('.qd-toggle-icon').style.transform = abrindo ? 'rotate(90deg)' : '';
+    }));
+    document.querySelectorAll('[data-wdvant-toggle]').forEach(btn=> btn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const [categoria, nome] = btn.dataset.wdvantToggle.split('|');
+      const idx = wizStateDragao.vantagensEscolhidas.findIndex(v=> v.nome===nome);
+      if(idx>=0){ wizStateDragao.vantagensEscolhidas.splice(idx,1); }
+      else {
+        const v = DRAGAO_VANTAGENS_CATALOGO[categoria].find(x=>x.nome===nome);
+        const custo = v.custo||0;
+        const gasto = wizStateDragao.vantagensEscolhidas.reduce((s,x)=> s+(x.custo||0),0);
+        const pool = wizDragaoXpVantagensPool();
+        if(gasto + custo > pool){ toast('XP insuficiente pra essa vantagem.'); return; }
+        wizStateDragao.vantagensEscolhidas.push({nome:v.nome, categoria, efeito:v.efeito, custo, arma:v.arma||null, bonusDefesa:v.bonusDefesa||0, bonusSaude:v.bonusSaude||0});
+      }
+      renderWizardDragao();
+    }));
+    document.querySelectorAll('[data-wdvant-remover]').forEach(btn=> btn.addEventListener('click', ()=>{
+      wizStateDragao.vantagensEscolhidas.splice(parseInt(btn.dataset.wdvantRemover,10),1);
+      renderWizardDragao();
+    }));
+    document.getElementById('wdVoltar6').addEventListener('click', ()=>{ wizStateDragao.step=5; renderWizardDragao(); });
+    document.getElementById('wdFinalizar').addEventListener('click', finalizarCriacaoDragao);
+  }
+
+  function finalizarCriacaoDragao(){
+    const dados = freshFichaDragao(session.playerName);
+    dados.nome = wizStateDragao.nome;
+    dados.casa = wizStateDragao.montador; // reaproveita o campo "Casa" da ficha genérica pra guardar o Montador
+    dados.idade = wizStateDragao.idade; // estágio (Pequeno/Jovem/Adulto/Ancião), não um número
+    dados.marcasDistincao = wizStateDragao.cor; // cor das escamas
+    dados.descricaoMote = wizStateDragao.descricaoMote;
+    if(wizStateDragao.foto){ dados.foto = wizStateDragao.foto; dados.fotoPos = {x:50,y:50,zoom:1}; }
+    dados.temperamento = wizStateDragao.temperamento;
+
+    // habilidades (Passo 3) — só as que dragões têm; as excluídas ficam travadas em 0
+    HABILIDADES_DRAGAO.forEach(h=>{ dados.habilidades[h] = wizStateDragao.habilidadesCompradas[h]||2; });
+    HABILIDADES_EXCLUIDAS_DRAGAO.forEach(h=>{ dados.habilidades[h] = 0; });
+
+    // especialidades (Passo 4)
+    Object.keys(wizStateDragao.especialidadesCompradas).forEach(h=>{
+      const lista = wizStateDragao.especialidadesCompradas[h].filter(e=> e.nome && e.nome.trim());
+      if(lista.length) dados.especialidades[h] = lista.map(e=> ({nome:e.nome.trim(), bonus:e.bonus||1}));
+    });
+
+    // vantagens (Passo 6) e desvantagens (Passo 5) — entram juntas na lista de Qualidades/Defeitos da ficha
+    dados.qualidadesLista = [
+      ...wizStateDragao.vantagensEscolhidas.map(v=> ({tipo:'qualidade', nome:v.nome, desc:v.efeito})),
+      ...wizStateDragao.desvantagensEscolhidas.map(d=> ({tipo:'defeito', nome:d.nome, desc:d.efeito}))
+    ];
+
+    // vantagens com "arma" viram armas naturais na ficha (a última escolhida de cada nome prevalece,
+    // ex: "Presas Devastadoras" escolhida depois de "Presas Afiadas" substitui a Mordida básica)
+    const armasPorNome = new Map();
+    wizStateDragao.vantagensEscolhidas.forEach(v=>{
+      if(v.arma) armasPorNome.set(v.arma.nome, {...v.arma});
+    });
+    dados.armas = Array.from(armasPorNome.values());
+
+    // vantagens com bônus de Defesa/Saúde somam nos campos da ficha
+    dados.bonusDefesa = wizStateDragao.vantagensEscolhidas.reduce((s,v)=> s+(v.bonusDefesa||0), 0);
+    dados.bonusSaude = wizStateDragao.vantagensEscolhidas.reduce((s,v)=> s+(v.bonusSaude||0), 0);
+
+    const doc = fichasCol().doc();
+    doc.set(dados).then(()=>{
+      fecharWizardDragao();
+      openEditor(doc.id);
+    }).catch(err=> toast('Erro: ' + err.message));
   }
 
   let wizState = null;
@@ -3029,16 +3630,17 @@
     const atual = (f.experienciaTotal||0) - (f.experienciaGasta||0);
     const custoTotal = evoCustoAtual(f);
     const restante = atual - custoTotal;
+    const habsEvoluiveis = HABILIDADES.filter(h=> h!=='status' && !(f.tipo==='dragao' && HABILIDADES_EXCLUIDAS_DRAGAO.includes(h)));
     let subform = '';
     if(evoSubFormAberto === 'habilidade'){
       subform = `<div class="field-row" style="align-items:flex-end;">
-        <div><label>Habilidade</label><select id="evoHabSelect">${HABILIDADES.filter(h=>h!=='status').map(h=>`<option value="${h}">${HABILIDADE_LABEL[h]}</option>`).join('')}</select></div>
+        <div><label>Habilidade</label><select id="evoHabSelect">${habsEvoluiveis.map(h=>`<option value="${h}">${HABILIDADE_LABEL[h]}</option>`).join('')}</select></div>
         <button class="btn primary" id="btnEvoConfirmarHab">+1 grad. (30 XP)</button>
         <button class="btn" id="btnEvoCancelarSub">Cancelar</button>
       </div>`;
     } else if(evoSubFormAberto === 'especialidade'){
       subform = `<div class="field-row" style="align-items:flex-end;">
-        <div><label>Habilidade</label><select id="evoEspHabSelect">${HABILIDADES.filter(h=>h!=='status').map(h=>`<option value="${h}">${HABILIDADE_LABEL[h]}</option>`).join('')}</select></div>
+        <div><label>Habilidade</label><select id="evoEspHabSelect">${habsEvoluiveis.map(h=>`<option value="${h}">${HABILIDADE_LABEL[h]}</option>`).join('')}</select></div>
         <div><label>Nome da especialidade</label><input type="text" id="evoEspNomeInput" placeholder="ex: Convencer"></div>
         <button class="btn primary" id="btnEvoConfirmarEsp">+1B (10 XP)</button>
         <button class="btn" id="btnEvoCancelarSub">Cancelar</button>
@@ -3088,6 +3690,7 @@
      com as tabelas de dificuldade e área) ele é movido pra 1ª coluna, logo após Qualidades e
      Defeitos, pra equilibrar melhor o tamanho das duas colunas. */
   function renderExtraSecoesHtml(f, id, isNPC, editable, historicoAberto, evoDraft){
+    const isDragao = f.tipo === 'dragao';
     return `
             <div class="panel-box">
               <h3>⭐ Experiência</h3>
@@ -3139,6 +3742,14 @@
 
             <div class="panel-box">
               <h3>Personalidade</h3>
+              ${isDragao ? `
+              <label>Temperamento</label>
+              <select data-field="temperamento" ${editable?'':'disabled'}>
+                <option value="">— escolha —</option>
+                ${TEMPERAMENTOS_DRAGAO.map(t=> `<option value="${t.chave}" ${f.temperamento===t.chave?'selected':''}>${t.emoji} ${t.nome}</option>`).join('')}
+              </select>
+              <p style="font-size:.8rem;color:var(--muted);margin-top:.4rem;">${f.temperamento && temperamentoInfo(f.temperamento) ? `<strong>${temperamentoInfo(f.temperamento).tracos}.</strong> ${temperamentoInfo(f.temperamento).desc}` : 'Dragões não têm objetivo, motivação, virtude ou vício — só um Temperamento.'}</p>
+              ` : `
               <div class="field-row">
                 <div><label>Objetivo</label><input type="text" data-field="objetivo" value="${escapeHtml(f.objetivo)}" ${editable?'':'disabled'}></div>
                 <div><label>Motivação</label><input type="text" data-field="motivacao" value="${escapeHtml(f.motivacao)}" ${editable?'':'disabled'}></div>
@@ -3147,6 +3758,7 @@
                 <div><label>Virtude</label><input type="text" data-field="virtude" value="${escapeHtml(f.virtude)}" ${editable?'':'disabled'}></div>
                 <div><label>Vício</label><input type="text" data-field="vicio" value="${escapeHtml(f.vicio)}" ${editable?'':'disabled'}></div>
               </div>
+              `}
               <textarea data-field="personalidadeExtra" placeholder="Notas adicionais de personalidade…" ${editable?'':'disabled'}>${escapeHtml(f.personalidadeExtra)}</textarea>
             </div>
 
@@ -3394,6 +4006,9 @@
   function createFicha(){
     abrirCriadorPersonagem();
   }
+  function createFichaDragao(){
+    abrirCriadorDragao();
+  }
   function createFichaNPC(){
     const doc = fichasCol().doc();
     const data = freshFichaNPC(session.playerName);
@@ -3638,6 +4253,105 @@
     el.textContent = kind==='saving' ? '● salvando…' : kind==='saved' ? '✓ salvo' : kind==='error' ? '⚠ falhou' : '';
   }
 
+  /* ============ Sistema de Reputação (homebrew "Sistema de Reputação" de Manu Pazos) ============
+     Renome = fama positiva, Infâmia = fama negativa. Cada trilha cresce por "feitos" (dados
+     rolados) ou por conversão direta de Pontos de Glória (1 para 1). A tabela abaixo dá, pro
+     valor de cada trilha, um bônus maior (BM) e um menor (Bm). Quem estiver "à frente" (Renome
+     > Infâmia ou vice-versa) empresta o BM pro par de testes sociais do seu lado (Persuasão e
+     Charme pro Renome; Enganação e Intimidação pra Infâmia) e o Bm pro outro par; em empate,
+     os dois pares recebem só o Bm. */
+  const REPUT_TIERS = [
+    {min:60, bm:10, bmenor:4, conceito:'Eu moro em Essos, enfurnado numa caverna há 30 metros no subsolo. Até eu já ouvi falar de você, e se precisar de algo é só me pedir.'},
+    {min:51, bm:8,  bmenor:3, conceito:'Você é conhecido onde quer que vá, e seu nome desperta sentimentos positivos e negativos por toda Westeros.'},
+    {min:41, bm:6,  bmenor:3, conceito:'Você é alguém com influência para ameaçar ou dialogar com nobres e septões de posição até maior que a sua.'},
+    {min:31, bm:4,  bmenor:2, conceito:'Você é alguém temido ou respeitado por suas ações. As pessoas tendem a querer te agradar ou evitar sua ira.'},
+    {min:21, bm:2,  bmenor:1, conceito:'Você é alguém relativamente conhecido, como um cavaleiro popular ou uma lady que já esteve em cortes importantes.'},
+    {min:10, bm:1,  bmenor:0, conceito:'Você tem uma certa fama na região de onde veio, e algumas pessoas sabem dos feitos que você realizou.'},
+    {min:0,  bm:0,  bmenor:0, conceito:'Tu é um zé ninguém.'}
+  ];
+  function reputInfo(valor){
+    const v = Math.max(0, valor||0);
+    return REPUT_TIERS.find(t=> v>=t.min);
+  }
+  function calcReputacao(f){
+    const rep = f.reputacao || {renome:0, infamia:0, historico:[]};
+    const renome = rep.renome||0, infamia = rep.infamia||0;
+    const renomeInfo = reputInfo(renome), infamiaInfo = reputInfo(infamia);
+    const dominante = renome > infamia ? 'renome' : (infamia > renome ? 'infamia' : 'empate');
+    const tierAtivo = dominante==='infamia' ? infamiaInfo : renomeInfo;
+    let bonusPersuasaoCharme = tierAtivo.bmenor, bonusEnganacaoIntimidacao = tierAtivo.bmenor;
+    if(dominante==='renome') bonusPersuasaoCharme = tierAtivo.bm;
+    else if(dominante==='infamia') bonusEnganacaoIntimidacao = tierAtivo.bm;
+    return {renome, infamia, renomeInfo, infamiaInfo, dominante, bonusPersuasaoCharme, bonusEnganacaoIntimidacao};
+  }
+  function rollFeitoReputacao(tamanho){
+    const faces = tamanho==='menor' ? 4 : (tamanho==='maior' ? 8 : 6);
+    return 1 + Math.floor(Math.random()*faces);
+  }
+  function registrarFeitoReputacao(id){
+    const f = fichasCache[id];
+    if(!f) return;
+    const trilhaSel = document.getElementById('reputFeitoTrilha');
+    const tamSel = document.getElementById('reputFeitoTamanho');
+    const descInput = document.getElementById('reputFeitoDesc');
+    if(!trilhaSel || !tamSel) return;
+    const trilha = trilhaSel.value, tamanho = tamSel.value;
+    const valor = rollFeitoReputacao(tamanho);
+    if(!f.reputacao) f.reputacao = {renome:0, infamia:0, historico:[]};
+    if(!f.reputacao.historico) f.reputacao.historico = [];
+    f.reputacao[trilha] = (f.reputacao[trilha]||0) + valor;
+    f.reputacao.historico.unshift({trilha, tipo:tamanho, valor, desc:(descInput?descInput.value:'').trim(), data: Date.now()});
+    if(descInput) descInput.value = '';
+    scheduleFichaSave(id, f);
+    renderEditor(id);
+    toast(`🎲 +${valor} em ${trilha==='renome'?'Renome':'Infâmia'}!`);
+  }
+  function usarGloriaReputacao(id){
+    const f = fichasCache[id];
+    if(!f) return;
+    const qtdInput = document.getElementById('reputGloriaQtd');
+    const trilhaSel = document.getElementById('reputGloriaTrilha');
+    if(!qtdInput || !trilhaSel) return;
+    const qtd = Math.max(1, parseInt(qtdInput.value,10)||1);
+    const trilha = trilhaSel.value;
+    if(!f.reputacao) f.reputacao = {renome:0, infamia:0, historico:[]};
+    if(!f.reputacao.historico) f.reputacao.historico = [];
+    f.reputacao[trilha] = (f.reputacao[trilha]||0) + qtd;
+    f.reputacao.historico.unshift({trilha, tipo:'gloria', valor:qtd, desc:'Pontos de Glória convertidos', data: Date.now()});
+    scheduleFichaSave(id, f);
+    renderEditor(id);
+    toast(`✨ +${qtd} em ${trilha==='renome'?'Renome':'Infâmia'} (Glória convertida)`);
+  }
+  function removerFeitoReputacao(id, idx){
+    const f = fichasCache[id];
+    if(!f || !f.reputacao || !f.reputacao.historico) return;
+    const entry = f.reputacao.historico[idx];
+    if(!entry) return;
+    f.reputacao[entry.trilha] = Math.max(0, (f.reputacao[entry.trilha]||0) - entry.valor);
+    f.reputacao.historico.splice(idx,1);
+    scheduleFichaSave(id, f);
+    renderEditor(id);
+  }
+  function reputBonusBoxHtml(rep){
+    const dom = rep.dominante;
+    const rotulo = dom==='renome' ? 'Renome em alta' : (dom==='infamia' ? 'Infâmia em alta' : 'Renome e Infâmia empatados');
+    return `<strong>${rotulo}:</strong> +${rep.bonusPersuasaoCharme} em Persuasão e Charme · +${rep.bonusEnganacaoIntimidacao} em Enganação e Intimidação`;
+  }
+  function reputHistoricoHtml(f, editable){
+    const hist = (f.reputacao && f.reputacao.historico) || [];
+    if(!hist.length) return `<div style="font-size:.85rem;color:var(--muted);opacity:.8;">Nenhum feito registrado ainda.</div>`;
+    const TIPO_LABEL = {menor:'Feito menor', comum:'Feito comum', maior:'Feito maior', gloria:'Glória convertida'};
+    return hist.map((e,i)=>`
+      <div class="reput-hist-row">
+        <div style="flex:1;">
+          <span class="${e.trilha==='renome'?'reput-tag-renome':'reput-tag-infamia'}">+${e.valor} ${e.trilha==='renome'?'Renome':'Infâmia'}</span>
+          <span style="color:var(--muted);"> · ${TIPO_LABEL[e.tipo]||e.tipo}</span>
+          ${e.desc ? `<div style="font-size:.85rem;color:var(--muted);">${escapeHtml(e.desc)}</div>` : ''}
+        </div>
+        ${editable?`<button type="button" class="row-del" data-delrepu="${i}" title="Remover">×</button>`:''}
+      </div>`).join('');
+  }
+
   function calc(f){
     const h = f.habilidades;
     const aeksio = (h.vontade||0)*4 + Math.ceil((f.magiaBonusEspecialidade||0)/2);
@@ -3645,7 +4359,7 @@
       defesaIntriga: (h.astucia||0) + (h.percepcao||0) + (h.status||0),
       compostura: (h.vontade||0) * 3,
       defesaCombate: (h.agilidade||0) + (h.atletismo||0) + (h.percepcao||0) + (f.bonusDefesa||0) - (f.penalidadeArmadura||0),
-      saude: (h.vigor||0) * 3 + (f.bonusSaude||0),
+      saude: (h.vigor||0) * (f.tipo==='dragao' ? 4 : 3) + (f.bonusSaude||0),
       movimento: 4 + Math.floor((f.corridaBonus||0)/2),
       corrida: (4 + Math.floor((f.corridaBonus||0)/2)) * 4,
       aeksio,
@@ -3660,7 +4374,10 @@
     if(!f){ closeEditor(); return; }
     const editable = canEdit(id);
     const isNPC = f.tipo === 'npcImportante';
+    const isDragao = f.tipo === 'dragao';
+    if(!f.reputacao) f.reputacao = {renome:0, infamia:0, historico:[]};
     const d = calc(f);
+    const rep = calcReputacao(f);
     const penFL = penalidadesFerimentosLesoes(f);
     const editor = document.getElementById('fichaEditor');
 
@@ -3693,13 +4410,13 @@
 
     function habRowHtml(h){
       return `<tr>
-        <td><input type="number" min="0" max="8" data-field="habilidades.${h}" value="${f.habilidades[h]}" ${editable?'':'disabled'}></td>
+        <td><input type="number" min="0" max="${isDragao?16:8}" data-field="habilidades.${h}" value="${f.habilidades[h]}" ${editable?'':'disabled'}></td>
         <td class="hab-name"><span class="quick-roll-btn" data-quickroll="${h}" title="Rolar ${HABILIDADE_LABEL[h]} rapidamente">🎲</span> ${HABILIDADE_LABEL[h]}</td>
         <td>${especialidadesCellHtml(h)}</td>
       </tr>`;
     }
     /* Status fica destacado na seção de Intriga (embaixo), não na tabela geral de habilidades */
-    const habRows = isNPC ? '' : HABILIDADES.filter(h=> h!=='status').map(h=> habRowHtml(h)).join('');
+    const habRows = isNPC ? '' : HABILIDADES.filter(h=> h!=='status' && !(isDragao && HABILIDADES_EXCLUIDAS_DRAGAO.includes(h))).map(h=> habRowHtml(h)).join('');
 
     /* ---- ficha de NPC importante: só as habilidades que o mestre adicionou manualmente,
        mais um teste destreinado padrão (2 dados) pra qualquer coisa que não foi listada.
@@ -3790,7 +4507,7 @@
     editor.innerHTML = `
       <div class="editor-header">
         <button class="btn" id="btnBackToList">← Voltar</button>
-        <h2 style="margin:0;font-size:1.338rem;">${isNPC?'👑 ':''}${escapeHtml(f.nome||'Nova Ficha')}</h2>
+        <h2 style="margin:0;font-size:1.338rem;">${isNPC?'👑 ':(isDragao?'🐉 ':'')}${escapeHtml(f.nome||'Nova Ficha')}</h2>
         ${!editable?'<span style="color:var(--muted);font-size:.944rem;">(somente leitura)</span>':''}
         <div class="topbar-fill"></div>
         ${editable ? `
@@ -3824,7 +4541,7 @@
               </div>` : `
               <div class="field-row">
                 <div><label>Nome</label><input type="text" data-field="nome" value="${escapeHtml(f.nome)}" ${editable?'':'disabled'}></div>
-                <div><label>Casa</label><input type="text" data-field="casa" value="${escapeHtml(f.casa)}" ${editable?'':'disabled'}></div>
+                <div><label>${isDragao?'Montador':'Casa'}</label><input type="text" data-field="casa" value="${escapeHtml(f.casa)}" ${editable?'':'disabled'}></div>
                 <div style="max-width:90px;"><label>Idade</label><input type="text" data-field="idade" value="${escapeHtml(f.idade)}" ${editable?'':'disabled'}></div>
                 <div style="max-width:120px;"><label>Sexo</label><input type="text" data-field="sexo" value="${escapeHtml(f.sexo)}" ${editable?'':'disabled'}></div>
                 <div><label>Jogador</label><input type="text" data-field="jogador" value="${escapeHtml(f.jogador)}" ${editable?'':'disabled'}></div>
@@ -3988,11 +4705,59 @@
               <div class="checkbox-row">${frustCheckboxes}</div>
             </div>
 
+            ${!isDragao ? `
+            <div class="panel-box">
+              <h3>🏆 Reputação</h3>
+              <div class="field-row">
+                <div class="stat-box"><div class="stat-value" id="statRenome">${rep.renome}</div><div class="stat-label">Renome</div><div class="stat-formula" id="renomeConceito">${rep.renomeInfo.conceito}</div></div>
+                <div class="stat-box"><div class="stat-value" id="statInfamia">${rep.infamia}</div><div class="stat-label">Infâmia</div><div class="stat-formula" id="infamiaConceito">${rep.infamiaInfo.conceito}</div></div>
+              </div>
+              <div class="intriga-lembrete" id="reputBonusBox" style="margin-top:.6rem;">${reputBonusBoxHtml(rep)}</div>
+              <div class="field-row" style="margin-top:.6rem;">
+                <div><label>Ajustar Renome</label><input type="number" data-field="reputacao.renome" value="${rep.renome}" ${editable?'':'disabled'}></div>
+                <div><label>Ajustar Infâmia</label><input type="number" data-field="reputacao.infamia" value="${rep.infamia}" ${editable?'':'disabled'}></div>
+              </div>
+              ${editable?`
+              <h3 style="margin-top:.9rem;font-size:1rem;">Registrar Feito</h3>
+              <div class="field-row" style="align-items:flex-end;">
+                <div><label>Trilha</label>
+                  <select id="reputFeitoTrilha">
+                    <option value="renome">Renome (+)</option>
+                    <option value="infamia">Infâmia (+)</option>
+                  </select>
+                </div>
+                <div><label>Tamanho do feito</label>
+                  <select id="reputFeitoTamanho">
+                    <option value="menor">Menor (1d4)</option>
+                    <option value="comum" selected>Comum (1d6)</option>
+                    <option value="maior">Maior (1d8)</option>
+                  </select>
+                </div>
+              </div>
+              <input type="text" id="reputFeitoDesc" placeholder="Descrição do feito (opcional)" style="margin-top:.4rem;">
+              <button type="button" class="btn primary" id="btnRegistrarFeito" style="width:100%;margin-top:.4rem;">🎲 Rolar e Adicionar</button>
+
+              <h3 style="margin-top:.9rem;font-size:1rem;">Pontos de Glória</h3>
+              <div class="field-row" style="align-items:flex-end;">
+                <div style="max-width:110px;"><label>Quantidade</label><input type="number" min="1" id="reputGloriaQtd" value="1"></div>
+                <div><label>Trilha</label>
+                  <select id="reputGloriaTrilha">
+                    <option value="renome">→ Renome</option>
+                    <option value="infamia">→ Infâmia</option>
+                  </select>
+                </div>
+                <button type="button" class="btn" id="btnUsarGloria" style="flex:1;">Converter</button>
+              </div>
+              `:''}
+              <h3 style="margin-top:.9rem;font-size:1rem;">Histórico</h3>
+              <div id="reputacaoHistorico">${reputHistoricoHtml(f, editable)}</div>
+            </div>` : ''}
+
             <div class="panel-box">
               <h3>Combate</h3>
               <div class="field-row">
                 <div class="stat-box"><div class="stat-value" id="statDefesaCombate">${d.defesaCombate}</div><div class="stat-label">Defesa em Combate</div><div class="stat-formula">Agi+Atlet+Percep+Bônus-Penal.</div></div>
-                <div class="stat-box"><div class="stat-value" id="statSaude">${d.saude}</div><div class="stat-label">Saúde</div><div class="stat-formula">Vigor × 3</div></div>
+                <div class="stat-box"><div class="stat-value" id="statSaude">${d.saude}</div><div class="stat-label">Saúde</div><div class="stat-formula">Vigor × ${f.tipo==='dragao'?4:3}</div></div>
               </div>
               <div class="field-row" style="margin-top:.5rem;">
                 <div><label>Bônus Defesa</label><input type="number" data-field="bonusDefesa" value="${f.bonusDefesa}" ${editable?'':'disabled'}></div>
@@ -4410,6 +5175,7 @@
 
     editor.querySelectorAll('[data-field]').forEach(el=>{
       el.addEventListener('input', ()=> applyFieldChange(id, el));
+      if(el.tagName==='SELECT') el.addEventListener('change', ()=> applyFieldChange(id, el));
     });
     editor.querySelectorAll('[data-check]').forEach(el=>{
       el.addEventListener('change', ()=> applyCheckChange(id, el));
@@ -4455,6 +5221,16 @@
         scheduleFichaSave(id, f2);
         renderEditor(id);
       });
+    });
+
+    /* ---- Reputação (Renome/Infâmia): registrar feito com rolagem, converter Glória e apagar
+       entradas do histórico (revertendo o valor somado por elas) ---- */
+    const btnRegistrarFeito = editor.querySelector('#btnRegistrarFeito');
+    if(btnRegistrarFeito) btnRegistrarFeito.addEventListener('click', ()=> registrarFeitoReputacao(id));
+    const btnUsarGloria = editor.querySelector('#btnUsarGloria');
+    if(btnUsarGloria) btnUsarGloria.addEventListener('click', ()=> usarGloriaReputacao(id));
+    editor.querySelectorAll('[data-delrepu]').forEach(btn=>{
+      btn.addEventListener('click', ()=> removerFeitoReputacao(id, parseInt(btn.dataset.delrepu,10)));
     });
 
     /* ---- especialidades (por habilidade): escolher da Tabela 4-1 do livro ou digitar uma
@@ -4613,6 +5389,7 @@
     if(path.startsWith('habilidades.') || ['bonusDefesa','penalidadeArmadura','corridaBonus','bonusSaude','magiaBonusEspecialidade'].includes(path)){
       refreshStatsOnly(id);
     }
+    if(path.startsWith('reputacao.')) refreshReputacaoOnly(id);
   }
   function applyCheckChange(id, el){
     const f = fichasCache[id];
@@ -4628,6 +5405,17 @@
     const val = el.type === 'number' ? (parseFloat(el.value) || 0) : el.value;
     f[parts[0]][parseInt(parts[1],10)][parts[2]] = val;
     scheduleFichaSave(id, f);
+  }
+
+  function refreshReputacaoOnly(id){
+    const f = fichasCache[id];
+    const rep = calcReputacao(f);
+    const el = (sel)=> document.getElementById(sel);
+    if(el('statRenome')) el('statRenome').textContent = rep.renome;
+    if(el('renomeConceito')) el('renomeConceito').textContent = rep.renomeInfo.conceito;
+    if(el('statInfamia')) el('statInfamia').textContent = rep.infamia;
+    if(el('infamiaConceito')) el('infamiaConceito').textContent = rep.infamiaInfo.conceito;
+    if(el('reputBonusBox')) el('reputBonusBox').innerHTML = reputBonusBoxHtml(rep);
   }
 
   function refreshStatsOnly(id){
@@ -4653,7 +5441,7 @@
   /* ============ iniciativa (organizador de turnos — a MESMA lista pra mestre e jogadores) ============ */
   let unsubIniciativa = null;
   let iniciativaCache = {};
-  let combateFichaSelecionada = null; // fichaId aberta na coluna compacta da aba Combate & Intriga
+  let combateFichaSelecionada = null; // fichaId aberta na coluna compacta da aba Combate
 
   function iniciativaCol(){
     return db.collection(COLLECTION).doc(session.campaignId).collection('iniciativa');
@@ -4870,16 +5658,18 @@
     }));
   }
 
-  /* ---- ficha compacta (Combate & Intriga): versão condensada, só com o essencial pra jogar,
-     mas totalmente funcional — rola dados, marca ferimentos/lesões, tudo grava na ficha real ---- */
+  /* ---- ficha compacta (Combate): versão condensada, só com o essencial pra jogar,
+     mas totalmente funcional — rola dados, marca ferimentos/lesões, tudo grava na ficha real.
+     O sistema de Intriga (postura, compostura, técnicas) tem sua própria aba e ficha compacta
+     — ver "sistema de intriga" mais abaixo. ---- */
   const COMBATE_HABS_CHAVE = ['luta','pontaria','atletismo'];
-  const INTRIGA_HABS_CHAVE = ['persuasao','astucia','enganacao'];
 
   function fichaCompactaHtml(fichaId){
     const f = fichasCache[fichaId];
     if(!f) return '<div class="campanhas-empty-hint">Ficha não encontrada.</div>';
     const editable = session.role==='mestre' || f.ownerName===session.playerName;
     const isNPC = f.tipo==='npcImportante';
+    const isDragao = f.tipo==='dragao';
     const d = calc(f);
     const hab = f.habilidades||{};
 
@@ -4916,14 +5706,14 @@
 
     return `
       <div class="fc-header">
-        <div class="fc-nome">${isNPC?'👑 ':''}${escapeHtml(f.nome||'Sem nome')}</div>
+        <div class="fc-nome">${isNPC?'👑 ':(isDragao?'🐉 ':'')}${escapeHtml(f.nome||'Sem nome')}</div>
         <button class="btn" id="btnFecharFichaCompacta">✕</button>
       </div>
       <div class="fc-stats-row">
         <div class="stat-box"><div class="stat-value">${d.defesaCombate}</div><div class="stat-label">Defesa Combate</div></div>
-        <div class="stat-box"><div class="stat-value">${d.defesaIntriga}</div><div class="stat-label">Defesa Intriga</div></div>
         <div class="stat-box"><div class="stat-value">${d.saude}</div><div class="stat-label">Saúde</div></div>
         <div class="stat-box"><div class="stat-value">${d.movimento}m</div><div class="stat-label">Movimento</div></div>
+        <div class="stat-box"><div class="stat-value">${d.corrida}m</div><div class="stat-label">Corrida</div></div>
       </div>
       <button class="btn primary" id="btnFcRolarIniciativa" style="width:100%;margin:.6rem 0;">🎲 Rolar Iniciativa (Agilidade)</button>
       <label>Ferimentos <span style="text-transform:none;">(≤ Vigor)</span></label>
@@ -4933,8 +5723,6 @@
       <div class="fc-secao-titulo">⚔️ Combate</div>
       ${COMBATE_HABS_CHAVE.map(habLinha).join('')}
       ${armasHtml}
-      <div class="fc-secao-titulo">🎭 Intriga</div>
-      ${INTRIGA_HABS_CHAVE.map(habLinha).join('')}
       <div class="fc-secao-titulo">Qualidades e Defeitos</div>
       ${qualidadesHtml}
       <button class="btn" id="btnAbrirFichaCompletaCompacta" style="width:100%;margin-top:.8rem;">📜 Abrir ficha completa</button>
@@ -5215,6 +6003,452 @@
         if(!popup.contains(e2.target)){ popup.remove(); document.removeEventListener('click', onDocClick); }
       });
     }, 50);
+  }
+
+  /* ============================================================================================
+     ============ sistema de Intriga (Capítulo 8: Intriga) — aba própria, separada de Combate =====
+     ============================================================================================
+     Modelo simplificado: cada participante guarda UMA Postura (em relação ao "oponente atual" da
+     cena), o que cobre bem o caso mais comum descrito no livro — intrigas entre dois oponentes.
+     Em intrigas com mais de dois participantes, o narrador pode simplesmente reajustar a postura
+     de cada um manualmente conforme muda de alvo.
+     A Postura serve dois papéis, como no livro: (1) modifica o teste de Enganação/Persuasão de
+     quem a possui, e (2) funciona como "armadura" (Valor de Postura) contra a Influência recebida
+     por quem a possui. Defesa em Intriga e Compostura são sempre recalculadas a partir da ficha
+     (Astúcia+Percepção+Status / 3×Vontade); só a Compostura ATUAL e a Frustração ficam persistidas
+     por participante, pois representam o desgaste durante a intriga em andamento. */
+
+  const POSTURAS = [
+    {nome:'Afetuosa',    vp:1, modEnganacao:-2, modPersuasao: 5, cor:'var(--good)',           desc:'Amor e devoção — cede à maior parte dos pedidos, mesmo desvantajosos.'},
+    {nome:'Amigável',    vp:2, modEnganacao:-1, modPersuasao: 3, cor:'var(--emerald-bright)',  desc:'Proximidade e boa vontade — faz favores e corre riscos por você.'},
+    {nome:'Afável',      vp:3, modEnganacao: 0, modPersuasao: 1, cor:'var(--sapphire-bright)', desc:'Vê com bons olhos, mas não é bem um amigo — dificilmente corre riscos.'},
+    {nome:'Indiferente', vp:4, modEnganacao: 0, modPersuasao: 0, cor:'var(--muted)',           desc:'Sem sentimentos fortes — ajuda por dever ou em troca de algo.'},
+    {nome:'Desgostosa',  vp:5, modEnganacao: 1, modPersuasao:-2, cor:'#c98a3a',                desc:'Frieza desconfortável — não corre riscos por você, pode ouvir conspirações.'},
+    {nome:'Inamistosa',  vp:6, modEnganacao: 2, modPersuasao:-4, cor:'var(--danger)',          desc:'Sentimentos negativos — pode ser convencido(a) a conspirar contra você.'},
+    {nome:'Maliciosa',   vp:7, modEnganacao: 3, modPersuasao:-6, cor:'var(--danger-bright)',   desc:'Trabalha ativamente contra você — seu pior inimigo.'}
+  ];
+  const POSTURA_INDIFERENTE = 3;
+
+  const TECNICAS = [
+    {nome:'Barganha',  attr:'astucia',   enganEsp:'Blefar',          desc:'Pede que o alvo faça algo em troca de recompensa. Só funciona enquanto você cumprir sua parte do acordo.'},
+    {nome:'Charme',    attr:'persuasao', enganEsp:'Atuar',           desc:'Cultiva uma amizade. Ao derrotar o alvo, melhora a postura dele em 1 passo e concede +1D em Enganação/Persuasão na próxima intriga contra ele.'},
+    {nome:'Convencer', attr:'vontade',   enganEsp:'Atuar',           desc:'Impõe sua posição com lógica. Não melhora a postura do alvo, mas ele ajuda nesta situação específica.'},
+    {nome:'Incitar',   attr:'astucia',   enganEsp:'Blefar',          desc:'Enche o alvo de ódio contra alguém indicado. Piora a postura dele (só contra esse alvo) por um número de passos igual à sua Persuasão.'},
+    {nome:'Intimidar', attr:'vontade',   enganEsp:'Atuar ou Blefar', desc:'Assusta o alvo. Enquanto você estiver presente, melhora a postura dele até Afável (ou +1 passo, se já for Afável ou melhor).'},
+    {nome:'Provocar',  attr:'percepcao', enganEsp:'Blefar',          desc:'Leva o alvo a agir por farpas e insultos — força uma ação, mas piora a postura dele em 1 passo.'},
+    {nome:'Seduzir',   attr:'persuasao', enganEsp:'Blefar',          desc:'A técnica mais sutil. Melhora a postura do alvo por um número de passos igual à sua Persuasão — mas piora com o tempo, um passo por dia.'}
+  ];
+
+  let unsubIntriga = null;
+  let intrigaCache = {};
+  let intrigaSelecionado = null; // id do participante aberto na coluna compacta da aba Intriga
+
+  function intrigaCol(){
+    return db.collection(COLLECTION).doc(session.campaignId).collection('intriga');
+  }
+  function subscribeIntriga(){
+    if(unsubIntriga) unsubIntriga();
+    unsubIntriga = intrigaCol().onSnapshot(snap=>{
+      intrigaCache = {};
+      snap.forEach(doc=> intrigaCache[doc.id] = doc.data());
+      renderIntrigaTab();
+    }, err=>{ console.error(err); toast('Erro de conexão (intriga): ' + err.message); });
+  }
+
+  /* estatísticas "ao vivo" de um participante: se ele tem ficha vinculada, Defesa em Intriga e
+     Compostura MÁXIMA sempre vêm da ficha atual (via calc); se é avulso, usa os valores manuais
+     guardados no próprio documento da intriga. */
+  function intrigaStatsFor(p){
+    if(p.fichaId && fichasCache[p.fichaId]){
+      const d = calc(fichasCache[p.fichaId]);
+      return { defesaIntriga: d.defesaIntriga, composturaMax: d.compostura };
+    }
+    return { defesaIntriga: p.defesaIntrigaManual||0, composturaMax: p.composturaMax||0 };
+  }
+  function intrigaListaEntradas(){
+    return Object.keys(intrigaCache).map(id=>{
+      const p = intrigaCache[id];
+      return Object.assign({id}, p, intrigaStatsFor(p));
+    }).sort((a,b)=> (a.clientTime||0)-(b.clientTime||0));
+  }
+
+  function renderIntrigaTabPreservandoFoco(){
+    const wrap = document.getElementById('intrigaWrap');
+    if(wrap && document.activeElement && wrap.contains(document.activeElement) &&
+       (document.activeElement.tagName==='INPUT' || document.activeElement.tagName==='TEXTAREA')) return;
+    renderIntrigaTab();
+  }
+
+  function posturaTabelaHtml(){
+    return `<table class="sub-table" style="font-size:.85rem;">
+      <thead><tr><th>Postura</th><th>VP</th><th>Enganação</th><th>Persuasão</th></tr></thead>
+      <tbody>${POSTURAS.map(ps=> `<tr><td style="color:${ps.cor};font-weight:600;">${ps.nome}</td><td>${ps.vp}</td><td>${ps.modEnganacao>=0?'+':''}${ps.modEnganacao}</td><td>${ps.modPersuasao>=0?'+':''}${ps.modPersuasao}</td></tr>`).join('')}</tbody>
+    </table>`;
+  }
+  function tecnicaTabelaHtml(){
+    return `<table class="sub-table" style="font-size:.85rem;">
+      <thead><tr><th>Técnica</th><th>Influência</th><th>Ao derrotar o alvo</th></tr></thead>
+      <tbody>${TECNICAS.map(t=> `<tr><td style="font-weight:600;color:var(--gold-bright);white-space:nowrap;">${t.nome}</td><td style="white-space:nowrap;">Grad. ${HABILIDADE_LABEL[t.attr]}</td><td style="font-size:.8rem;color:var(--muted);">${t.desc}</td></tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  function renderIntrigaTab(){
+    const wrap = document.getElementById('intrigaWrap');
+    if(!wrap) return;
+    if(intrigaSelecionado && !intrigaCache[intrigaSelecionado]) intrigaSelecionado = null;
+    const entries = intrigaListaEntradas();
+
+    const minhasFichas = Object.keys(fichasCache).filter(id=> fichasCache[id].ownerName === session.playerName && fichasCache[id].tipo!=='npcImportante' && !intrigaCache[id]);
+    const entrarPanelHtml = (session.role==='jogador' && minhasFichas.length) ? `
+      <div class="panel-box">
+        <h3>🎭 Entrar na intriga</h3>
+        ${minhasFichas.length>1 ? `
+        <label>Personagem</label>
+        <select id="intrigaFichaSelect">${minhasFichas.map(id=> `<option value="${id}">${escapeHtml(fichasCache[id].nome||'Sem nome')}</option>`).join('')}</select>` : `<input type="hidden" id="intrigaFichaSelect" value="${minhasFichas[0]}">`}
+        <div class="login-actions" style="margin-top:.6rem;">
+          <button class="btn primary" id="btnEntrarIntriga" style="flex:1;">🎭 Entrar</button>
+        </div>
+      </div>` : '';
+
+    const addManualHtml = session.role==='mestre' ? `
+      <div class="panel-box" style="border-left:3px solid var(--crimson-bright);">
+        <h3>➕ Adicionar à intriga</h3>
+        <button class="btn primary" id="btnAbrirAddParticipanteIntriga" style="width:100%;">🎭 Adicionar jogador ou NPC</button>
+        <div class="field-row" style="margin-top:.6rem;">
+          <div style="flex:2;"><label>Participante avulso (sem ficha)</label><input type="text" id="intrigaNovoNome" placeholder="ex: Cortesão do porto"></div>
+        </div>
+        <div class="field-row">
+          <div style="flex:1;"><label>Defesa em Intriga</label><input type="number" id="intrigaNovoDefesa" value="9"></div>
+          <div style="flex:1;"><label>Compostura</label><input type="number" id="intrigaNovoCompostura" value="9"></div>
+        </div>
+        <div class="login-actions" style="margin-top:.6rem;">
+          <button class="btn" id="btnAddIntrigaManual" style="flex:1;">Adicionar avulso</button>
+          ${entries.length ? `<button class="btn" id="btnLimparIntriga">🗑️ Limpar tudo</button>` : ''}
+        </div>
+      </div>` : '';
+
+    const listHtml = entries.length ? entries.map(e=>{
+      const isMine = e.ownerName === session.playerName;
+      const podeAbrir = session.role==='mestre' || isMine;
+      const podeRemover = session.role==='mestre';
+      const selecionado = e.id===intrigaSelecionado;
+      const post = POSTURAS[e.postura ?? POSTURA_INDIFERENTE];
+      const icone = e.tipo==='npc' ? '👑' : (e.tipo==='avulso' ? '👹' : '🗡️');
+      const derrotado = (e.composturaAtual||0) <= 0;
+      return `<div class="campanha-item combate-item ${podeAbrir?'combate-item-clicavel':''} ${selecionado?'combate-item-ativa':''}" ${podeAbrir?`data-selectintriga="${e.id}"`:''} style="flex-direction:column;align-items:stretch;gap:.35rem;${isMine?'border-color:var(--gold);':''}">
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <span class="campanha-nome" style="flex:1;">${icone} ${escapeHtml(e.nome)}${e.ownerName && e.tipo!=='npc' && e.tipo!=='avulso' ? ' <span style="font-size:.8rem;color:var(--muted);">('+escapeHtml(e.ownerName)+')</span>' : ''}${derrotado?' <span style="color:var(--danger-bright);">— derrotado(a)</span>':''}</span>
+          <span class="campanha-role mestre" style="border-color:${post.cor};color:${post.cor};">${post.nome}</span>
+          ${podeRemover ? `<button class="btn" data-removeintriga="${e.id}" title="Remover da intriga" style="padding:.2rem .5rem;">✕</button>` : ''}
+        </div>
+        <div style="display:flex;gap:.9rem;font-size:.82rem;color:var(--muted);flex-wrap:wrap;">
+          <span>Compostura: <strong style="color:${derrotado?'var(--danger-bright)':'var(--gold-bright)'};">${e.composturaAtual}</strong>/${e.composturaMax}</span>
+          <span>Defesa Intriga: <strong style="color:var(--gold-bright);">${e.defesaIntriga}</strong></span>
+          ${e.frustracao ? `<span>Frustração: <strong style="color:var(--danger-bright);">${e.frustracao}</strong></span>` : ''}
+        </div>
+      </div>`;
+    }).join('') : `<div class="campanhas-empty-hint">Ninguém entrou na intriga ainda.</div>`;
+
+    const larguraLista = intrigaSelecionado ? '360px' : '640px';
+    wrap.innerHTML = `
+      <div id="intrigaLayout" style="display:flex;gap:1rem;height:100%;align-items:flex-start;overflow:hidden;">
+        <div id="intrigaListaCol" style="width:${larguraLista};max-width:${larguraLista};flex-shrink:0;height:100%;overflow-y:auto;padding:1.2rem;">
+          ${entrarPanelHtml}
+          ${addManualHtml}
+          <div class="panel-box">
+            <h3>🎭 Participantes</h3>
+            <p style="font-size:.82rem;color:var(--muted);margin-top:-.4rem;">Clique num participante pra abrir a ficha de intriga (postura, compostura e testes de Influência).</p>
+            <div id="intrigaLista">${listHtml}</div>
+          </div>
+          <div class="panel-box">
+            <h3>🎭 Posturas</h3>
+            <p style="font-size:.82rem;color:var(--muted);margin-top:-.4rem;">A postura de cada um em relação ao oponente atual: reduz Influência recebida (VP) e modifica os próprios testes.</p>
+            ${posturaTabelaHtml()}
+          </div>
+          <div class="panel-box">
+            <h3>🗡️ Técnicas</h3>
+            ${tecnicaTabelaHtml()}
+          </div>
+          <div class="panel-box">
+            <h3>📊 Graus de Sucesso</h3>
+            <p style="font-size:.82rem;color:var(--muted);margin-top:-.4rem;">Quanto o resultado precisa superar a Defesa em Intriga do alvo.</p>
+            <table class="sub-table" style="font-size:.9rem;">
+              <thead><tr><th>Margem sobre a Defesa</th><th>Grau</th></tr></thead>
+              <tbody>
+                <tr><td>+0 a +4</td><td>1 — Marginal</td></tr>
+                <tr><td>+5 a +9</td><td>2 — Grande</td></tr>
+                <tr><td>+10 a +14</td><td>3 — Incrível</td></tr>
+                <tr><td>+15 a +19</td><td>4 — Impressionante</td></tr>
+                <tr><td>+20 ou mais</td><td>5+ — Impressionante</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ${intrigaSelecionado ? `<div id="intrigaFichaCol" class="panel-box" style="flex:1;height:100%;overflow-y:auto;margin:1.2rem 1.2rem 1.2rem 0;">${fichaIntrigaCompactaHtml(intrigaSelecionado)}</div>` : ''}
+      </div>`;
+
+    wrap.querySelectorAll('[data-selectintriga]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        intrigaSelecionado = el.dataset.selectintriga;
+        renderIntrigaTab();
+      });
+    });
+    const btnEntrar = document.getElementById('btnEntrarIntriga');
+    if(btnEntrar) btnEntrar.addEventListener('click', ()=>{
+      const fichaId = document.getElementById('intrigaFichaSelect').value;
+      const f = fichasCache[fichaId];
+      if(!f) return;
+      intrigaCol().doc(fichaId).set({
+        nome: f.nome||'Sem nome', fichaId, tipo: f.tipo==='npcImportante'?'npc':'pj',
+        ownerName: session.playerName, postura: POSTURA_INDIFERENTE, composturaAtual: calc(f).compostura,
+        frustracao: 0, clientTime: Date.now()
+      }).then(()=>{ intrigaSelecionado = fichaId; }).catch(err=> toast('Erro: '+err.message));
+    });
+    const btnAbrirAddParticipanteIntriga = document.getElementById('btnAbrirAddParticipanteIntriga');
+    if(btnAbrirAddParticipanteIntriga) btnAbrirAddParticipanteIntriga.addEventListener('click', abrirAddParticipanteIntriga);
+    const btnAddManual = document.getElementById('btnAddIntrigaManual');
+    if(btnAddManual) btnAddManual.addEventListener('click', ()=>{
+      const nome = document.getElementById('intrigaNovoNome').value.trim();
+      const defesa = parseInt(document.getElementById('intrigaNovoDefesa').value,10) || 0;
+      const compostura = parseInt(document.getElementById('intrigaNovoCompostura').value,10) || 0;
+      if(!nome){ toast('Dê um nome ao participante.'); return; }
+      intrigaCol().doc().set({
+        nome, fichaId:null, tipo:'avulso', defesaIntrigaManual: defesa,
+        composturaMax: compostura, composturaAtual: compostura, postura: POSTURA_INDIFERENTE, frustracao: 0,
+        addedBy: session.playerName, clientTime: Date.now()
+      }).catch(err=> toast('Erro: '+err.message));
+      document.getElementById('intrigaNovoNome').value='';
+    });
+    const btnLimparIntriga = document.getElementById('btnLimparIntriga');
+    if(btnLimparIntriga) btnLimparIntriga.addEventListener('click', ()=>{
+      if(!confirm('Limpar toda a intriga? (Isso não apaga nenhuma ficha, só tira todo mundo da lista.)')) return;
+      Object.keys(intrigaCache).forEach(eid=> intrigaCol().doc(eid).delete().catch(()=>{}));
+      intrigaSelecionado = null;
+    });
+    wrap.querySelectorAll('[data-removeintriga]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const remId = btn.dataset.removeintriga;
+        if(remId === intrigaSelecionado) intrigaSelecionado = null;
+        intrigaCol().doc(remId).delete().catch(err=> toast('Erro: '+err.message));
+      });
+    });
+    wireFichaIntriga();
+  }
+
+  /* mestre escolhe, entre jogadores e NPCs Importantes ainda fora da intriga, quem entra na lista */
+  function abrirAddParticipanteIntriga(){
+    const jogadorIds = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='npcImportante' && !intrigaCache[id]);
+    const npcIds = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo==='npcImportante' && !intrigaCache[id]);
+    const overlay = document.createElement('div');
+    overlay.id = 'addParticipanteIntrigaOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:460;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:linear-gradient(160deg, var(--panel-2), var(--panel) 60%);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:10px;padding:1.4rem 1.6rem;max-width:420px;width:100%;max-height:80vh;overflow:auto;';
+    const itemHtml = (id)=> `
+      <div class="campanha-item" data-escolherparticipante="${id}" style="cursor:pointer;">
+        <span class="campanha-nome">${escapeHtml(fichasCache[id].nome||'Sem nome')}${fichasCache[id].ownerName?' <span style="font-size:.826rem;color:var(--muted);">('+escapeHtml(fichasCache[id].ownerName)+')</span>':''}</span>
+      </div>`;
+    box.innerHTML = `
+      <h3 style="margin-top:0;">🎭 Adicionar à intriga</h3>
+      <div class="wizard-secao-titulo">Jogadores</div>
+      ${jogadorIds.length ? jogadorIds.map(itemHtml).join('') : `<div class="campanhas-empty-hint">Todos os jogadores já estão na intriga, ou nenhuma ficha foi criada ainda.</div>`}
+      <div class="wizard-secao-titulo" style="margin-top:.6rem;">NPCs Importantes</div>
+      ${npcIds.length ? npcIds.map(itemHtml).join('') : `<div class="campanhas-empty-hint">Todos os NPCs Importantes já estão na intriga, ou nenhum foi criado ainda.</div>`}
+      <div class="login-actions" style="margin-top:1rem;"><button class="btn" id="addParticipanteIntrigaCancelar" style="flex:1;">Fechar</button></div>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay) overlay.remove(); });
+    document.getElementById('addParticipanteIntrigaCancelar').addEventListener('click', ()=> overlay.remove());
+    box.querySelectorAll('[data-escolherparticipante]').forEach(el=> el.addEventListener('click', ()=>{
+      const id = el.dataset.escolherparticipante;
+      const f = fichasCache[id];
+      intrigaCol().doc(id).set({
+        nome: f.nome||'Sem nome', fichaId: id, tipo: f.tipo==='npcImportante'?'npc':'pj',
+        ownerName: f.ownerName||null, postura: POSTURA_INDIFERENTE, composturaAtual: calc(f).compostura,
+        frustracao: 0, clientTime: Date.now()
+      }).then(()=>{ overlay.remove(); intrigaSelecionado = id; })
+        .catch(err=> toast('Erro: ' + err.message));
+    }));
+  }
+
+  /* ---- ficha compacta de Intriga: postura, compostura, frustração, habilidades-chave e o
+     teste de Influência contra outro participante (rola dados, calcula grau de sucesso,
+     aplica Influência menos o VP do alvo à Compostura dele) ---- */
+  const INTRIGA_HABS_CHAVE = ['astucia','enganacao','percepcao','persuasao','vontade'];
+
+  function fichaIntrigaCompactaHtml(id){
+    const p = intrigaCache[id];
+    if(!p) return '<div class="campanhas-empty-hint">Participante não encontrado.</div>';
+    const f = p.fichaId ? fichasCache[p.fichaId] : null;
+    const editable = session.role==='mestre' || p.ownerName===session.playerName;
+    const stats = intrigaStatsFor(p);
+    const post = POSTURAS[p.postura ?? POSTURA_INDIFERENTE];
+
+    const habLinha = f ? (h)=>{
+      const esps = getEspecialidadesList(f, h);
+      const espsHtml = esps.map((e,i)=> `
+        <div class="fc-esp-row">
+          <span class="quick-roll-btn" data-icesproll="${h}.${i}" title="Rolar ${HABILIDADE_LABEL[h]} (${e.nome||'especialização'})">🎲</span>
+          <span style="flex:1;">${escapeHtml(e.nome||'(sem nome)')}</span>
+          <span style="color:var(--muted);">+${e.bonus||1}</span>
+        </div>`).join('');
+      return `<div class="fc-hab-row">
+        <span class="quick-roll-btn" data-icroll="${h}" title="Rolar ${HABILIDADE_LABEL[h]}">🎲</span>
+        <span style="flex:1;">${HABILIDADE_LABEL[h]}</span>
+        <span style="color:var(--gold-bright);font-family:'Cinzel',serif;">${(f.habilidades&&f.habilidades[h])??2}</span>
+      </div>${espsHtml}`;
+    } : (h)=> `<div class="fc-hab-row"><span style="flex:1;">${HABILIDADE_LABEL[h]}</span><span style="color:var(--muted);">— sem ficha —</span></div>`;
+
+    const statusVal = f ? ((f.habilidades&&f.habilidades.status)??2) : '—';
+    const posturaOptions = POSTURAS.map((ps,i)=> `<option value="${i}" ${i===(p.postura??POSTURA_INDIFERENTE)?'selected':''}>${ps.nome} (VP ${ps.vp})</option>`).join('');
+    const outros = Object.keys(intrigaCache).filter(oid=> oid!==id);
+    const alvoOptions = outros.map(oid=> `<option value="${oid}">${escapeHtml(intrigaCache[oid].nome||'Sem nome')}</option>`).join('');
+    const tecnicaOptions = TECNICAS.map((t,i)=> `<option value="${i}">${t.nome} — Influência = ${HABILIDADE_LABEL[t.attr]}</option>`).join('');
+
+    return `
+      <div class="fc-header">
+        <div class="fc-nome">${p.tipo==='npc'?'👑 ':''}${escapeHtml(p.nome||'Sem nome')}</div>
+        <button class="btn" id="btnFecharFichaIntriga">✕</button>
+      </div>
+      <div class="fc-stats-row">
+        <div class="stat-box"><div class="stat-value">${stats.defesaIntriga}</div><div class="stat-label">Defesa Intriga</div></div>
+        <div class="stat-box"><div class="stat-value">${p.composturaAtual}/${stats.composturaMax}</div><div class="stat-label">Compostura</div></div>
+        <div class="stat-box"><div class="stat-value">${p.frustracao||0}</div><div class="stat-label">Frustração</div></div>
+        <div class="stat-box" style="border-color:${post.cor};"><div class="stat-value" style="font-size:1.15rem;color:${post.cor};">${post.nome}</div><div class="stat-label">Postura (VP ${post.vp})</div></div>
+      </div>
+
+      <label>Postura em relação ao oponente atual</label>
+      <select id="icPosturaSelect" ${editable?'':'disabled'}>${posturaOptions}</select>
+      <p style="font-size:.78rem;color:var(--muted);margin:.2rem 0 0;">${post.desc}<br>Modificadores dos PRÓPRIOS testes: Persuasão ${post.modPersuasao>=0?'+':''}${post.modPersuasao} · Enganação ${post.modEnganacao>=0?'+':''}${post.modEnganacao}</p>
+
+      <div class="field-row" style="margin-top:.6rem;">
+        <div style="flex:1;"><label>Compostura atual</label><input type="number" id="icComposturaInput" value="${p.composturaAtual}" ${editable?'':'disabled'}></div>
+        <div style="flex:1;"><label>Frustração atual</label><input type="number" id="icFrustracaoInput" value="${p.frustracao||0}" min="0" ${editable?'':'disabled'}></div>
+      </div>
+      ${editable ? `<button class="btn" id="btnSalvarEstadoIntriga" style="width:100%;margin-top:.5rem;">💾 Salvar Compostura / Frustração</button>` : ''}
+      <p style="font-size:.76rem;color:var(--muted);margin:.4rem 0 0;">Cada ponto de Frustração absorve Influência igual à graduação em Vontade, mas impõe -1D em Enganação/Persuasão até o fim da intriga. Se a Frustração acumulada exceder a Vontade, o participante é derrotado.</p>
+
+      <div class="fc-secao-titulo">🎭 Habilidades de Intriga</div>
+      <div class="fc-hab-row"><span style="flex:1;">Status</span><span style="color:var(--gold-bright);font-family:'Cinzel',serif;">${statusVal}</span></div>
+      ${INTRIGA_HABS_CHAVE.map(habLinha).join('')}
+
+      ${f ? `
+      <div class="fc-secao-titulo">⚔️ Testar Influência</div>
+      <label>Alvo</label>
+      <select id="icAlvoSelect">${alvoOptions || '<option value="">— nenhum outro participante —</option>'}</select>
+      <label>Técnica</label>
+      <select id="icTecnicaSelect">${tecnicaOptions}</select>
+      <label>Habilidade usada</label>
+      <select id="icHabilidadeSelect">
+        <option value="persuasao">Persuasão</option>
+        <option value="enganacao">Enganação (mentindo/blefando)</option>
+      </select>
+      <button class="btn primary" id="btnRolarInfluencia" style="width:100%;margin-top:.6rem;" ${outros.length?'':'disabled'}>🎲 Rolar Influência</button>
+      <div id="icResultadoInfluencia"></div>
+      ` : `<p style="font-size:.8rem;color:var(--muted);margin-top:.6rem;">Participante avulso, sem ficha vinculada — o narrador aplica Influência manualmente pela Compostura acima.</p>`}
+
+      ${f ? `<button class="btn" id="btnAbrirFichaCompletaIntriga" style="width:100%;margin-top:.8rem;">📜 Abrir ficha completa</button>` : ''}
+    `;
+  }
+
+  function wireFichaIntriga(){
+    const col = document.getElementById('intrigaFichaCol');
+    if(!col || !intrigaSelecionado) return;
+    const id = intrigaSelecionado;
+    const p = intrigaCache[id];
+    if(!p) return;
+    const btnFechar = document.getElementById('btnFecharFichaIntriga');
+    if(btnFechar) btnFechar.addEventListener('click', ()=>{ intrigaSelecionado = null; renderIntrigaTab(); });
+    const btnAbrirCompleta = document.getElementById('btnAbrirFichaCompletaIntriga');
+    if(btnAbrirCompleta) btnAbrirCompleta.addEventListener('click', ()=>{
+      switchTab('fichas');
+      openEditor(p.fichaId);
+    });
+    const posturaSelect = document.getElementById('icPosturaSelect');
+    if(posturaSelect) posturaSelect.addEventListener('change', ()=>{
+      intrigaCol().doc(id).set({postura: parseInt(posturaSelect.value,10)}, {merge:true}).catch(err=> toast('Erro: '+err.message));
+    });
+    const btnSalvarEstado = document.getElementById('btnSalvarEstadoIntriga');
+    if(btnSalvarEstado) btnSalvarEstado.addEventListener('click', ()=>{
+      const compostura = parseInt(document.getElementById('icComposturaInput').value,10) || 0;
+      const frustracao = Math.max(0, parseInt(document.getElementById('icFrustracaoInput').value,10) || 0);
+      intrigaCol().doc(id).set({composturaAtual: compostura, frustracao}, {merge:true})
+        .then(()=> toast('Estado de intriga atualizado.'))
+        .catch(err=> toast('Erro: '+err.message));
+    });
+    col.querySelectorAll('[data-icroll]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=> quickRoll(p.fichaId, btn.dataset.icroll, ev));
+    });
+    col.querySelectorAll('[data-icesproll]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        const [h, i] = btn.dataset.icesproll.split('.');
+        quickRollEspecialidade(p.fichaId, h, parseInt(i,10), ev);
+      });
+    });
+    const btnRolarInfluencia = document.getElementById('btnRolarInfluencia');
+    if(btnRolarInfluencia) btnRolarInfluencia.addEventListener('click', ()=> resolverInfluencia(id));
+  }
+
+  /* rola o teste de Influência (Persuasão ou Enganação + modificador de Postura), compara com a
+     Defesa em Intriga do alvo, calcula o grau de sucesso e a Influência bruta pela técnica
+     escolhida (graduação do atributo × grau), subtrai o VP da Postura do alvo, e deixa um botão
+     pra aplicar o resultado final à Compostura do alvo (grava no Firestore, visível a todos). */
+  function resolverInfluencia(atacanteId){
+    const p = intrigaCache[atacanteId];
+    const f = p && p.fichaId ? fichasCache[p.fichaId] : null;
+    if(!f) return;
+    const alvoId = document.getElementById('icAlvoSelect').value;
+    const alvo = intrigaCache[alvoId];
+    if(!alvo){ toast('Escolha um alvo.'); return; }
+    const tecnica = TECNICAS[parseInt(document.getElementById('icTecnicaSelect').value,10)];
+    const habKey = document.getElementById('icHabilidadeSelect').value; // 'persuasao' ou 'enganacao'
+    const postura = POSTURAS[p.postura ?? POSTURA_INDIFERENTE];
+    const posturaMod = habKey==='persuasao' ? postura.modPersuasao : postura.modEnganacao;
+    const grad = (f.habilidades && f.habilidades[habKey]) ?? 2;
+    const pen = penalidadesFerimentosLesoes(f);
+    const modTotal = pen.mod + posturaMod;
+    const {rolls, discarded, total} = rollDiceCore(grad, 0, pen.penalty, modTotal);
+    const alvoStats = intrigaStatsFor(alvo);
+    const dificuldade = alvoStats.defesaIntriga;
+
+    let influenciaAplicada = 0;
+    let resultadoHtml;
+    if(total >= dificuldade){
+      const grau = 1 + Math.floor((total - dificuldade)/5);
+      const gradAttr = (f.habilidades && f.habilidades[tecnica.attr]) ?? 2;
+      const influenciaBruta = gradAttr * grau;
+      const alvoPostura = POSTURAS[alvo.postura ?? POSTURA_INDIFERENTE];
+      influenciaAplicada = Math.max(0, influenciaBruta - alvoPostura.vp);
+      resultadoHtml = `
+        <div style="margin-top:.6rem;padding:.6rem;background:rgba(47,158,92,.12);border:1px solid var(--good);border-radius:6px;">
+          <div style="color:var(--good);font-weight:700;">✓ Sucesso — grau ${grau}</div>
+          <div style="font-size:.85rem;margin-top:.2rem;">Influência: ${tecnica.nome} (${HABILIDADE_LABEL[tecnica.attr]} ${gradAttr}) × ${grau} = <strong>${influenciaBruta}</strong></div>
+          <div style="font-size:.85rem;">VP de ${escapeHtml(alvo.nome)} (${alvoPostura.nome}): -${alvoPostura.vp} → perda de Compostura: <strong style="color:var(--gold-bright);">${influenciaAplicada}</strong></div>
+          <button class="btn primary" id="btnAplicarInfluencia" style="width:100%;margin-top:.5rem;">💥 Aplicar ${influenciaAplicada} à Compostura de ${escapeHtml(alvo.nome)}</button>
+        </div>`;
+    } else {
+      resultadoHtml = `<div style="margin-top:.6rem;padding:.6rem;background:rgba(184,38,47,.12);border:1px solid var(--danger);border-radius:6px;color:#e06060;font-weight:700;">✗ Falha — não superou a Defesa em Intriga (${dificuldade}).</div>`;
+    }
+
+    document.getElementById('icResultadoInfluencia').innerHTML = `
+      <div style="margin-top:.6rem;font-size:.85rem;color:var(--muted);">${tecnica.nome} via ${habKey==='persuasao'?'Persuasão':'Enganação'} — sua postura é ${postura.nome} (${posturaMod>=0?'+':''}${posturaMod})</div>
+      <div>${buildDiceHtml(rolls, discarded)}</div>
+      <div style="font-family:'Cinzel',serif;font-size:1.6rem;color:var(--gold-bright);">${total} <span style="font-size:.9rem;color:var(--muted);">vs Defesa ${dificuldade}</span></div>
+      ${resultadoHtml}
+    `;
+    recordRollHistory(f.nome||'Ficha', habKey, grad, 0, pen.penalty, modTotal, total, dificuldade, f.rollVisibility==='privada', rolls, discarded);
+
+    const btnAplicar = document.getElementById('btnAplicarInfluencia');
+    if(btnAplicar) btnAplicar.addEventListener('click', ()=>{
+      const novaCompostura = (alvo.composturaAtual||0) - influenciaAplicada;
+      intrigaCol().doc(alvoId).set({composturaAtual: novaCompostura}, {merge:true})
+        .then(()=>{
+          toast(`${alvo.nome} perdeu ${influenciaAplicada} de Compostura.` + (novaCompostura<=0 ? ' Está derrotado(a)!' : ''));
+          btnAplicar.disabled = true;
+        })
+        .catch(err=> toast('Erro: '+err.message));
+    });
   }
 
   /* trecho de conteúdo reaproveitado tanto no histórico completo (dentro do balão) quanto no toast */
