@@ -1808,7 +1808,7 @@
      sem fala pra idioma ou persuasão articulada, sem instrução formal pra conhecimento/cura, e
      sem sutileza pra enganação ou empatia detalhada pra lidar com animais (eles PRÓPRIOS são o
      animal). Usado tanto no criador de dragão quanto na ficha completa pra esconder essas linhas. */
-  const HABILIDADES_EXCLUIDAS_DRAGAO = ['conhecimento','cura','enganacao','idioma','ladinagem','lidarAnimais','persuasao'];
+  const HABILIDADES_EXCLUIDAS_DRAGAO = ['conhecimento','cura','enganacao','guerra','idioma','ladinagem','lidarAnimais','persuasao','status'];
   const HABILIDADES_DRAGAO = HABILIDADES.filter(h=> !HABILIDADES_EXCLUIDAS_DRAGAO.includes(h));
   /* Tabela 4-1 do livro: especialidades oficiais de cada habilidade, usadas pra popular o
      seletor de "+ Especialidade" na ficha (além da opção de digitar uma personalizada). */
@@ -2512,31 +2512,62 @@
      ============================================================================
      Dragões são criados como se fossem personagens (mesmas 19 habilidades,
      mesma lógica de XP acumulado), mas não usam armas manufaturadas — só armas
-     e defesas naturais. À medida que crescem, investem XP exclusivamente em
-     Armadura Natural, Baforada, Presas/Garras e outras Vantagens de Dragão.
-     Possuem 4 idades (Pequeno → Jovem → Adulto → Ancião): ficam mais fortes e
-     resistentes, mas perdem o teto máximo de Agilidade a cada estágio. A Saúde
-     de um dragão usa Vigor × 4 (um multiplicador a mais que um humano, ×3). */
+     e defesas naturais. Garras, Mordida e Baforada são ganhas automaticamente
+     por todo dragão desde a criação (escalam com a idade — ver
+     DRAGAO_ARMAS_NATURAIS_POR_IDADE); o XP de Vantagens de Dragão vai pra
+     Armadura Natural, Voo, Instinto e outras vantagens exclusivas.
+     Possuem 5 idades (Pequeno → Jovem → Adulto → Veterano → Ancião): ficam mais
+     fortes e resistentes, mas perdem o teto máximo de Agilidade a cada estágio.
+     A Saúde de um dragão usa Vigor × 6. */
 
-  const DRAGAO_IDADES = ['Pequeno','Jovem','Adulto','Ancião'];
+  const DRAGAO_IDADES = ['Pequeno','Jovem','Adulto','Veterano','Ancião'];
   const DRAGAO_IDADE_INFO = {
     'Pequeno': {
-      agilidadeMax: 7, gradMax: 10, xpHabilidades: 210, xpEspecialidades: 50, xpVantagens: 40,
+      agilidadeMax: 7, gradMax: 12, xpHabilidades: 280, xpEspecialidades: 50, xpVantagens: 40,
       desc: 'Recém-saído do ovo ou com poucos anos de vida — do tamanho de um cavalo grande. Ainda ágil e veloz, mas mal começou a desenvolver escamas resistentes ou fogo de verdade.'
     },
     'Jovem': {
-      agilidadeMax: 6, gradMax: 12, xpHabilidades: 280, xpEspecialidades: 70, xpVantagens: 90,
+      agilidadeMax: 6, gradMax: 12, xpHabilidades: 380, xpEspecialidades: 70, xpVantagens: 90,
       desc: 'Já voa com folga e caça sozinho — do tamanho de uma casa pequena. Mais forte e perigoso que um filhote, mas ainda rápido no ar e no chão.'
     },
     'Adulto': {
-      agilidadeMax: 5, gradMax: 14, xpHabilidades: 360, xpEspecialidades: 100, xpVantagens: 150,
+      agilidadeMax: 5, gradMax: 12, xpHabilidades: 480, xpEspecialidades: 100, xpVantagens: 150,
       desc: 'Um terror consagrado nos céus, massivo o bastante pra esmagar muralhas. Sua mobilidade já não é o que era quando filhote, mas seu poder de fogo e sua blindagem natural compensam.'
     },
+    'Veterano': {
+      agilidadeMax: 4, gradMax: 12, xpHabilidades: 580, xpEspecialidades: 120, xpVantagens: 185,
+      desc: 'Sobrevivente de incontáveis batalhas e voos — grande o bastante pra sombrear um vilarejo inteiro. Já não tem a agilidade da juventude, mas seu poder de fogo e sua couraça natural impõem respeito por onde passa.'
+    },
     'Ancião': {
-      agilidadeMax: 4, gradMax: 16, xpHabilidades: 460, xpEspecialidades: 140, xpVantagens: 220,
+      agilidadeMax: 3, gradMax: 12, xpHabilidades: 680, xpEspecialidades: 140, xpVantagens: 220,
       desc: 'Uma lenda viva, tão grande quanto castelos inteiros. Lento e pesado perto do que já foi, mas quase indestrutível e capaz de decidir guerras sozinho.'
     }
   };
+
+  /* Armas naturais que TODO dragão recebe automaticamente desde a criação (Garras, Mordida e
+     Baforada) — não são mais compradas com XP, escalam sozinhas conforme a idade do dragão.
+     Garras = ação menor; Mordida = ação maior; Baforada = ação maior, Área, Longo Alcance,
+     recarrega em 1d3+1 turnos depois de usada. */
+  const DRAGAO_ARMAS_NATURAIS_POR_IDADE = {
+    'Pequeno':  {garra:1, mordida:2, baforada:0},
+    'Jovem':    {garra:2, mordida:4, baforada:4},
+    'Adulto':   {garra:3, mordida:6, baforada:8},
+    'Veterano': {garra:4, mordida:8, baforada:12},
+    'Ancião':   {garra:5, mordida:10, baforada:16}
+  };
+  const DRAGAO_ARMAS_NATURAIS_NOMES = ['Garras','Mordida','Baforada'];
+  function armasNaturaisDragao(idade){
+    const b = DRAGAO_ARMAS_NATURAIS_POR_IDADE[idade] || DRAGAO_ARMAS_NATURAIS_POR_IDADE['Adulto'];
+    const fmtDano = (base, bonus)=> bonus>0 ? `${base}+${bonus}` : base;
+    return [
+      {nome:'Garras', habilidade:'luta', dano:fmtDano('Atletismo', b.garra),
+        qualidades:'Ataque natural, ação menor — não pode ser desarmado.'},
+      {nome:'Mordida', habilidade:'luta', dano:fmtDano('Atletismo', b.mordida),
+        qualidades:'Ataque natural, ação maior — não pode ser desarmado.'},
+      {nome:'Baforada', habilidade:'pontaria', dano:fmtDano('Vontade', b.baforada),
+        qualidades:'Ataque natural, ação maior, Área, Longo Alcance — recarrega em 1d3+1 turnos depois de usada.'}
+    ];
+  }
 
   /* Dragões não têm objetivos, motivações, virtudes ou vícios como personagens — suas emoções
      são mais simples e mais viscerais, resumidas num único Temperamento. */
@@ -2565,11 +2596,7 @@
      de Pontos de Destino. "arma" gera automaticamente uma arma natural na ficha; "bonusDefesa" e
      "bonusSaude" somam diretamente aos campos já existentes na ficha (mesmos usados por humanos). */
   const DRAGAO_VANTAGENS_CATALOGO = {
-    'Armas Naturais': [
-      {nome:'Presas Afiadas', exigencia:'—', custo:20, efeito:'Presas grandes e cortantes, já capazes de rasgar carne e armadura leve.', arma:{nome:'Mordida', habilidade:'luta', dano:'Atletismo+1', qualidades:'Ataque natural — não pode ser desarmado.'}},
-      {nome:'Presas Devastadoras', exigencia:'Presas Afiadas', custo:40, efeito:'A mordida se torna capaz de partir ossos e couraças inteiras.', arma:{nome:'Mordida', habilidade:'luta', dano:'Atletismo+3', qualidades:'Ataque natural, Cruel — não pode ser desarmado.'}},
-      {nome:'Garras Retráteis', exigencia:'—', custo:20, efeito:'Garras longas o bastante pra prender e rasgar presas em movimento.', arma:{nome:'Garras', habilidade:'luta', dano:'Atletismo+1', qualidades:'Ataque natural, Rápida — não pode ser desarmado.'}},
-      {nome:'Garras Trituradoras', exigencia:'Garras Retráteis', custo:40, efeito:'Suas garras conseguem despedaçar escudos, portões e armaduras pesadas.', arma:{nome:'Garras', habilidade:'luta', dano:'Atletismo+3', qualidades:'Ataque natural, Cruel, Rápida — não pode ser desarmado.'}},
+    'Ataques Especiais': [
       {nome:'Chicotada de Cauda', exigencia:'—', custo:25, efeito:'Um golpe de cauda largo o bastante pra varrer vários inimigos ao redor.', arma:{nome:'Rabada', habilidade:'luta', dano:'Atletismo', qualidades:'Ataque natural, Comprida — empurra o alvo 1 passo em caso de acerto.'}}
     ],
     'Armadura & Resistência': [
@@ -2579,11 +2606,6 @@
       {nome:'Couraça Draconica', exigencia:'Escamas Endurecidas II', custo:50, efeito:'Só aço valiriano, magia ou outro dragão conseguem realmente feri-lo. +2 Defesa em Combate, +4 Saúde.', bonusDefesa:2, bonusSaude:4},
       {nome:'Vitalidade Colossal', exigencia:'—', custo:45, efeito:'Um corpo descomunalmente resistente, mesmo pros padrões da espécie. +6 Saúde.', bonusSaude:6},
       {nome:'Regeneração Rápida', exigencia:'Vigor 5', custo:60, efeito:'Ferimentos leves se fecham em horas, não em dias. Uma vez por dia de descanso completo, remove automaticamente 1 Ferimento marcado.'}
-    ],
-    'Baforada': [
-      {nome:'Baforada de Fogo', exigencia:'—', custo:50, efeito:'Um jato de fogo abrasador, capaz de incinerar tudo à frente.', arma:{nome:'Baforada de Fogo', habilidade:'pontaria', dano:'Vigor+3', qualidades:'Área, Longo Alcance — exige uma ação menor pra recuperar o fôlego antes de usar de novo.'}},
-      {nome:'Baforada Ampliada', exigencia:'Baforada de Fogo', custo:70, efeito:'O alcance e o volume de fogo aumentam drasticamente.', arma:{nome:'Baforada de Fogo', habilidade:'pontaria', dano:'Vigor+5', qualidades:'Área Grande, Longo Alcance — exige uma ação menor pra recuperar o fôlego antes de usar de novo.'}},
-      {nome:'Sopro Ancestral', exigencia:'Baforada Ampliada', idadeMin:'Ancião', custo:100, efeito:'Um fogo lendário, quase impossível de conter — dizem que derrete aço e pedra. Ignora Armadura Natural e a maior parte das defesas mágicas comuns.', arma:{nome:'Baforada de Fogo', habilidade:'pontaria', dano:'Vigor+7', qualidades:'Área Grande, Longo Alcance, Cruel — ignora armadura natural e a maioria das defesas mágicas.'}}
     ],
     'Voo & Mobilidade': [
       {nome:'Voo', exigencia:'—', custo:30, efeito:'Asas fortes o bastante pra voos curtos, caça aérea e manobras básicas. Some +4 metros ao Movimento quando estiver voando.'},
@@ -2692,7 +2714,7 @@
   function wizardDragaoStep1Html(){
     const w = wizStateDragao;
     return `
-      <p class="wizard-intro">Vamos montar a ficha do dragão passo a passo, do mesmo jeito que se cria um personagem — só que dragões não usam armas manufaturadas, apenas suas armas e defesas naturais (compradas no Passo 6).</p>
+      <p class="wizard-intro">Vamos montar a ficha do dragão passo a passo, do mesmo jeito que se cria um personagem — só que dragões não usam armas manufaturadas. Garras, Mordida e Baforada já vêm automáticas conforme a idade escolhida; armadura natural e outras vantagens são compradas no Passo 6.</p>
       <div class="field-row">
         <div><label>Nome *</label><input type="text" id="wdNome" value="${escapeHtml(w.nome)}" placeholder="Nome do dragão"></div>
         <div><label>Montador</label><input type="text" id="wdMontador" value="${escapeHtml(w.montador)}" placeholder="Ex: Aegon Targaryen, sem montador…"></div>
@@ -2797,7 +2819,7 @@
     const gasto = wizDragaoXpHabilidadesGasto();
     const restante = info.xpHabilidades - gasto;
     return `
-      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP para habilidades: <strong style="color:var(--gold-bright);">${info.xpHabilidades}</strong> · Graduação máxima: <strong style="color:var(--gold-bright);">${info.gradMax}</strong>. Agilidade tem um teto próprio de <strong style="color:var(--gold-bright);">${info.agilidadeMax}</strong> — dragões maiores são mais fortes, mas mais lentos (nem todo dragão chega nesse máximo). Dragões não têm Conhecimento, Cura, Enganação, Idioma, Ladinagem, Lidar com Animais nem Persuasão — não aparecem aqui.</p>
+      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP para habilidades: <strong style="color:var(--gold-bright);">${info.xpHabilidades}</strong> · Graduação máxima: <strong style="color:var(--gold-bright);">${info.gradMax}</strong>. Agilidade tem um teto próprio de <strong style="color:var(--gold-bright);">${info.agilidadeMax}</strong> — dragões maiores são mais fortes, mas mais lentos (nem todo dragão chega nesse máximo). Dragões não têm Conhecimento, Cura, Enganação, Guerra, Idioma, Ladinagem, Lidar com Animais, Persuasão nem Status — não aparecem aqui.</p>
       <div class="wizard-xp-tracker ${restante<0?'estourado':''}">XP gasto: <strong>${gasto}</strong> / ${info.xpHabilidades} — ${restante>=0?`restam ${restante}`:`estourou em ${-restante}`}</div>
       <table class="hab-table">
         <thead><tr><th>Habilidade</th><th>Graduação</th><th>Custo acumulado</th></tr></thead>
@@ -2968,7 +2990,7 @@
     const gasto = escolhidas.reduce((s,v)=> s+(v.custo||0),0);
     const restante = pool - gasto;
     return `
-      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP disponível pra Vantagens de Dragão: <strong style="color:var(--gold-bright);">${pool}</strong>${wizStateDragao.desvantagensEscolhidas.length?` (${DRAGAO_IDADE_INFO[faixa].xpVantagens} base + ${wizStateDragao.desvantagensEscolhidas.length*15} de desvantagens)`:''}. É aqui que o dragão investe em armadura natural, baforada, presas, garras e outras vantagens exclusivas — dragões não compram armas manufaturadas.</p>
+      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP disponível pra Vantagens de Dragão: <strong style="color:var(--gold-bright);">${pool}</strong>${wizStateDragao.desvantagensEscolhidas.length?` (${DRAGAO_IDADE_INFO[faixa].xpVantagens} base + ${wizStateDragao.desvantagensEscolhidas.length*15} de desvantagens)`:''}. Garras, Mordida e Baforada já são automáticas (escalam com a idade) — aqui o dragão investe em armadura natural, voo, instinto e outras vantagens exclusivas.</p>
       <div class="wizard-xp-tracker ${restante<0?'estourado':''}">XP gasto: <strong>${gasto}</strong> / ${pool} — ${restante>=0?`restam ${restante}`:`estourou em ${-restante}`}</div>
       ${escolhidas.length ? `<div class="wizard-escolhidos-lista">${escolhidas.map((v,i)=> `<span class="wizard-escolhido-tag">${escapeHtml(v.nome)} (${v.custo} XP) <button data-wdvant-remover="${i}" title="Remover">×</button></span>`).join('')}</div>` : ''}
       ${Object.keys(DRAGAO_VANTAGENS_CATALOGO).map(categoria=>{
@@ -3054,9 +3076,10 @@
       ...wizStateDragao.desvantagensEscolhidas.map(d=> ({tipo:'defeito', nome:d.nome, desc:d.efeito}))
     ];
 
-    // vantagens com "arma" viram armas naturais na ficha (a última escolhida de cada nome prevalece,
-    // ex: "Presas Devastadoras" escolhida depois de "Presas Afiadas" substitui a Mordida básica)
+    // Garras, Mordida e Baforada são automáticas desde a criação, escalando com a idade escolhida.
+    // Vantagens com "arma" (ex: Chicotada de Cauda) entram como armas extras, além dessas três.
     const armasPorNome = new Map();
+    armasNaturaisDragao(wizStateDragao.idade).forEach(a=> armasPorNome.set(a.nome, a));
     wizStateDragao.vantagensEscolhidas.forEach(v=>{
       if(v.arma) armasPorNome.set(v.arma.nome, {...v.arma});
     });
@@ -3065,6 +3088,12 @@
     // vantagens com bônus de Defesa/Saúde somam nos campos da ficha
     dados.bonusDefesa = wizStateDragao.vantagensEscolhidas.reduce((s,v)=> s+(v.bonusDefesa||0), 0);
     dados.bonusSaude = wizStateDragao.vantagensEscolhidas.reduce((s,v)=> s+(v.bonusSaude||0), 0);
+
+    // XP: o dragão carrega o XP total da idade em que foi criado; o que não foi gasto em
+    // habilidades no Passo 3 fica disponível pra evoluir depois (mesma moeda usada no botão "Evoluir")
+    const infoIdadeCriacao = DRAGAO_IDADE_INFO[wizStateDragao.idade] || DRAGAO_IDADE_INFO['Adulto'];
+    dados.experienciaTotal = infoIdadeCriacao.xpHabilidades;
+    dados.experienciaGasta = wizDragaoXpHabilidadesGasto();
 
     const doc = fichasCol().doc();
     doc.set(dados).then(()=>{
@@ -3660,7 +3689,7 @@
       <div class="login-actions" style="margin-top:.6rem;flex-wrap:wrap;">
         <button class="btn add-row-btn" id="btnEvoAddHab">+ Melhorar Habilidade</button>
         <button class="btn add-row-btn" id="btnEvoAddEsp">+ Especialidade</button>
-        <button class="btn add-row-btn" id="btnEvoAddDestino">+ Ponto de Destino (50 XP)</button>
+        ${f.tipo!=='dragao' ? `<button class="btn add-row-btn" id="btnEvoAddDestino">+ Ponto de Destino (50 XP)</button>` : ''}
       </div>
       <div id="evoSubForm" style="margin-top:.5rem;">${subform}</div>
       <div class="login-actions" style="margin-top:.8rem;">
@@ -3677,6 +3706,12 @@
         return `<div class="historico-item">
           <div class="historico-item-header"><span>${dataTxt}</span><strong style="color:var(--good);">+${h.xp||0} XP${h.moedasTxt?(' · +'+escapeHtml(h.moedasTxt)):''}</strong></div>
           <div class="historico-item-desc">🎁 Recompensa do Mestre${h.motivo?': '+escapeHtml(h.motivo):''}</div>
+        </div>`;
+      }
+      if(h.tipo==='idade'){
+        return `<div class="historico-item">
+          <div class="historico-item-header"><span>${dataTxt}</span><strong style="color:var(--good);">+${h.ganho||0} XP</strong></div>
+          <div class="historico-item-desc">🐉 Envelheceu para ${escapeHtml(h.novaIdade||'')} — Garras, Mordida e Baforada atualizadas.</div>
         </div>`;
       }
       return `<div class="historico-item">
@@ -3767,6 +3802,7 @@
               <textarea data-field="historia" style="min-height:120px;" ${editable?'':'disabled'}>${escapeHtml(f.historia)}</textarea>
             </div>
 
+            ${isDragao ? '' : `
             <div class="panel-box">
               <h3>Juramentos</h3>
               <textarea data-field="juramentos" ${editable?'':'disabled'}>${escapeHtml(f.juramentos)}</textarea>
@@ -3776,11 +3812,34 @@
               <textarea data-field="aliados" ${editable?'':'disabled'}>${escapeHtml(f.aliados)}</textarea>
               <h3 style="margin-top:.7rem;">Inimigos</h3>
               <textarea data-field="inimigos" ${editable?'':'disabled'}>${escapeHtml(f.inimigos)}</textarea>
-            </div>`}`;
+            </div>`}`}`;
+  }
+  /* Dragões evoluem de idade de modo linear: ao clicar em "Evoluir", se ainda não for Ancião,
+     avançam pra próxima idade e ganham o excedente de XP até o próximo estágio (sempre a mesma
+     escala usada na criação — ver DRAGAO_IDADE_INFO). Esse XP entra na mesma "carteira" usada
+     pra comprar habilidades (30 XP) e especialidades (10 XP) no rascunho de evolução. Garras,
+     Mordida e Baforada são atualizadas automaticamente pra nova idade. */
+  function aplicarEnvelhecimentoDragao(id, f){
+    const idxAtual = DRAGAO_IDADES.indexOf(f.idade);
+    if(idxAtual < 0 || idxAtual >= DRAGAO_IDADES.length-1) return; // idade desconhecida ou já é Ancião
+    const infoAtual = DRAGAO_IDADE_INFO[f.idade] || DRAGAO_IDADE_INFO['Adulto'];
+    const novaIdade = DRAGAO_IDADES[idxAtual+1];
+    const infoNova = DRAGAO_IDADE_INFO[novaIdade];
+    const ganho = infoNova.xpHabilidades - infoAtual.xpHabilidades;
+    f.idade = novaIdade;
+    f.experienciaTotal = (f.experienciaTotal||0) + ganho;
+    const outrasArmas = (f.armas||[]).filter(a=> !DRAGAO_ARMAS_NATURAIS_NOMES.includes(a.nome));
+    f.armas = [...armasNaturaisDragao(novaIdade), ...outrasArmas];
+    if(!f.historicoXP) f.historicoXP = [];
+    f.historicoXP.push({tipo:'idade', data: Date.now(), ganho, novaIdade});
+    scheduleFichaSave(id, f);
+    toast(`🐉 Seu dragão envelheceu para ${novaIdade}! +${ganho} XP`);
   }
   function wireExperienciaPainel(id){
     const btnEvoluir = document.getElementById('btnEvoluir');
     if(btnEvoluir) btnEvoluir.addEventListener('click', ()=>{
+      const f0 = fichasCache[id];
+      if(f0 && f0.tipo==='dragao') aplicarEnvelhecimentoDragao(id, f0);
       evoDraft = {fichaId:id, acoes:[]};
       evoSubFormAberto = null;
       renderEditor(id);
@@ -4352,14 +4411,24 @@
       </div>`).join('');
   }
 
+  /* soma os dados de bônus de qualquer especialidade de Vigor chamada "Resistência" (tolera
+     acento/maiúsculas) — usada pro Valor de Armadura natural dos dragões. */
+  function bonusResistenciaDragao(f){
+    const lista = getEspecialidadesList(f, 'vigor');
+    const norm = (s)=> (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return lista.filter(e=> norm(e.nome)==='resistencia').reduce((s,e)=> s+(e.bonus||0), 0);
+  }
+
   function calc(f){
     const h = f.habilidades;
+    const isDragao = f.tipo === 'dragao';
     const aeksio = (h.vontade||0)*4 + Math.ceil((f.magiaBonusEspecialidade||0)/2);
     return {
       defesaIntriga: (h.astucia||0) + (h.percepcao||0) + (h.status||0),
       compostura: (h.vontade||0) * 3,
-      defesaCombate: (h.agilidade||0) + (h.atletismo||0) + (h.percepcao||0) + (f.bonusDefesa||0) - (f.penalidadeArmadura||0),
-      saude: (h.vigor||0) * (f.tipo==='dragao' ? 4 : 3) + (f.bonusSaude||0),
+      defesaCombate: (h.agilidade||0) + (h.atletismo||0) + (h.percepcao||0) + (f.bonusDefesa||0) - (isDragao ? 0 : (f.penalidadeArmadura||0)),
+      saude: (h.vigor||0) * (isDragao ? 6 : 3) + (f.bonusSaude||0),
+      valorArmadura: isDragao ? (h.vigor||0) + Math.floor(bonusResistenciaDragao(f)/2) : 0,
       movimento: 4 + Math.floor((f.corridaBonus||0)/2),
       corrida: (4 + Math.floor((f.corridaBonus||0)/2)) * 4,
       aeksio,
@@ -4410,7 +4479,7 @@
 
     function habRowHtml(h){
       return `<tr>
-        <td><input type="number" min="0" max="${isDragao?16:8}" data-field="habilidades.${h}" value="${f.habilidades[h]}" ${editable?'':'disabled'}></td>
+        <td><input type="number" min="0" max="${isDragao?12:8}" data-field="habilidades.${h}" value="${f.habilidades[h]}" ${editable?'':'disabled'}></td>
         <td class="hab-name"><span class="quick-roll-btn" data-quickroll="${h}" title="Rolar ${HABILIDADE_LABEL[h]} rapidamente">🎲</span> ${HABILIDADE_LABEL[h]}</td>
         <td>${especialidadesCellHtml(h)}</td>
       </tr>`;
@@ -4580,11 +4649,12 @@
               </table>`}
             </div>
 
+            ${!isDragao ? `
             <div class="panel-box">
               <h3>Armadura</h3>
               <div id="armadurasBody">${armadurasRows || `<div class="campanhas-empty-hint" style="padding:.4rem 0;">Nenhuma armadura ainda.</div>`}</div>
               ${editable?'<button class="btn add-row-btn" data-addrow="armaduras">+ Adicionar</button>':''}
-            </div>
+            </div>` : ''}
 
             <div class="panel-box">
               <h3>Armas / Ataques</h3>
@@ -4682,6 +4752,7 @@
               <div id="rolagemLivreResultBox" style="margin-top:.6rem;"></div>
             </div>
 
+            ${!isDragao ? `
             <div class="panel-box">
               <h3>Intriga</h3>
               <button type="button" class="btn ${f.emIntriga?'primary':''}" id="btnEmIntriga" style="width:100%;margin-bottom:.7rem;" ${editable?'':'disabled'}>
@@ -4703,7 +4774,7 @@
               <input type="text" data-field="vitorias" value="${escapeHtml(f.vitorias)}" ${editable?'':'disabled'}>
               <label>Frustrações <span style="text-transform:none;">(&lt; Vontade)</span></label>
               <div class="checkbox-row">${frustCheckboxes}</div>
-            </div>
+            </div>` : ''}
 
             ${!isDragao ? `
             <div class="panel-box">
@@ -4756,15 +4827,20 @@
             <div class="panel-box">
               <h3>Combate</h3>
               <div class="field-row">
-                <div class="stat-box"><div class="stat-value" id="statDefesaCombate">${d.defesaCombate}</div><div class="stat-label">Defesa em Combate</div><div class="stat-formula">Agi+Atlet+Percep+Bônus-Penal.</div></div>
-                <div class="stat-box"><div class="stat-value" id="statSaude">${d.saude}</div><div class="stat-label">Saúde</div><div class="stat-formula">Vigor × ${f.tipo==='dragao'?4:3}</div></div>
+                <div class="stat-box"><div class="stat-value" id="statDefesaCombate">${d.defesaCombate}</div><div class="stat-label">Defesa em Combate</div><div class="stat-formula">${isDragao?'Agi+Atlet+Percep+Bônus':'Agi+Atlet+Percep+Bônus-Penal.'}</div></div>
+                <div class="stat-box"><div class="stat-value" id="statSaude">${d.saude}</div><div class="stat-label">Saúde</div><div class="stat-formula">Vigor × ${isDragao?6:3}</div></div>
               </div>
               <div class="field-row" style="margin-top:.5rem;">
                 <div><label>Bônus Defesa</label><input type="number" data-field="bonusDefesa" value="${f.bonusDefesa}" ${editable?'':'disabled'}></div>
+                ${isDragao ? `
+                <div><label>Valor de Armadura</label><input type="text" id="statValorArmadura" value="${d.valorArmadura}" disabled title="Vigor + metade dos dados de bônus em Resistência — reduz o dano tomado, não altera a Defesa em Combate."></div>
+                ` : `
                 <div><label>Penalidade Armadura</label><input type="number" data-field="penalidadeArmadura" value="${f.penalidadeArmadura}" ${editable?'':'disabled'}></div>
+                `}
                 <div><label>2B em Corrida</label><input type="number" data-field="corridaBonus" value="${f.corridaBonus}" ${editable?'':'disabled'}></div>
                 <div><label>Bônus Saúde</label><input type="number" data-field="bonusSaude" value="${f.bonusSaude||0}" ${editable?'':'disabled'}></div>
               </div>
+              ${isDragao?`<div style="font-size:.85rem;color:var(--muted);margin-top:.3rem;">Valor de Armadura = Vigor + metade dos dados de bônus na especialidade "Resistência". Não altera a Defesa em Combate — só indica quanto reduzir do dano recebido.</div>`:''}
               <label>Ferimentos <span style="text-transform:none;">(≤ Vigor)</span></label>
               <div class="checkbox-row">${ferimCheckboxes}</div>
               <label>Lesões <span style="text-transform:none;">(&lt; Vigor)</span></label>
@@ -4776,6 +4852,7 @@
               </div>
             </div>
 
+            ${isDragao ? '' : `
             <div class="panel-box">
               <h3>Magia</h3>
               <label style="display:flex;align-items:center;gap:.5rem;text-transform:none;font-family:inherit;font-size:1.083rem;margin:0 0 .3rem;">
@@ -4876,7 +4953,7 @@
                   <tr><td>30</td><td>50–100 pessoas</td><td>2.500 m²</td><td>Grande praça / pequeno campo / complexo inteiro</td></tr>
                 </tbody>
               </table>` : ''}
-            </div>
+            </div>`}
 
             ${f.magiaFeiticeiro ? '' : renderExtraSecoesHtml(f, id, isNPC, editable, historicoAberto, evoDraft)}
           </div>
@@ -5426,6 +5503,7 @@
     if(el('statCompostura')) el('statCompostura').textContent = d.compostura;
     if(el('statDefesaCombate')) el('statDefesaCombate').textContent = d.defesaCombate;
     if(el('statSaude')) el('statSaude').textContent = d.saude;
+    if(el('statValorArmadura')) el('statValorArmadura').value = d.valorArmadura;
     if(el('statMovimento')) el('statMovimento').textContent = d.movimento + 'm';
     if(el('statCorrida')) el('statCorrida').textContent = d.corrida + 'm';
     if(el('statAeksio')) el('statAeksio').textContent = d.aeksio;
