@@ -1093,6 +1093,7 @@
     <div class="topbar-fill"></div>
     <span id="roleBadge"></span>
     <span id="playerNameBadge" style="font-size:.968rem;color:var(--gold-bright);"></span>
+    <button class="btn" id="btnAdminContas" title="Transferir fichas / migrar conta de jogador" style="display:none;">🔧 Contas</button>
     <button class="btn" id="btnLeaveSession">🚪 Trocar</button>
   </header>
 
@@ -1682,6 +1683,8 @@
     beginLoginFlow();
   });
 
+  document.getElementById('btnAdminContas').addEventListener('click', ()=> abrirFerramentasContaMestre());
+
   /* ============ entrar no app ============ */
   function enterApp(){
     document.getElementById('loginScreen').classList.add('hidden');
@@ -1697,6 +1700,9 @@
     /* Recompensas é ferramenta exclusiva do mestre, pra distribuir XP e dinheiro */
     const tabRecompensas = document.getElementById('tabBtnRecompensas');
     if(tabRecompensas) tabRecompensas.style.display = session.role === 'mestre' ? '' : 'none';
+    /* ferramenta de admin (transferir ficha / migrar conta) — só o mestre vê */
+    const btnAdminContas = document.getElementById('btnAdminContas');
+    if(btnAdminContas) btnAdminContas.style.display = session.role === 'mestre' ? '' : 'none';
     setupRollBubble();
     subscribeFichas();
     subscribeMapas();
@@ -9267,6 +9273,228 @@
         .then(()=>{ overlay.remove(); toast('Configurações salvas.'); })
         .catch(err=> toast('Erro: '+err.message));
     });
+  }
+
+  /* ==========================================================================================
+     ADMIN (mestre): transferir controle de ficha / migrar tudo de uma conta pra outra
+     ==========================================================================================
+     Contexto: quem é "dono" de cada coisa na campanha (ficha, entrada de iniciativa, participante
+     de intriga, página de diário, pasta de galeria, mapa de relações, linha do tempo) é decidido
+     comparando o campo ownerName/addedBy salvo no documento com session.playerName — que é o nome
+     de exibição (nickname) da conta logada, não um ID técnico estável. Ou seja: "dono" = nome salvo
+     no Firestore bater com o nome da conta atualmente logada.
+
+     Isso tem uma consequência direta pro problema relatado: se em algum momento essa jogadora
+     acabou com DUAS contas (ex.: criou uma conta nova achando que a antiga "quebrou", ou teve que
+     refazer login num PC novo e digitou o nickname com uma letra diferente/maiúscula diferente/
+     espaço a mais), as fichas continuam gravadas com o ownerName da conta ANTIGA. A conta nova
+     nunca vai enxergar essas atualizações como "minhas", porque o app está comparando strings de
+     nome, não uma identidade de usuário real — daí a sensação de "parou de sincronizar num PC
+     específico, mas funciona numa conta diferente".
+
+     As funções abaixo permitem: (1) passar o controle de UMA ficha específica pra outro nome de
+     jogador, e (2) migrar TUDO que uma conta antiga criou pra uma conta nova, campo por campo, em
+     todas as coleções da campanha — pra então poder desativar/apagar a conta antiga sem perder nada.
+  */
+
+  // troca ownerName/addedBy de um documento (só se o campo existir nele) — não mexe em outros campos
+  function _adminTrocaOwnerDoc(ref, data, novoNome){
+    const patch = {};
+    if(Object.prototype.hasOwnProperty.call(data,'ownerName') && data.ownerName!=null) patch.ownerName = novoNome;
+    if(Object.prototype.hasOwnProperty.call(data,'addedBy') && data.addedBy!=null) patch.addedBy = novoNome;
+    if(!Object.keys(patch).length) return Promise.resolve(false);
+    return ref.set(patch, {merge:true}).then(()=> true);
+  }
+
+  // pega o conteúdo atual de uma coleção uma única vez (o wrapper com undo só expõe onSnapshot,
+  // então assinamos e cancelamos assim que a primeira resposta chega)
+  function _adminGetColecaoUmaVez(colRef){
+    return new Promise((resolve, reject)=>{
+      let done = false;
+      const unsub = colRef.onSnapshot(snap=>{
+        if(done) return; // onSnapshot local pode disparar mais de uma vez (cache local + servidor)
+        done = true;
+        const docs = [];
+        snap.forEach(d=> docs.push({id:d.id, data:d.data()}));
+        setTimeout(()=> unsub && unsub(), 0);
+        resolve(docs);
+      }, reject);
+    });
+  }
+
+  /* ---- 1) transferir o controle de UMA ficha para outro jogador ----
+     Atualiza a ficha e, em cascata, a entrada de iniciativa e o participante de intriga
+     ligados a ela (essas duas coleções usam o MESMO id da ficha como id do documento),
+     pra não deixar a ficha com um dono e o rastreador de combate/intriga com outro. */
+  function adminTransferirFicha(fichaId, novoOwnerName){
+    if(!session || !db) return Promise.reject(new Error('Entre numa campanha antes.'));
+    if(!fichaId || !novoOwnerName) return Promise.reject(new Error('Informe a ficha e o novo dono.'));
+    const fichaRef = fichasCol().doc(fichaId);
+    return fichaRef.get().then(snap=>{
+      if(!snap.exists) throw new Error('Ficha não encontrada nesta campanha.');
+      const donoAntigo = snap.data().ownerName || null;
+      return _adminTrocaOwnerDoc(fichaRef, snap.data(), novoOwnerName).then(()=>{
+        const inicRef = iniciativaCol().doc(fichaId);
+        const intrRef = intrigaCol().doc(fichaId);
+        return Promise.all([
+          inicRef.get().then(s=> s.exists ? _adminTrocaOwnerDoc(inicRef, s.data(), novoOwnerName) : false),
+          intrRef.get().then(s=> s.exists ? _adminTrocaOwnerDoc(intrRef, s.data(), novoOwnerName) : false)
+        ]).then(()=> ({fichaId, donoAntigo, donoNovo: novoOwnerName}));
+      });
+    });
+  }
+
+  /* ---- 2) transferir TUDO que uma conta (nome antigo) criou pra outro nome ----
+     Varre fichas, iniciativa, rolagens, intriga, páginas de diário, pastas de galeria (+ imagens
+     dentro delas) e mapas de relações trocando ownerName/addedBy. Na linha do tempo e nos mapas,
+     também troca o nome dentro das listas de visualizadores/editores/allowedViewers, senão a
+     conta nova ficaria sem os acessos que a antiga tinha. Não apaga nem duplica nada — só troca
+     "de quem é" em cada registro que já existe. */
+  async function adminTransferirTudoDoJogador(nomeAntigo, nomeNovo){
+    if(!session || !db) throw new Error('Entre numa campanha antes.');
+    if(session.role !== 'mestre') throw new Error('Só o mestre pode migrar contas.');
+    if(!nomeAntigo || !nomeNovo) throw new Error('Informe os dois nomes.');
+    if(nomeAntigo === nomeNovo) throw new Error('Os nomes são iguais — nada a migrar.');
+
+    const resumo = {};
+
+    async function migrarColecaoSimples(colRef, chave){
+      const docs = await _adminGetColecaoUmaVez(colRef);
+      let n = 0;
+      for(const d of docs){
+        if(d.data.ownerName===nomeAntigo || d.data.addedBy===nomeAntigo){
+          await _adminTrocaOwnerDoc(colRef.doc(d.id), d.data, nomeNovo);
+          n++;
+        }
+      }
+      resumo[chave] = n;
+    }
+
+    await migrarColecaoSimples(fichasCol(), 'fichas');
+    await migrarColecaoSimples(iniciativaCol(), 'iniciativa');
+    await migrarColecaoSimples(rolagensCol(), 'rolagens');
+    await migrarColecaoSimples(intrigaCol(), 'intriga');
+    await migrarColecaoSimples(diarioPaginasCol(), 'paginasDeDiario');
+
+    // pastas de galeria + imagens dentro de cada pasta (as imagens têm ownerName próprio,
+    // de quem fez o upload, que pode ser diferente do dono da pasta)
+    const pastas = await _adminGetColecaoUmaVez(galeriaPastasCol());
+    let pastasMigradas = 0, imagensMigradas = 0;
+    for(const p of pastas){
+      if(p.data.ownerName === nomeAntigo){
+        await _adminTrocaOwnerDoc(galeriaPastasCol().doc(p.id), p.data, nomeNovo);
+        pastasMigradas++;
+      }
+      const imagens = await _adminGetColecaoUmaVez(galeriaImagensCol(p.id));
+      for(const img of imagens){
+        if(img.data.ownerName === nomeAntigo){
+          await _adminTrocaOwnerDoc(galeriaImagensCol(p.id).doc(img.id), img.data, nomeNovo);
+          imagensMigradas++;
+        }
+      }
+    }
+    resumo.pastasDeGaleria = pastasMigradas;
+    resumo.imagensDeGaleria = imagensMigradas;
+
+    // mapas de relações: ownerName + lista allowedViewers
+    const mapas = await _adminGetColecaoUmaVez(mapasCol());
+    let mapasMigrados = 0;
+    for(const m of mapas){
+      const patch = {};
+      if(m.data.ownerName === nomeAntigo) patch.ownerName = nomeNovo;
+      if(Array.isArray(m.data.allowedViewers) && m.data.allowedViewers.includes(nomeAntigo)){
+        patch.allowedViewers = m.data.allowedViewers.map(x=> x===nomeAntigo?nomeNovo:x);
+      }
+      if(Object.keys(patch).length){ await mapasCol().doc(m.id).set(patch, {merge:true}); mapasMigrados++; }
+    }
+    resumo.mapasDeRelacoes = mapasMigrados;
+
+    // linhas do tempo: ownerName + listas visualizadores/editores
+    const linhas = await _adminGetColecaoUmaVez(linhasTempoCol());
+    let linhasMigradas = 0;
+    for(const l of linhas){
+      const patch = {};
+      if(l.data.ownerName === nomeAntigo) patch.ownerName = nomeNovo;
+      if(Array.isArray(l.data.visualizadores) && l.data.visualizadores.includes(nomeAntigo)){
+        patch.visualizadores = l.data.visualizadores.map(x=> x===nomeAntigo?nomeNovo:x);
+      }
+      if(Array.isArray(l.data.editores) && l.data.editores.includes(nomeAntigo)){
+        patch.editores = l.data.editores.map(x=> x===nomeAntigo?nomeNovo:x);
+      }
+      if(Object.keys(patch).length){ await linhasTempoCol().doc(l.id).set(patch, {merge:true}); linhasMigradas++; }
+    }
+    resumo.linhasDoTempo = linhasMigradas;
+
+    return resumo;
+  }
+
+  /* ---- 3) "excluir" a conta antiga ----
+     Importante: por segurança do próprio Firebase, o SDK de cliente só permite apagar a conta
+     de AUTENTICAÇÃO (login/senha) de quem estiver logado nela no momento — o mestre não consegue,
+     de dentro da própria sessão, apagar a conta de login de outra pessoa. O que dá pra fazer daqui
+     é apagar o PERFIL da conta antiga (o documento que lista as campanhas dela, usado só pra
+     preencher a telinha de "minhas campanhas" no login) — isso desvincula a conta antiga desta
+     campanha sem afetar nenhum dado já migrado. Pra apagar a conta de login em si, é preciso: (a)
+     pedir pra jogadora, já logada com a conta antiga, chamar authLogout() e depois logar de novo
+     nela e rodar `firebase.auth().currentUser.delete()` no console; ou (b) apagar o usuário pelo
+     Console do Firebase, em Authentication > Users. SEMPRE rode a migração (passo 2) ANTES disso,
+     ou os dados da conta antiga ficam órfãos (ownerName apontando pra um nome que ninguém mais loga). */
+  function adminApagarPerfilContaAntiga(nomeOuSlugAntigo){
+    if(!db) return Promise.reject(new Error('Sem conexão com o banco.'));
+    const slug = nicknameSlug(nomeOuSlugAntigo);
+    if(!slug) return Promise.reject(new Error('Nome/slug inválido.'));
+    return db.collection(USUARIOS_COLLECTION).doc(slug).delete().then(()=> slug);
+  }
+
+  // expõe pra uso avançado via console do navegador (F12), caso o mestre prefira rodar na mão
+  window.GDT_ADMIN = {
+    transferirFicha: adminTransferirFicha,
+    transferirTudoDoJogador: adminTransferirTudoDoJogador,
+    apagarPerfilContaAntiga: adminApagarPerfilContaAntiga
+  };
+
+  /* ---- UI simples (prompts), no mesmo estilo que o resto do app já usa pra ações do mestre ---- */
+  function abrirFerramentasContaMestre(){
+    if(!session || session.role !== 'mestre'){ toast('Só o mestre pode usar isso.'); return; }
+    const fichas = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='npcImportante');
+    const listaFichas = fichas.map((id,i)=> `${i+1}. ${fichasCache[id].nome||'Sem nome'} — dono atual: ${fichasCache[id].ownerName||'ninguém'}`).join('\n') || '(nenhuma ficha de jogador nesta campanha ainda)';
+
+    const escolha = prompt(
+      '🔧 Ferramentas de conta\n\n'+
+      '1 — Transferir o controle de UMA ficha para outro jogador\n'+
+      '2 — Transferir TUDO que um jogador criou (nome antigo → nome novo)\n'+
+      '3 — Apagar o perfil de uma conta antiga (depois de já migrar tudo)\n\n'+
+      'Digite 1, 2 ou 3:'
+    );
+    if(escolha==='1'){
+      const idx = prompt('Fichas desta campanha:\n\n'+listaFichas+'\n\nDigite o NÚMERO da ficha que quer transferir:');
+      const ficha = fichas[parseInt(idx,10)-1];
+      if(!ficha){ toast('Ficha inválida.'); return; }
+      const novoDono = prompt('Nome (nickname exato) do jogador que vai receber esta ficha:');
+      if(!novoDono) return;
+      adminTransferirFicha(ficha, novoDono.trim())
+        .then(r=> toast(`Ficha transferida de "${r.donoAntigo||'ninguém'}" para "${r.donoNovo}".`))
+        .catch(err=> toast('Erro: '+err.message));
+    } else if(escolha==='2'){
+      const nomeAntigo = prompt('Nome (nickname exato) da conta ANTIGA, de onde vai sair tudo:');
+      if(!nomeAntigo) return;
+      const nomeNovo = prompt('Nome (nickname exato) da conta NOVA, que vai receber tudo:');
+      if(!nomeNovo) return;
+      if(!confirm(`Confirma migrar TODAS as fichas, rolagens, iniciativa, intriga, diário, galerias, mapas e linha do tempo de "${nomeAntigo}" para "${nomeNovo}" nesta campanha?`)) return;
+      adminTransferirTudoDoJogador(nomeAntigo.trim(), nomeNovo.trim())
+        .then(resumo=>{
+          const linhas = Object.entries(resumo).map(([k,v])=> `${k}: ${v}`).join('\n');
+          alert('Migração concluída:\n\n'+linhas);
+        })
+        .catch(err=> toast('Erro: '+err.message));
+    } else if(escolha==='3'){
+      const nomeAntigo = prompt('Nome (nickname exato) OU slug da conta antiga cujo PERFIL você quer apagar (isso não apaga o login dela, só a lista de campanhas dela):');
+      if(!nomeAntigo) return;
+      if(!confirm('Você já migrou os dados dessa conta (passo 2)? Isso não pode ser desfeito por aqui.')) return;
+      adminApagarPerfilContaAntiga(nomeAntigo.trim())
+        .then(slug=> toast('Perfil da conta "'+slug+'" apagado.'))
+        .catch(err=> toast('Erro: '+err.message));
+    }
   }
 
   /* ============ inicialização ============ */
