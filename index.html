@@ -1093,7 +1093,6 @@
     <div class="topbar-fill"></div>
     <span id="roleBadge"></span>
     <span id="playerNameBadge" style="font-size:.968rem;color:var(--gold-bright);"></span>
-    <button class="btn" id="btnAdminContas" title="Transferir fichas / migrar conta de jogador" style="display:none;">🔧 Contas</button>
     <button class="btn" id="btnLeaveSession">🚪 Trocar</button>
   </header>
 
@@ -1683,8 +1682,6 @@
     beginLoginFlow();
   });
 
-  document.getElementById('btnAdminContas').addEventListener('click', ()=> abrirFerramentasContaMestre());
-
   /* ============ entrar no app ============ */
   function enterApp(){
     document.getElementById('loginScreen').classList.add('hidden');
@@ -1700,9 +1697,6 @@
     /* Recompensas é ferramenta exclusiva do mestre, pra distribuir XP e dinheiro */
     const tabRecompensas = document.getElementById('tabBtnRecompensas');
     if(tabRecompensas) tabRecompensas.style.display = session.role === 'mestre' ? '' : 'none';
-    /* ferramenta de admin (transferir ficha / migrar conta) — só o mestre vê */
-    const btnAdminContas = document.getElementById('btnAdminContas');
-    if(btnAdminContas) btnAdminContas.style.display = session.role === 'mestre' ? '' : 'none';
     setupRollBubble();
     subscribeFichas();
     subscribeMapas();
@@ -2527,28 +2521,40 @@
      A Saúde de um dragão usa Vigor × 6. */
 
   const DRAGAO_IDADES = ['Pequeno','Jovem','Adulto','Veterano','Ancião'];
+  /* agiPercMax = teto de Agilidade e Percepção (essas duas habilidades ficam mais lentas de
+     desenvolver conforme o dragão cresce e fica mais pesado); gradMax = teto das demais
+     habilidades do dragão (Astúcia, Atletismo, Furtividade, Luta, Pontaria, Sobrevivência, Vigor,
+     Vontade). Cada idade exige um número mínimo de desvantagens (0 pra Pequeno/Jovem/Adulto,
+     1 pra Veterano, 2 pra Ancião) — ver DRAGAO_IDADE_MIN_DESVANTAGENS. */
   const DRAGAO_IDADE_INFO = {
     'Pequeno': {
-      agilidadeMax: 7, gradMax: 12, xpHabilidades: 280, xpEspecialidades: 50, xpVantagens: 40,
+      agiPercMax: 8, gradMax: 10, xpHabilidades: 280, xpEspecialidades: 50, xpVantagens: 40,
       desc: 'Recém-saído do ovo ou com poucos anos de vida — do tamanho de um cavalo grande. Ainda ágil e veloz, mas mal começou a desenvolver escamas resistentes ou fogo de verdade.'
     },
     'Jovem': {
-      agilidadeMax: 6, gradMax: 12, xpHabilidades: 380, xpEspecialidades: 70, xpVantagens: 90,
+      agiPercMax: 10, gradMax: 11, xpHabilidades: 380, xpEspecialidades: 70, xpVantagens: 90,
       desc: 'Já voa com folga e caça sozinho — do tamanho de uma casa pequena. Mais forte e perigoso que um filhote, mas ainda rápido no ar e no chão.'
     },
     'Adulto': {
-      agilidadeMax: 5, gradMax: 12, xpHabilidades: 480, xpEspecialidades: 100, xpVantagens: 150,
+      agiPercMax: 12, gradMax: 12, xpHabilidades: 480, xpEspecialidades: 100, xpVantagens: 150,
       desc: 'Um terror consagrado nos céus, massivo o bastante pra esmagar muralhas. Sua mobilidade já não é o que era quando filhote, mas seu poder de fogo e sua blindagem natural compensam.'
     },
     'Veterano': {
-      agilidadeMax: 4, gradMax: 12, xpHabilidades: 580, xpEspecialidades: 120, xpVantagens: 185,
+      agiPercMax: 8, gradMax: 12, xpHabilidades: 580, xpEspecialidades: 120, xpVantagens: 185,
       desc: 'Sobrevivente de incontáveis batalhas e voos — grande o bastante pra sombrear um vilarejo inteiro. Já não tem a agilidade da juventude, mas seu poder de fogo e sua couraça natural impõem respeito por onde passa.'
     },
     'Ancião': {
-      agilidadeMax: 3, gradMax: 12, xpHabilidades: 680, xpEspecialidades: 140, xpVantagens: 220,
+      agiPercMax: 6, gradMax: 11, xpHabilidades: 680, xpEspecialidades: 140, xpVantagens: 220,
       desc: 'Uma lenda viva, tão grande quanto castelos inteiros. Lento e pesado perto do que já foi, mas quase indestrutível e capaz de decidir guerras sozinho.'
     }
   };
+  /* Número mínimo de desvantagens exigido pra cada idade (na criação direta ou acumulado ao
+     longo das evoluções). */
+  const DRAGAO_IDADE_MIN_DESVANTAGENS = {'Pequeno':0,'Jovem':0,'Adulto':0,'Veterano':1,'Ancião':2};
+  function dragaoLimiteHabilidade(idade, h){
+    const info = DRAGAO_IDADE_INFO[idade] || DRAGAO_IDADE_INFO['Adulto'];
+    return (h==='agilidade' || h==='percepcao') ? info.agiPercMax : info.gradMax;
+  }
 
   /* Armas naturais que TODO dragão recebe automaticamente desde a criação (Garras, Mordida e
      Baforada) — não são mais compradas com XP, escalam sozinhas conforme a idade do dragão.
@@ -2588,46 +2594,31 @@
   }
 
   const DESVANTAGENS_CATALOGO_DRAGAO = [
-    {nome:'Fome Insaciável', efeito:'Precisa se alimentar com frequência incomum; passar mais de dois dias sem caçar ou comer lhe custa -1D em todos os testes até se alimentar novamente.'},
-    {nome:'Orgulho Feroz', efeito:'Nunca recua nem pede ajuda, mesmo em desvantagem clara — encara fuga como humilhação inaceitável.'},
-    {nome:'Vínculo Frágil', efeito:'Depende emocionalmente de um único cavaleiro, guardião ou companheiro. Se ele for ferido, capturado ou morto, sofre -2 em todos os testes até superar a perda.'},
-    {nome:'Temor a Aço Valiriano', efeito:'Hesita instintivamente diante de armas de aço valiriano ou chifres de dragão — precisa de um teste de Vontade Desafiador (9) pra atacar quem as porta abertamente.'},
-    {nome:'Escamas Imaturas', efeito:'Sua couraça natural ainda não está completamente formada. Reduz sua Saúde em -2.'},
-    {nome:'Fúria Cega', efeito:'Uma vez provocado além do limite, ataca o alvo mais próximo — aliado ou não — até se acalmar ou ser subjugado.'},
-    {nome:'Marca de Nascença Fraca', efeito:'Nasceu menor ou mais frágil que o normal da ninhada. Escolha uma habilidade física (Agilidade, Atletismo ou Vigor): sofre -1D em todos os testes com ela.'},
-    {nome:'Desconfiado de Forasteiros', efeito:'Não se deixa montar ou comandar por ninguém fora de seu vínculo original — qualquer tentativa exige um teste de Lidar com Animais ou Persuasão Formidável (12).'}
+    {nome:'Cegueira', efeito:'Seja pelo tempo ou por outro fator, a vista de seu dragão não é boa. Role -3D em todos os seus testes de Percepção e Pontaria.'},
+    {nome:'Aerodinâmica Comprometida', efeito:'A estabilidade de voo de seu dragão é prejudicada. Role -3D em todos os testes.'},
+    {nome:'Seletividade Alimentar', efeito:'Seu dragão só se alimenta de um tipo de comida específica. Escolha ou role 1: (1) Ovelhas, (2) Boi, (3) Peixes, (4) Pessoas, (5) Cavalos, (6) Outros dragões. Se seu dragão passar 2 dias sem se alimentar do seu gosto específico, ele perde 1D em todos os testes.'},
+    {nome:'Chamativo', efeito:'Seu dragão chama muito atenção. Role -2D em todos os testes de Furtividade.'},
+    {nome:'Fôlego Fraco', efeito:'Seu dragão possui um fogo menos intenso que o comum para dragões de sua idade. O máximo de graus de sucesso que o dragão pode acumular em um ataque de Baforada é 2.'},
+    {nome:'Medroso', efeito:'Em cenas de combate, o dragão tem que passar em um teste de Vontade DT 18 (DT 24 se o combate envolver outros dragões).'},
+    {nome:'Lento', efeito:'Quando usar "Impulso", reduz o valor de seu deslocamento pela metade.'}
   ];
 
   /* Tabela de Vantagens de Dragão — o equivalente às Qualidades humanas, mas comprado com XP em vez
-     de Pontos de Destino. "arma" gera automaticamente uma arma natural na ficha; "bonusDefesa" e
-     "bonusSaude" somam diretamente aos campos já existentes na ficha (mesmos usados por humanos). */
+     de Pontos de Destino. "arma" gera automaticamente uma arma natural na ficha; "bonusDefesa",
+     "bonusSaude" e "bonusValorArmadura" somam diretamente aos campos já existentes na ficha. */
   const DRAGAO_VANTAGENS_CATALOGO = {
-    'Ataques Especiais': [
-      {nome:'Chicotada de Cauda', exigencia:'—', custo:25, efeito:'Um golpe de cauda largo o bastante pra varrer vários inimigos ao redor.', arma:{nome:'Rabada', habilidade:'luta', dano:'Atletismo', qualidades:'Ataque natural, Comprida — empurra o alvo 1 passo em caso de acerto.'}}
-    ],
     'Armadura & Resistência': [
-      {nome:'Escamas Endurecidas I', exigencia:'—', custo:20, efeito:'Escamas mais grossas que o normal da espécie. +1 Defesa em Combate, +2 Saúde.', bonusDefesa:1, bonusSaude:2},
-      {nome:'Escamas Endurecidas II', exigencia:'Escamas Endurecidas I', custo:40, efeito:'A couraça natural se aprofunda ainda mais. +1 Defesa em Combate adicional, +2 Saúde adicional.', bonusDefesa:1, bonusSaude:2},
-      {nome:'Escamas Endurecidas III', exigencia:'Escamas Endurecidas II', custo:60, efeito:'Praticamente impenetrável a armas comuns. +1 Defesa em Combate adicional, +2 Saúde adicional.', bonusDefesa:1, bonusSaude:2},
-      {nome:'Couraça Draconica', exigencia:'Escamas Endurecidas II', custo:50, efeito:'Só aço valiriano, magia ou outro dragão conseguem realmente feri-lo. +2 Defesa em Combate, +4 Saúde.', bonusDefesa:2, bonusSaude:4},
-      {nome:'Vitalidade Colossal', exigencia:'—', custo:45, efeito:'Um corpo descomunalmente resistente, mesmo pros padrões da espécie. +6 Saúde.', bonusSaude:6},
-      {nome:'Regeneração Rápida', exigencia:'Vigor 5', custo:60, efeito:'Ferimentos leves se fecham em horas, não em dias. Uma vez por dia de descanso completo, remove automaticamente 1 Ferimento marcado.'}
+      {nome:'Escamas Espessas', exigencia:'—', custo:30, efeito:'A resistência de seu dragão é mais elevada que o comum. +2 no Valor de Armadura.', bonusValorArmadura:2}
     ],
-    'Voo & Mobilidade': [
-      {nome:'Voo', exigencia:'—', custo:30, efeito:'Asas fortes o bastante pra voos curtos, caça aérea e manobras básicas. Some +4 metros ao Movimento quando estiver voando.'},
-      {nome:'Voo Veloz', exigencia:'Voo', custo:50, efeito:'Alcança grandes altitudes e velocidades de perseguição. Some mais +4 metros ao Movimento quando voando (total +8).'},
-      {nome:'Mergulho Predatório', exigencia:'Voo', custo:35, efeito:'Um ataque feito em mergulho é devastador: some sua graduação em Atletismo ao dano da primeira Mordida, Garras ou Rabada usada no combate.'}
+    'Ataques Especiais': [
+      {nome:'Predador dos Céus', exigencia:'—', custo:35, efeito:'Em uma carga aérea, converta até 2 dados de bônus de Voar em dados de teste no ataque.'}
     ],
     'Instinto & Presença': [
-      {nome:'Sentidos Aguçados', exigencia:'—', custo:25, efeito:'Visão, olfato e audição muito acima do normal. Some +2 aos testes de Percepção usando Notar.'},
-      {nome:'Medo Ancestral', exigencia:'—', custo:40, efeito:'Sua simples presença apavora mortais e animais comuns. Testes de Vontade ou Coragem feitos contra você sofrem -2.'},
-      {nome:'Fúria Draconica', exigencia:'—', custo:35, efeito:'Uma vez por combate, ao sofrer um Ferimento, pode entrar em fúria: +1D em todos os testes de Luta e Atletismo até o fim da cena.'},
-      {nome:'Memória Milenar', exigencia:'—', idadeMin:'Adulto', custo:30, efeito:'Guarda lembranças de eras passadas. Some +2 aos testes de Astúcia envolvendo história, magia antiga ou seus próprios feitos.'}
+      {nome:'Intimidador', exigencia:'—', custo:40, efeito:'Seu dragão é um monstro para seus oponentes. Seu inimigo deve fazer um teste de Vontade no início de cada um de seus turnos. Se passar, fica imune à presença intimidadora do dragão até o fim do dia. Se falhar, perde 1 de suas ações menores e não pode realizar ações maiores.'},
+      {nome:'Coroa de Luz', exigencia:'—', custo:35, efeito:'Sob luz direta o seu dragão age como um grande refletor. Dobre o valor da sua Agilidade pra sua Defesa em Combate desde que seu dragão esteja exposto a essa fonte luminosa (luz solar, lua cheia, etc).'}
     ],
-    'Vantagens Raras': [
-      {nome:'Vínculo de Sangue', exigencia:'—', custo:30, efeito:'Reconhece e aceita o comando de um único cavaleiro, guardião ou companheiro; ninguém mais consegue montá-lo ou comandá-lo sem sua permissão.'},
-      {nome:'Sangue de Fogo', exigencia:'—', idadeMin:'Ancião', custo:50, efeito:'Imune a fogo e calor extremo de qualquer origem, incluindo o próprio.'},
-      {nome:'Terror dos Céus', exigencia:'—', idadeMin:'Adulto', custo:60, efeito:'Exércitos inteiros rompem formação ao vê-lo se aproximar. Tropas comuns precisam de um teste de Vontade Desafiador (9) pra não fugir em pânico.'}
+    'Voo & Mobilidade': [
+      {nome:'Asas Leves', exigencia:'—', custo:45, efeito:'Seu dragão pode usar Esquiva como uma ação menor.'}
     ]
   };
 
@@ -2651,7 +2642,7 @@
       frustracoes:[false,false,false,false,false,false,false],
       ferimentos:[false,false,false,false,false,false,false],
       lesoes:[false,false,false,false,false,false,false],
-      bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0, bonusSaude:0,
+      bonusDefesa:0, penalidadeArmadura:0, corridaBonus:0, bonusSaude:0, bonusValorArmadura:0,
       armaduras:[], armas:[],
       magiaFeiticeiro:false, magiaBonusEspecialidade:0, magiaDificuldadeAcumulada:0, magiaModificadores:0,
       altura:'', peso:'', olhos:'', cabelos:'', marcasDistincao:'', detalhes:'',
@@ -2672,7 +2663,8 @@
       habilidadesCompradas:{},
       especialidadesCompradas:{},
       desvantagensEscolhidas:[],
-      vantagensEscolhidas:[]
+      vantagensEscolhidas:[],
+      vantagemGratisNome: null // nome da vantagem ganha de graça por ter escolhido ≥1 desvantagem
     };
     HABILIDADES_DRAGAO.forEach(h=>{ wizStateDragao.habilidadesCompradas[h] = 2; });
     renderWizardDragao();
@@ -2735,7 +2727,7 @@
           return `<div class="wizard-status-card ${w.idade===id?'selecionado':''}" data-dragidade="${id}">
             <div class="wizard-status-nome">🐉 ${id}</div>
             <div class="wizard-status-desc">${escapeHtml(info.desc)}</div>
-            <div class="wizard-status-exemplos">Agilidade máx.: ${info.agilidadeMax} · Outras habilidades máx.: ${info.gradMax}</div>
+            <div class="wizard-status-exemplos">Agilidade e Percepção máx.: ${info.agiPercMax} · Outras habilidades máx.: ${info.gradMax}${DRAGAO_IDADE_MIN_DESVANTAGENS[id]>0?` · Exige ${DRAGAO_IDADE_MIN_DESVANTAGENS[id]} desvantagem${DRAGAO_IDADE_MIN_DESVANTAGENS[id]>1?'ns':''}`:''}</div>
           </div>`;
         }).join('')}
       </div>
@@ -2825,7 +2817,7 @@
     const gasto = wizDragaoXpHabilidadesGasto();
     const restante = info.xpHabilidades - gasto;
     return `
-      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP para habilidades: <strong style="color:var(--gold-bright);">${info.xpHabilidades}</strong> · Graduação máxima: <strong style="color:var(--gold-bright);">${info.gradMax}</strong>. Agilidade tem um teto próprio de <strong style="color:var(--gold-bright);">${info.agilidadeMax}</strong> — dragões maiores são mais fortes, mas mais lentos (nem todo dragão chega nesse máximo). Dragões não têm Conhecimento, Cura, Enganação, Guerra, Idioma, Ladinagem, Lidar com Animais, Persuasão nem Status — não aparecem aqui.</p>
+      <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP para habilidades: <strong style="color:var(--gold-bright);">${info.xpHabilidades}</strong> · Graduação máxima: <strong style="color:var(--gold-bright);">${info.gradMax}</strong>. Agilidade e Percepção têm um teto próprio de <strong style="color:var(--gold-bright);">${info.agiPercMax}</strong> — dragões maiores são mais fortes, mas mais lentos e menos alertas (nem todo dragão chega nesse máximo). Dragões não têm Conhecimento, Cura, Enganação, Guerra, Idioma, Ladinagem, Lidar com Animais, Persuasão nem Status — não aparecem aqui.</p>
       <div class="wizard-xp-tracker ${restante<0?'estourado':''}">XP gasto: <strong>${gasto}</strong> / ${info.xpHabilidades} — ${restante>=0?`restam ${restante}`:`estourou em ${-restante}`}</div>
       <table class="hab-table">
         <thead><tr><th>Habilidade</th><th>Graduação</th><th>Custo acumulado</th></tr></thead>
@@ -2833,9 +2825,9 @@
           ${HABILIDADES_DRAGAO.map(h=>{
             const grad = wizStateDragao.habilidadesCompradas[h]||2;
             const custo = custoAcumuladoHabilidade(grad);
-            const max = h==='agilidade' ? info.agilidadeMax : info.gradMax;
+            const max = dragaoLimiteHabilidade(faixa, h);
             return `<tr>
-              <td class="hab-name">${HABILIDADE_LABEL[h]}${h==='agilidade'?' 🪽':''}</td>
+              <td class="hab-name">${HABILIDADE_LABEL[h]}${h==='agilidade'?' 🪽':''}${h==='percepcao'?' 👁️':''}</td>
               <td><input type="number" min="1" max="${max}" data-wdhab="${h}" value="${grad}" style="width:64px;"></td>
               <td style="color:var(--muted);">${custo>=0?'+':''}${custo} XP</td>
             </tr>`;
@@ -2853,7 +2845,7 @@
       const h = inp.dataset.wdhab;
       const faixa = wizStateDragao.idade;
       const info = DRAGAO_IDADE_INFO[faixa]||DRAGAO_IDADE_INFO['Adulto'];
-      const max = h==='agilidade' ? info.agilidadeMax : info.gradMax;
+      const max = dragaoLimiteHabilidade(faixa, h);
       let v = parseInt(inp.value,10); if(isNaN(v)) v = 2;
       v = Math.max(1, Math.min(max, v));
       wizStateDragao.habilidadesCompradas[h] = v;
@@ -2886,7 +2878,7 @@
             ${lista.map((e,i)=> `
               <div class="compra-gorjeta-linha">
                 <div style="flex:1;"><input type="text" data-wdesp-nome="${h}.${i}" value="${escapeHtml(e.nome)}" placeholder="nome da especialidade"></div>
-                <div style="max-width:90px;"><input type="number" min="1" max="5" data-wdesp-bonus="${h}.${i}" value="${e.bonus}"></div>
+                <div style="max-width:90px;"><input type="number" min="1" max="${wizStateDragao.habilidadesCompradas[h]||1}" data-wdesp-bonus="${h}.${i}" value="${e.bonus}"></div>
                 <button class="row-del" data-wdesp-del="${h}.${i}" title="Remover">×</button>
               </div>`).join('')}
             <button class="btn add-row-btn" data-wdesp-add="${h}">+ Especialidade em ${HABILIDADE_LABEL[h]}</button>
@@ -2917,19 +2909,23 @@
     }));
     document.querySelectorAll('[data-wdesp-bonus]').forEach(inp=> inp.addEventListener('input', ()=>{
       const [h,i] = inp.dataset.wdespBonus.split('.');
-      wizStateDragao.especialidadesCompradas[h][parseInt(i,10)].bonus = Math.max(1, parseInt(inp.value,10)||1);
+      const maxB = wizStateDragao.habilidadesCompradas[h]||1;
+      wizStateDragao.especialidadesCompradas[h][parseInt(i,10)].bonus = Math.max(1, Math.min(maxB, parseInt(inp.value,10)||1));
       renderWizardDragao();
     }));
     document.getElementById('wdVoltar4').addEventListener('click', ()=>{ wizStateDragao.step=3; renderWizardDragao(); });
     document.getElementById('wdAvancar4').addEventListener('click', ()=>{ wizStateDragao.step=5; renderWizardDragao(); });
   }
 
-  /* ---- Passo 5: Desvantagens (opcionais — cada uma dá +15 XP pra gastar em Vantagens de Dragão) ---- */
+  /* ---- Passo 5: Desvantagens (opcionais — cada uma dá +15 XP pra gastar em Vantagens de Dragão).
+     Veteranos exigem ao menos 1 desvantagem e Anciões ao menos 2 (DRAGAO_IDADE_MIN_DESVANTAGENS).
+     Além disso, ter escolhido ao menos 1 desvantagem libera 1 Vantagem de Dragão grátis no Passo 6. ---- */
   function wizardDragaoStep5Html(){
     const escolhidas = wizStateDragao.desvantagensEscolhidas;
+    const minReq = DRAGAO_IDADE_MIN_DESVANTAGENS[wizStateDragao.idade] || 0;
     return `
-      <p class="wizard-intro">Desvantagens são opcionais, mas cada uma escolhida concede <strong style="color:var(--gold-bright);">+15 XP</strong> extra pra gastar em Vantagens de Dragão no próximo passo.</p>
-      <div class="wizard-xp-tracker">Desvantagens escolhidas: <strong>${escolhidas.length}</strong> — bônus: +${escolhidas.length*15} XP</div>
+      <p class="wizard-intro">Cada desvantagem escolhida concede <strong style="color:var(--gold-bright);">+15 XP</strong> extra pra gastar em Vantagens de Dragão no próximo passo, e escolher ao menos 1 libera <strong style="color:var(--gold-bright);">1 Vantagem grátis</strong> no Passo 6.${minReq>0?` Dragões <strong style="color:var(--gold-bright);">${wizStateDragao.idade}s</strong> exigem ao menos <strong style="color:var(--gold-bright);">${minReq}</strong> desvantagem${minReq>1?'ns':''}.`:''}</p>
+      <div class="wizard-xp-tracker ${escolhidas.length<minReq?'estourado':''}">Desvantagens escolhidas: <strong>${escolhidas.length}</strong>${minReq>0?` / mínimo ${minReq}`:''} — bônus: +${escolhidas.length*15} XP</div>
       <button class="btn add-row-btn" id="btnWdDvPersonalizada">✏️ Adicionar Personalizada</button>
       <div class="wizard-qual-grid" style="margin-top:.6rem;">
         ${DESVANTAGENS_CATALOGO_DRAGAO.map(dv=>{
@@ -2979,26 +2975,46 @@
       renderWizardDragao();
     });
     document.getElementById('wdVoltar5').addEventListener('click', ()=>{ wizStateDragao.step=4; renderWizardDragao(); });
-    document.getElementById('wdAvancar5').addEventListener('click', ()=>{ wizStateDragao.step=6; renderWizardDragao(); });
+    document.getElementById('wdAvancar5').addEventListener('click', ()=>{
+      const minReq = DRAGAO_IDADE_MIN_DESVANTAGENS[wizStateDragao.idade] || 0;
+      if(wizStateDragao.desvantagensEscolhidas.length < minReq){
+        toast(`Dragões ${wizStateDragao.idade}s precisam de ao menos ${minReq} desvantagem${minReq>1?'ns':''}.`);
+        return;
+      }
+      wizStateDragao.step=6; renderWizardDragao();
+    });
   }
 
-  /* ---- Passo 6: Vantagens de Dragão — armadura natural, baforada, presas/garras etc. ---- */
+  /* ---- Passo 6: Vantagens de Dragão — armadura natural, baforada, presas/garras etc.
+     Se o dragão tiver ao menos 1 desvantagem escolhida no Passo 5, ele pode marcar 1 das
+     vantagens já escolhidas como "grátis" (não conta no XP gasto). ---- */
   function wizDragaoXpVantagensPool(){
     const faixa = wizStateDragao.idade;
     const info = DRAGAO_IDADE_INFO[faixa]||DRAGAO_IDADE_INFO['Adulto'];
     return info.xpVantagens + wizStateDragao.desvantagensEscolhidas.length*15;
+  }
+  function wizDragaoTemVantagemGratisDisponivel(){
+    return wizStateDragao.desvantagensEscolhidas.length >= 1;
+  }
+  function wizDragaoGastoVantagens(){
+    return wizStateDragao.vantagensEscolhidas.reduce((s,v)=> s + (v.nome===wizStateDragao.vantagemGratisNome ? 0 : (v.custo||0)), 0);
   }
   function wizardDragaoStep6Html(){
     const faixa = wizStateDragao.idade;
     const pool = wizDragaoXpVantagensPool();
     const escolhidas = wizStateDragao.vantagensEscolhidas;
     const nomesEscolhidos = escolhidas.map(v=>v.nome);
-    const gasto = escolhidas.reduce((s,v)=> s+(v.custo||0),0);
+    const gasto = wizDragaoGastoVantagens();
     const restante = pool - gasto;
+    const temGratis = wizDragaoTemVantagemGratisDisponivel();
     return `
       <p class="wizard-intro">Idade: <strong style="color:var(--gold-bright);">${faixa}</strong> — XP disponível pra Vantagens de Dragão: <strong style="color:var(--gold-bright);">${pool}</strong>${wizStateDragao.desvantagensEscolhidas.length?` (${DRAGAO_IDADE_INFO[faixa].xpVantagens} base + ${wizStateDragao.desvantagensEscolhidas.length*15} de desvantagens)`:''}. Garras, Mordida e Baforada já são automáticas (escalam com a idade) — aqui o dragão investe em armadura natural, voo, instinto e outras vantagens exclusivas.</p>
+      ${temGratis ? `<p class="wizard-intro" style="color:var(--gold-bright);">🎁 Como você escolheu ao menos 1 desvantagem, pode marcar 1 das vantagens já escolhidas abaixo como grátis (não gasta XP).</p>` : ''}
       <div class="wizard-xp-tracker ${restante<0?'estourado':''}">XP gasto: <strong>${gasto}</strong> / ${pool} — ${restante>=0?`restam ${restante}`:`estourou em ${-restante}`}</div>
-      ${escolhidas.length ? `<div class="wizard-escolhidos-lista">${escolhidas.map((v,i)=> `<span class="wizard-escolhido-tag">${escapeHtml(v.nome)} (${v.custo} XP) <button data-wdvant-remover="${i}" title="Remover">×</button></span>`).join('')}</div>` : ''}
+      ${escolhidas.length ? `<div class="wizard-escolhidos-lista">${escolhidas.map((v,i)=> {
+        const ehGratis = v.nome===wizStateDragao.vantagemGratisNome;
+        return `<span class="wizard-escolhido-tag" style="${ehGratis?'border-color:var(--gold-bright);':''}">${escapeHtml(v.nome)} (${ehGratis?'🎁 Grátis':`${v.custo} XP`}) ${temGratis?`<button data-wdvant-gratis="${escapeHtml(v.nome)}" title="${ehGratis?'Remover grátis':'Tornar grátis'}" style="margin-left:.2rem;">${ehGratis?'↩️':'🎁'}</button>`:''}<button data-wdvant-remover="${i}" title="Remover">×</button></span>`;
+      }).join('')}</div>` : ''}
       ${Object.keys(DRAGAO_VANTAGENS_CATALOGO).map(categoria=>{
         const itens = DRAGAO_VANTAGENS_CATALOGO[categoria].filter(v=> atendeExigenciaDragao(v.exigencia, v.idadeMin, wizStateDragao.habilidadesCompradas, nomesEscolhidos, faixa));
         if(!itens.length) return '';
@@ -3037,19 +3053,31 @@
       ev.stopPropagation();
       const [categoria, nome] = btn.dataset.wdvantToggle.split('|');
       const idx = wizStateDragao.vantagensEscolhidas.findIndex(v=> v.nome===nome);
-      if(idx>=0){ wizStateDragao.vantagensEscolhidas.splice(idx,1); }
+      if(idx>=0){
+        if(wizStateDragao.vantagemGratisNome===nome) wizStateDragao.vantagemGratisNome = null;
+        wizStateDragao.vantagensEscolhidas.splice(idx,1);
+      }
       else {
         const v = DRAGAO_VANTAGENS_CATALOGO[categoria].find(x=>x.nome===nome);
         const custo = v.custo||0;
-        const gasto = wizStateDragao.vantagensEscolhidas.reduce((s,x)=> s+(x.custo||0),0);
+        const gasto = wizDragaoGastoVantagens();
         const pool = wizDragaoXpVantagensPool();
         if(gasto + custo > pool){ toast('XP insuficiente pra essa vantagem.'); return; }
-        wizStateDragao.vantagensEscolhidas.push({nome:v.nome, categoria, efeito:v.efeito, custo, arma:v.arma||null, bonusDefesa:v.bonusDefesa||0, bonusSaude:v.bonusSaude||0});
+        wizStateDragao.vantagensEscolhidas.push({nome:v.nome, categoria, efeito:v.efeito, custo, arma:v.arma||null, bonusDefesa:v.bonusDefesa||0, bonusSaude:v.bonusSaude||0, bonusValorArmadura:v.bonusValorArmadura||0});
       }
       renderWizardDragao();
     }));
+    document.querySelectorAll('[data-wdvant-gratis]').forEach(btn=> btn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const nome = btn.dataset.wdvantGratis;
+      wizStateDragao.vantagemGratisNome = (wizStateDragao.vantagemGratisNome===nome) ? null : nome;
+      renderWizardDragao();
+    }));
     document.querySelectorAll('[data-wdvant-remover]').forEach(btn=> btn.addEventListener('click', ()=>{
-      wizStateDragao.vantagensEscolhidas.splice(parseInt(btn.dataset.wdvantRemover,10),1);
+      const idx = parseInt(btn.dataset.wdvantRemover,10);
+      const v = wizStateDragao.vantagensEscolhidas[idx];
+      if(v && wizStateDragao.vantagemGratisNome===v.nome) wizStateDragao.vantagemGratisNome = null;
+      wizStateDragao.vantagensEscolhidas.splice(idx,1);
       renderWizardDragao();
     }));
     document.getElementById('wdVoltar6').addEventListener('click', ()=>{ wizStateDragao.step=5; renderWizardDragao(); });
@@ -3083,7 +3111,7 @@
     ];
 
     // Garras, Mordida e Baforada são automáticas desde a criação, escalando com a idade escolhida.
-    // Vantagens com "arma" (ex: Chicotada de Cauda) entram como armas extras, além dessas três.
+    // Vantagens com campo "arma" (nenhuma no catálogo atual) entrariam como armas extras, além dessas três.
     const armasPorNome = new Map();
     armasNaturaisDragao(wizStateDragao.idade).forEach(a=> armasPorNome.set(a.nome, a));
     wizStateDragao.vantagensEscolhidas.forEach(v=>{
@@ -3094,6 +3122,7 @@
     // vantagens com bônus de Defesa/Saúde somam nos campos da ficha
     dados.bonusDefesa = wizStateDragao.vantagensEscolhidas.reduce((s,v)=> s+(v.bonusDefesa||0), 0);
     dados.bonusSaude = wizStateDragao.vantagensEscolhidas.reduce((s,v)=> s+(v.bonusSaude||0), 0);
+    dados.bonusValorArmadura = wizStateDragao.vantagensEscolhidas.reduce((s,v)=> s+(v.bonusValorArmadura||0), 0);
 
     // XP: o dragão carrega o XP total da idade em que foi criado; o que não foi gasto em
     // habilidades no Passo 3 fica disponível pra evoluir depois (mesma moeda usada no botão "Evoluir")
@@ -3393,7 +3422,7 @@
             ${lista.map((e,i)=> `
               <div class="compra-gorjeta-linha">
                 <div style="flex:1;"><input type="text" data-wizesp-nome="${h}.${i}" value="${escapeHtml(e.nome)}" placeholder="nome da especialidade"></div>
-                <div style="max-width:90px;"><input type="number" min="1" max="5" data-wizesp-bonus="${h}.${i}" value="${e.bonus}"></div>
+                <div style="max-width:90px;"><input type="number" min="1" max="${wizState.habilidadesCompradas[h]||1}" data-wizesp-bonus="${h}.${i}" value="${e.bonus}"></div>
                 <button class="row-del" data-wizesp-del="${h}.${i}" title="Remover">×</button>
               </div>`).join('')}
             <button class="btn add-row-btn" data-wizesp-add="${h}">+ Especialidade em ${HABILIDADE_LABEL[h]}</button>
@@ -3424,7 +3453,8 @@
     }));
     document.querySelectorAll('[data-wizesp-bonus]').forEach(inp=> inp.addEventListener('input', ()=>{
       const [h,i] = inp.dataset.wizespBonus.split('.');
-      wizState.especialidadesCompradas[h][parseInt(i,10)].bonus = Math.max(1, parseInt(inp.value,10)||1);
+      const maxB = wizState.habilidadesCompradas[h]||1;
+      wizState.especialidadesCompradas[h][parseInt(i,10)].bonus = Math.max(1, Math.min(maxB, parseInt(inp.value,10)||1));
       renderWizard();
     }));
     document.getElementById('wVoltar5').addEventListener('click', ()=>{ wizState.step=4; renderWizard(); });
@@ -3841,11 +3871,110 @@
     scheduleFichaSave(id, f);
     toast(`🐉 Seu dragão envelheceu para ${novaIdade}! +${ganho} XP`);
   }
+
+  /* Virar Veterano ou Ancião exige escolher uma desvantagem nova antes de confirmar o
+     envelhecimento (ver DRAGAO_IDADE_MIN_DESVANTAGENS: 1 pra Veterano, mais 1 — total 2 — pra
+     Ancião). Como o envelhecimento é sempre sequencial, ao chegar em Ancião o dragão já tem a
+     desvantagem ganha ao virar Veterano, então só falta escolher mais 1 aqui. */
+  let evoDesvantagemState = null; // {id, novaIdade, escolhidas:[], continuar}
+  function abrirModalDesvantagemEvolucao(id, novaIdade, continuar){
+    evoDesvantagemState = {id, novaIdade, escolhidas:[], continuar};
+    renderModalDesvantagemEvolucao();
+  }
+  function renderModalDesvantagemEvolucao(){
+    const st = evoDesvantagemState;
+    if(!st) return;
+    let overlay = document.getElementById('evoDesvantagemOverlay');
+    if(!overlay){
+      overlay = document.createElement('div');
+      overlay.id = 'evoDesvantagemOverlay';
+      document.body.appendChild(overlay);
+    }
+    const f = fichasCache[st.id] || {};
+    const jaTem = (f.qualidadesLista||[]).filter(q=>q.tipo==='defeito').map(q=>q.nome);
+    overlay.innerHTML = `<div class="wizard-box wizard-box-largo">
+      <div class="wizard-header"><h2>🐉 Seu dragão está virando ${st.novaIdade}!</h2></div>
+      <div class="wizard-body">
+        <p class="wizard-intro">Dragões ${st.novaIdade}s precisam de mais 1 desvantagem${st.novaIdade==='Ancião'?' (junto com a que ganhou ao virar Veterano, ele fica com 2 no total)':''}. Escolha 1 desvantagem nova pra continuar envelhecendo.</p>
+        <div class="wizard-xp-tracker ${st.escolhidas.length<1?'estourado':''}">Escolhidas: <strong>${st.escolhidas.length}</strong> / mínimo 1</div>
+        <button class="btn add-row-btn" id="btnEvoDvPersonalizada">✏️ Adicionar Personalizada</button>
+        <div class="wizard-qual-grid" style="margin-top:.6rem;">
+          ${DESVANTAGENS_CATALOGO_DRAGAO.filter(dv=> !jaTem.includes(dv.nome)).map(dv=>{
+            const jaEscolhida = st.escolhidas.some(e=>e.nome===dv.nome);
+            return `<div class="wizard-qual-item ${jaEscolhida?'escolhida':''}">
+              <div class="wizard-qual-row" data-evodvtoggle="${escapeHtml(dv.nome)}">
+                <span class="qd-toggle-icon">▸</span>
+                <span class="wizard-qual-nome">${escapeHtml(dv.nome)}</span>
+                <button class="btn" data-evodv-toggle="${escapeHtml(dv.nome)}" style="padding:.2rem .55rem;font-size:.8rem;margin:0;">${jaEscolhida?'✓ Escolhida':'+ Escolher'}</button>
+              </div>
+              <div class="wizard-qual-detail" style="display:none;">${escapeHtml(dv.efeito)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="wizard-actions">
+          <div class="topbar-fill"></div>
+          <button class="btn primary" id="btnEvoDvConfirmar">Confirmar e Envelhecer</button>
+        </div>
+      </div>
+    </div>`;
+    document.querySelectorAll('[data-evodvtoggle]').forEach(row=> row.addEventListener('click', (ev)=>{
+      if(ev.target.closest('button')) return;
+      const item = row.closest('.wizard-qual-item');
+      const detail = item.querySelector('.wizard-qual-detail');
+      const abrindo = detail.style.display === 'none';
+      detail.style.display = abrindo ? '' : 'none';
+      row.querySelector('.qd-toggle-icon').style.transform = abrindo ? 'rotate(90deg)' : '';
+    }));
+    document.querySelectorAll('[data-evodv-toggle]').forEach(btn=> btn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const nome = btn.dataset.evodvToggle;
+      const idx = evoDesvantagemState.escolhidas.findIndex(d=>d.nome===nome);
+      if(idx>=0) evoDesvantagemState.escolhidas.splice(idx,1);
+      else {
+        const dv = DESVANTAGENS_CATALOGO_DRAGAO.find(d=>d.nome===nome);
+        evoDesvantagemState.escolhidas.push({nome:dv.nome, efeito:dv.efeito});
+      }
+      renderModalDesvantagemEvolucao();
+    }));
+    const btnPersonalizada = document.getElementById('btnEvoDvPersonalizada');
+    if(btnPersonalizada) btnPersonalizada.addEventListener('click', ()=>{
+      const nome = prompt('Nome da desvantagem personalizada:');
+      if(!nome) return;
+      const efeito = prompt('Descrição — o que ela faz:') || '';
+      evoDesvantagemState.escolhidas.push({nome, efeito});
+      renderModalDesvantagemEvolucao();
+    });
+    document.getElementById('btnEvoDvConfirmar').addEventListener('click', ()=>{
+      if(evoDesvantagemState.escolhidas.length < 1){ toast('Escolha ao menos 1 desvantagem.'); return; }
+      const continuar = evoDesvantagemState.continuar;
+      const escolhidas = evoDesvantagemState.escolhidas;
+      const ov = document.getElementById('evoDesvantagemOverlay');
+      if(ov) ov.remove();
+      evoDesvantagemState = null;
+      continuar(escolhidas);
+    });
+  }
   function wireExperienciaPainel(id){
     const btnEvoluir = document.getElementById('btnEvoluir');
     if(btnEvoluir) btnEvoluir.addEventListener('click', ()=>{
       const f0 = fichasCache[id];
-      if(f0 && f0.tipo==='dragao') aplicarEnvelhecimentoDragao(id, f0);
+      if(f0 && f0.tipo==='dragao'){
+        const idxAtual = DRAGAO_IDADES.indexOf(f0.idade);
+        const novaIdade = DRAGAO_IDADES[idxAtual+1];
+        if(novaIdade==='Veterano' || novaIdade==='Ancião'){
+          abrirModalDesvantagemEvolucao(id, novaIdade, (escolhidas)=>{
+            const f1 = fichasCache[id];
+            if(!f1.qualidadesLista) f1.qualidadesLista = [];
+            escolhidas.forEach(d=> f1.qualidadesLista.push({tipo:'defeito', nome:d.nome, desc:d.efeito}));
+            aplicarEnvelhecimentoDragao(id, f1);
+            evoDraft = {fichaId:id, acoes:[]};
+            evoSubFormAberto = null;
+            renderEditor(id);
+          });
+          return;
+        }
+        aplicarEnvelhecimentoDragao(id, f0);
+      }
       evoDraft = {fichaId:id, acoes:[]};
       evoSubFormAberto = null;
       renderEditor(id);
@@ -4259,6 +4388,90 @@
     return f && f.ownerName === session.playerName;
   }
 
+  /* ============ transferir controle de uma ficha para outro usuário ============
+     "Dono" de uma ficha, nesse app, é só o campo ownerName (texto) batendo com
+     session.playerName — não existe UID/permissão de verdade por trás. Transferir
+     controle é portanto só trocar esse texto pelo nome exato do jogador de destino
+     (o "nome" vem do cadastro/login dele, currentAuthUser.nome). Só o Mestre pode
+     fazer essa troca, pra evitar que um jogador "roube" a ficha de outro sozinho.
+     Guardamos o dono anterior em ownerHistory só como registro/auditoria. */
+  function abrirTransferirFicha(id){
+    const f = fichasCache[id];
+    if(!f) return;
+    if(session.role !== 'mestre'){ toast('Só o Mestre pode transferir o controle de uma ficha.'); return; }
+
+    // nomes já conhecidos nessa campanha (donos de outras fichas), pra não precisar digitar de cabeça
+    const nomesConhecidos = Array.from(new Set(
+      Object.values(fichasCache).map(x=> x.ownerName).filter(Boolean)
+    )).filter(nome=> nome !== f.ownerName).sort((a,b)=> a.localeCompare(b));
+
+    const overlay = document.createElement('div');
+    overlay.id = 'transferirFichaOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:460;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:linear-gradient(160deg, var(--panel-2), var(--panel) 60%);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:10px;padding:1.4rem 1.6rem;max-width:420px;width:100%;max-height:80vh;overflow:auto;';
+    const itemHtml = (nome)=> `
+      <div class="campanha-item" data-escolhernovodono="${escapeHtml(nome)}" style="cursor:pointer;">
+        <span class="campanha-nome">${escapeHtml(nome)}</span>
+      </div>`;
+    box.innerHTML = `
+      <h3 style="margin-top:0;">🔁 Transferir controle</h3>
+      <p style="font-size:.944rem;color:var(--muted);margin-top:-.4rem;">
+        Ficha: <strong style="color:var(--gold-bright);">${escapeHtml(f.nome||'Sem nome')}</strong><br>
+        Dono atual: <strong>${escapeHtml(f.ownerName||'sem dono')}</strong>
+      </p>
+      ${nomesConhecidos.length ? `
+      <div class="wizard-secao-titulo">Jogadores já conhecidos nesta campanha</div>
+      ${nomesConhecidos.map(itemHtml).join('')}
+      ` : `<div class="campanhas-empty-hint">Nenhum outro nome de jogador conhecido ainda nesta campanha.</div>`}
+      <div class="wizard-secao-titulo" style="margin-top:.8rem;">Ou digite o nome exato do jogador</div>
+      <div class="field-row">
+        <input type="text" id="transferirFichaNomeInput" placeholder="nome exato do jogador (como aparece no login)">
+      </div>
+      <p style="font-size:.85rem;color:var(--muted);margin:.3rem 0 0;">
+        ⚠️ O nome precisa ser IDÊNTICO ao nome de login/cadastro do jogador de destino — é assim que o app decide de quem é a ficha.
+      </p>
+      <div class="login-actions" style="margin-top:1rem;">
+        <button class="btn ghost" id="transferirFichaMestre" title="Deixa a ficha sob controle do Mestre (útil pra transformar num NPC)">👑 Dar ao Mestre</button>
+        <button class="btn primary" id="transferirFichaConfirmar" style="flex:1;">Transferir</button>
+        <button class="btn" id="transferirFichaCancelar">Cancelar</button>
+      </div>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const fechar = ()=> overlay.remove();
+    overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay) fechar(); });
+    document.getElementById('transferirFichaCancelar').addEventListener('click', fechar);
+    document.getElementById('transferirFichaMestre').addEventListener('click', ()=>{
+      transferirControleFicha(id, session.playerName, fechar);
+    });
+    document.getElementById('transferirFichaConfirmar').addEventListener('click', ()=>{
+      const nome = document.getElementById('transferirFichaNomeInput').value.trim();
+      if(!nome){ toast('Digite ou escolha o nome do novo dono.'); return; }
+      transferirControleFicha(id, nome, fechar);
+    });
+    box.querySelectorAll('[data-escolhernovodono]').forEach(el=>{
+      el.addEventListener('click', ()=> transferirControleFicha(id, el.dataset.escolhernovodono, fechar));
+    });
+  }
+
+  function transferirControleFicha(id, novoOwnerName, onDone){
+    const f = fichasCache[id];
+    if(!f) return;
+    const donoAnterior = f.ownerName || null;
+    if(donoAnterior === novoOwnerName){ toast('Essa ficha já é dessa pessoa.'); return; }
+    const historico = Array.isArray(f.ownerHistory) ? f.ownerHistory.slice() : [];
+    historico.push({ de: donoAnterior, para: novoOwnerName, por: session.playerName, em: Date.now() });
+    fichasCol().doc(id).set({
+      ownerName: novoOwnerName,
+      ownerHistory: historico,
+      updatedAt: serverTimestampValue()
+    }, {merge:true}).then(()=>{
+      toast(`🔁 Ficha "${f.nome||'Sem nome'}" transferida para ${novoOwnerName}.`);
+      if(onDone) onDone();
+      if(currentEditingId===id) renderEditor(id);
+    }).catch(err=> toast('Erro ao transferir: ' + err.message));
+  }
+
   function openEditor(id){
     currentEditingId = id;
     document.getElementById('fichasList').style.display = 'none';
@@ -4434,7 +4647,7 @@
       compostura: (h.vontade||0) * 3,
       defesaCombate: (h.agilidade||0) + (h.atletismo||0) + (h.percepcao||0) + (f.bonusDefesa||0) - (isDragao ? 0 : (f.penalidadeArmadura||0)),
       saude: (h.vigor||0) * (isDragao ? 6 : 3) + (f.bonusSaude||0),
-      valorArmadura: isDragao ? (h.vigor||0) + Math.floor(bonusResistenciaDragao(f)/2) : 0,
+      valorArmadura: isDragao ? (h.vigor||0) + Math.floor(bonusResistenciaDragao(f)/2) + (f.bonusValorArmadura||0) : 0,
       movimento: 4 + Math.floor((f.corridaBonus||0)/2),
       corrida: (4 + Math.floor((f.corridaBonus||0)/2)) * 4,
       aeksio,
@@ -4464,7 +4677,7 @@
         <div class="esp-item">
           <span class="quick-roll-btn" data-esproll="${h}.${i}" title="Rolar com essa especialidade">🎲</span>
           <input type="text" class="esp-nome-input" data-espfield="${h}.${i}.nome" value="${escapeHtml(e.nome||'')}" placeholder="especialidade" ${editable?'':'disabled'}>
-          <input type="number" min="1" max="5" class="esp-bonus-input" data-espfield="${h}.${i}.bonus" value="${e.bonus||1}" title="Dados de bônus" ${editable?'':'disabled'}>
+          <input type="number" min="1" max="${Math.max(1,f.habilidades[h]||0)}" class="esp-bonus-input" data-espfield="${h}.${i}.bonus" value="${e.bonus||1}" title="Dados de bônus (máx. = graduação da habilidade)" ${editable?'':'disabled'}>
           ${editable?`<button class="row-del" data-espdel="${h}.${i}" title="Remover especialidade">×</button>`:''}
         </div>`).join('');
       const catalogo = ESPECIALIDADES_CATALOGO[h] || [];
@@ -4485,7 +4698,7 @@
 
     function habRowHtml(h){
       return `<tr>
-        <td><input type="number" min="0" max="${isDragao?12:8}" data-field="habilidades.${h}" value="${f.habilidades[h]}" ${editable?'':'disabled'}></td>
+        <td><input type="number" min="0" max="${isDragao?dragaoLimiteHabilidade(f.idade,h):8}" data-field="habilidades.${h}" value="${f.habilidades[h]}" ${editable?'':'disabled'}></td>
         <td class="hab-name"><span class="quick-roll-btn" data-quickroll="${h}" title="Rolar ${HABILIDADE_LABEL[h]} rapidamente">🎲</span> ${HABILIDADE_LABEL[h]}</td>
         <td>${especialidadesCellHtml(h)}</td>
       </tr>`;
@@ -4590,6 +4803,7 @@
           <button type="button" class="btn ${f.rollVisibility!=='privada'?'primary':''}" data-setvisibility="publica">🌐 Pública</button>
           <button type="button" class="btn ${f.rollVisibility==='privada'?'primary':''}" data-setvisibility="privada">🔒 Privada</button>
         </div>` : ''}
+        ${session.role==='mestre' ? `<button class="btn sapphire" id="btnTransferirFicha" title="Passar o controle desta ficha para outro jogador">🔁 Transferir ficha</button>` : ''}
         ${editable ? `<button class="btn danger" id="btnDeleteFicha">Excluir ficha</button>` : ''}
       </div>
       <div class="editor-body">
@@ -4669,7 +4883,8 @@
             </div>
 
             <div class="panel-box">
-              <h3>Equipamentos Gerais</h3>
+              <h3>${isDragao?'Carga':'Equipamentos Gerais'}</h3>
+              ${isDragao?`<div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;">Um dragão aguenta um volume de carga igual a seu Atletismo × 5 (fora seu montador). Capacidade atual: <strong style="color:var(--gold-bright);">${(f.habilidades.atletismo||0)*5}</strong>.</div>`:''}
               <div id="equipamentosGeraisWrap">${(f.equipamentosGerais||[]).map((eq,i)=>`
                 <div class="eq-item">
                   <div class="eq-row" data-toggleeq="${i}">
@@ -4681,10 +4896,10 @@
                   <div class="eq-detail" style="display:none;">
                     <textarea data-eqdesc="${i}" placeholder="Descrição do item…" ${editable?'':'disabled'}>${escapeHtml(eq.descricao||'')}</textarea>
                   </div>
-                </div>`).join('') || `<div class="campanhas-empty-hint" style="padding:.4rem 0;">Nenhum equipamento ainda — compre algo na loja ou adicione manualmente.</div>`}
+                </div>`).join('') || `<div class="campanhas-empty-hint" style="padding:.4rem 0;">Nenhum ${isDragao?'item de carga':'equipamento'} ainda${isDragao?'':' — compre algo na loja ou adicione manualmente'}.</div>`}
               </div>
               ${editable ? `<button class="btn add-row-btn" id="btnAddEquipamentoGeral">+ Adicionar item</button>` : ''}
-              ${editable ? `<button class="btn primary" id="btnAdquirirEquipamento" style="width:100%;margin-top:.6rem;">🛒 Adquirir Equipamento</button>` : ''}
+              ${(editable && !isDragao) ? `<button class="btn primary" id="btnAdquirirEquipamento" style="width:100%;margin-top:.6rem;">🛒 Adquirir Equipamento</button>` : ''}
             </div>
 
             <div class="panel-box">
@@ -4839,14 +5054,15 @@
               <div class="field-row" style="margin-top:.5rem;">
                 <div><label>Bônus Defesa</label><input type="number" data-field="bonusDefesa" value="${f.bonusDefesa}" ${editable?'':'disabled'}></div>
                 ${isDragao ? `
-                <div><label>Valor de Armadura</label><input type="text" id="statValorArmadura" value="${d.valorArmadura}" disabled title="Vigor + metade dos dados de bônus em Resistência — reduz o dano tomado, não altera a Defesa em Combate."></div>
+                <div><label>Valor de Armadura</label><input type="text" id="statValorArmadura" value="${d.valorArmadura}" disabled title="Vigor + metade dos dados de bônus em Resistência + bônus de vantagens — reduz o dano tomado, não altera a Defesa em Combate."></div>
+                <div><label>Bônus Valor Armadura</label><input type="number" data-field="bonusValorArmadura" value="${f.bonusValorArmadura||0}" ${editable?'':'disabled'}></div>
                 ` : `
                 <div><label>Penalidade Armadura</label><input type="number" data-field="penalidadeArmadura" value="${f.penalidadeArmadura}" ${editable?'':'disabled'}></div>
                 `}
-                <div><label>2B em Corrida</label><input type="number" data-field="corridaBonus" value="${f.corridaBonus}" ${editable?'':'disabled'}></div>
+                <div><label>2B em ${isDragao?'Vôo':'Corrida'}</label><input type="number" data-field="corridaBonus" value="${f.corridaBonus}" ${editable?'':'disabled'}></div>
                 <div><label>Bônus Saúde</label><input type="number" data-field="bonusSaude" value="${f.bonusSaude||0}" ${editable?'':'disabled'}></div>
               </div>
-              ${isDragao?`<div style="font-size:.85rem;color:var(--muted);margin-top:.3rem;">Valor de Armadura = Vigor + metade dos dados de bônus na especialidade "Resistência". Não altera a Defesa em Combate — só indica quanto reduzir do dano recebido.</div>`:''}
+              ${isDragao?`<div style="font-size:.85rem;color:var(--muted);margin-top:.3rem;">Valor de Armadura = Vigor + metade dos dados de bônus na especialidade "Resistência" + Bônus Valor Armadura (de vantagens como Escamas Espessas). Não altera a Defesa em Combate — só indica quanto reduzir do dano recebido.</div>`:''}
               <label>Ferimentos <span style="text-transform:none;">(≤ Vigor)</span></label>
               <div class="checkbox-row">${ferimCheckboxes}</div>
               <label>Lesões <span style="text-transform:none;">(&lt; Vigor)</span></label>
@@ -4854,7 +5070,7 @@
               ${(penFL.mod<0 || penFL.penalty>0) ? `<div style="font-size:.85rem;color:var(--danger-bright);margin-top:.3rem;">⚠️ Penalidade automática nos testes: ${penFL.mod<0?`${penFL.mod} no resultado`:''}${(penFL.mod<0 && penFL.penalty>0)?' e ':''}${penFL.penalty>0?`-${penFL.penalty}D`:''}</div>` : ''}
               <div class="field-row" style="margin-top:.5rem;">
                 <div class="stat-box"><div class="stat-value" id="statMovimento" style="font-size:1.402rem;">${d.movimento}m</div><div class="stat-label">Movimento</div></div>
-                <div class="stat-box"><div class="stat-value" id="statCorrida" style="font-size:1.402rem;">${d.corrida}m</div><div class="stat-label">Corrida</div></div>
+                <div class="stat-box"><div class="stat-value" id="statCorrida" style="font-size:1.402rem;">${d.corrida}m</div><div class="stat-label">${isDragao?'Vôo':'Corrida'}</div></div>
               </div>
             </div>
 
@@ -4972,6 +5188,8 @@
       if(!confirm(`Excluir "${f.nome||'esta ficha'}" permanentemente? Essa ação não pode ser desfeita.`)) return;
       fichasCol().doc(id).delete().then(closeEditor).catch(err=> toast('Erro: '+err.message));
     });
+    const btnTransferir = document.getElementById('btnTransferirFicha');
+    if(btnTransferir) btnTransferir.addEventListener('click', ()=> abrirTransferirFicha(id));
 
     editor.querySelectorAll('[data-quickroll]').forEach(btn=>{
       btn.addEventListener('click', (ev)=>{
@@ -5374,7 +5592,7 @@
         const lista = getEspecialidadesList(f2, h);
         const idx = parseInt(idxStr,10);
         if(!lista[idx]) return;
-        lista[idx][campo] = campo==='bonus' ? (Math.max(1, parseInt(el.value,10) || 1)) : el.value;
+        lista[idx][campo] = campo==='bonus' ? (Math.max(1, Math.min(Math.max(1,f2.habilidades[h]||0), parseInt(el.value,10) || 1))) : el.value;
         f2.especialidades[h] = lista;
         scheduleFichaSave(id, f2);
       });
@@ -5469,7 +5687,7 @@
     if(el.type === 'number') val = parseFloat(val) || 0;
     setDeepValue(f, path, val);
     scheduleFichaSave(id, f);
-    if(path.startsWith('habilidades.') || ['bonusDefesa','penalidadeArmadura','corridaBonus','bonusSaude','magiaBonusEspecialidade'].includes(path)){
+    if(path.startsWith('habilidades.') || ['bonusDefesa','penalidadeArmadura','corridaBonus','bonusSaude','bonusValorArmadura','magiaBonusEspecialidade'].includes(path)){
       refreshStatsOnly(id);
     }
     if(path.startsWith('reputacao.')) refreshReputacaoOnly(id);
@@ -5797,7 +6015,7 @@
         <div class="stat-box"><div class="stat-value">${d.defesaCombate}</div><div class="stat-label">Defesa Combate</div></div>
         <div class="stat-box"><div class="stat-value">${d.saude}</div><div class="stat-label">Saúde</div></div>
         <div class="stat-box"><div class="stat-value">${d.movimento}m</div><div class="stat-label">Movimento</div></div>
-        <div class="stat-box"><div class="stat-value">${d.corrida}m</div><div class="stat-label">Corrida</div></div>
+        <div class="stat-box"><div class="stat-value">${d.corrida}m</div><div class="stat-label">${isDragao?'Vôo':'Corrida'}</div></div>
       </div>
       <button class="btn primary" id="btnFcRolarIniciativa" style="width:100%;margin:.6rem 0;">🎲 Rolar Iniciativa (Agilidade)</button>
       <label>Ferimentos <span style="text-transform:none;">(≤ Vigor)</span></label>
@@ -9273,228 +9491,6 @@
         .then(()=>{ overlay.remove(); toast('Configurações salvas.'); })
         .catch(err=> toast('Erro: '+err.message));
     });
-  }
-
-  /* ==========================================================================================
-     ADMIN (mestre): transferir controle de ficha / migrar tudo de uma conta pra outra
-     ==========================================================================================
-     Contexto: quem é "dono" de cada coisa na campanha (ficha, entrada de iniciativa, participante
-     de intriga, página de diário, pasta de galeria, mapa de relações, linha do tempo) é decidido
-     comparando o campo ownerName/addedBy salvo no documento com session.playerName — que é o nome
-     de exibição (nickname) da conta logada, não um ID técnico estável. Ou seja: "dono" = nome salvo
-     no Firestore bater com o nome da conta atualmente logada.
-
-     Isso tem uma consequência direta pro problema relatado: se em algum momento essa jogadora
-     acabou com DUAS contas (ex.: criou uma conta nova achando que a antiga "quebrou", ou teve que
-     refazer login num PC novo e digitou o nickname com uma letra diferente/maiúscula diferente/
-     espaço a mais), as fichas continuam gravadas com o ownerName da conta ANTIGA. A conta nova
-     nunca vai enxergar essas atualizações como "minhas", porque o app está comparando strings de
-     nome, não uma identidade de usuário real — daí a sensação de "parou de sincronizar num PC
-     específico, mas funciona numa conta diferente".
-
-     As funções abaixo permitem: (1) passar o controle de UMA ficha específica pra outro nome de
-     jogador, e (2) migrar TUDO que uma conta antiga criou pra uma conta nova, campo por campo, em
-     todas as coleções da campanha — pra então poder desativar/apagar a conta antiga sem perder nada.
-  */
-
-  // troca ownerName/addedBy de um documento (só se o campo existir nele) — não mexe em outros campos
-  function _adminTrocaOwnerDoc(ref, data, novoNome){
-    const patch = {};
-    if(Object.prototype.hasOwnProperty.call(data,'ownerName') && data.ownerName!=null) patch.ownerName = novoNome;
-    if(Object.prototype.hasOwnProperty.call(data,'addedBy') && data.addedBy!=null) patch.addedBy = novoNome;
-    if(!Object.keys(patch).length) return Promise.resolve(false);
-    return ref.set(patch, {merge:true}).then(()=> true);
-  }
-
-  // pega o conteúdo atual de uma coleção uma única vez (o wrapper com undo só expõe onSnapshot,
-  // então assinamos e cancelamos assim que a primeira resposta chega)
-  function _adminGetColecaoUmaVez(colRef){
-    return new Promise((resolve, reject)=>{
-      let done = false;
-      const unsub = colRef.onSnapshot(snap=>{
-        if(done) return; // onSnapshot local pode disparar mais de uma vez (cache local + servidor)
-        done = true;
-        const docs = [];
-        snap.forEach(d=> docs.push({id:d.id, data:d.data()}));
-        setTimeout(()=> unsub && unsub(), 0);
-        resolve(docs);
-      }, reject);
-    });
-  }
-
-  /* ---- 1) transferir o controle de UMA ficha para outro jogador ----
-     Atualiza a ficha e, em cascata, a entrada de iniciativa e o participante de intriga
-     ligados a ela (essas duas coleções usam o MESMO id da ficha como id do documento),
-     pra não deixar a ficha com um dono e o rastreador de combate/intriga com outro. */
-  function adminTransferirFicha(fichaId, novoOwnerName){
-    if(!session || !db) return Promise.reject(new Error('Entre numa campanha antes.'));
-    if(!fichaId || !novoOwnerName) return Promise.reject(new Error('Informe a ficha e o novo dono.'));
-    const fichaRef = fichasCol().doc(fichaId);
-    return fichaRef.get().then(snap=>{
-      if(!snap.exists) throw new Error('Ficha não encontrada nesta campanha.');
-      const donoAntigo = snap.data().ownerName || null;
-      return _adminTrocaOwnerDoc(fichaRef, snap.data(), novoOwnerName).then(()=>{
-        const inicRef = iniciativaCol().doc(fichaId);
-        const intrRef = intrigaCol().doc(fichaId);
-        return Promise.all([
-          inicRef.get().then(s=> s.exists ? _adminTrocaOwnerDoc(inicRef, s.data(), novoOwnerName) : false),
-          intrRef.get().then(s=> s.exists ? _adminTrocaOwnerDoc(intrRef, s.data(), novoOwnerName) : false)
-        ]).then(()=> ({fichaId, donoAntigo, donoNovo: novoOwnerName}));
-      });
-    });
-  }
-
-  /* ---- 2) transferir TUDO que uma conta (nome antigo) criou pra outro nome ----
-     Varre fichas, iniciativa, rolagens, intriga, páginas de diário, pastas de galeria (+ imagens
-     dentro delas) e mapas de relações trocando ownerName/addedBy. Na linha do tempo e nos mapas,
-     também troca o nome dentro das listas de visualizadores/editores/allowedViewers, senão a
-     conta nova ficaria sem os acessos que a antiga tinha. Não apaga nem duplica nada — só troca
-     "de quem é" em cada registro que já existe. */
-  async function adminTransferirTudoDoJogador(nomeAntigo, nomeNovo){
-    if(!session || !db) throw new Error('Entre numa campanha antes.');
-    if(session.role !== 'mestre') throw new Error('Só o mestre pode migrar contas.');
-    if(!nomeAntigo || !nomeNovo) throw new Error('Informe os dois nomes.');
-    if(nomeAntigo === nomeNovo) throw new Error('Os nomes são iguais — nada a migrar.');
-
-    const resumo = {};
-
-    async function migrarColecaoSimples(colRef, chave){
-      const docs = await _adminGetColecaoUmaVez(colRef);
-      let n = 0;
-      for(const d of docs){
-        if(d.data.ownerName===nomeAntigo || d.data.addedBy===nomeAntigo){
-          await _adminTrocaOwnerDoc(colRef.doc(d.id), d.data, nomeNovo);
-          n++;
-        }
-      }
-      resumo[chave] = n;
-    }
-
-    await migrarColecaoSimples(fichasCol(), 'fichas');
-    await migrarColecaoSimples(iniciativaCol(), 'iniciativa');
-    await migrarColecaoSimples(rolagensCol(), 'rolagens');
-    await migrarColecaoSimples(intrigaCol(), 'intriga');
-    await migrarColecaoSimples(diarioPaginasCol(), 'paginasDeDiario');
-
-    // pastas de galeria + imagens dentro de cada pasta (as imagens têm ownerName próprio,
-    // de quem fez o upload, que pode ser diferente do dono da pasta)
-    const pastas = await _adminGetColecaoUmaVez(galeriaPastasCol());
-    let pastasMigradas = 0, imagensMigradas = 0;
-    for(const p of pastas){
-      if(p.data.ownerName === nomeAntigo){
-        await _adminTrocaOwnerDoc(galeriaPastasCol().doc(p.id), p.data, nomeNovo);
-        pastasMigradas++;
-      }
-      const imagens = await _adminGetColecaoUmaVez(galeriaImagensCol(p.id));
-      for(const img of imagens){
-        if(img.data.ownerName === nomeAntigo){
-          await _adminTrocaOwnerDoc(galeriaImagensCol(p.id).doc(img.id), img.data, nomeNovo);
-          imagensMigradas++;
-        }
-      }
-    }
-    resumo.pastasDeGaleria = pastasMigradas;
-    resumo.imagensDeGaleria = imagensMigradas;
-
-    // mapas de relações: ownerName + lista allowedViewers
-    const mapas = await _adminGetColecaoUmaVez(mapasCol());
-    let mapasMigrados = 0;
-    for(const m of mapas){
-      const patch = {};
-      if(m.data.ownerName === nomeAntigo) patch.ownerName = nomeNovo;
-      if(Array.isArray(m.data.allowedViewers) && m.data.allowedViewers.includes(nomeAntigo)){
-        patch.allowedViewers = m.data.allowedViewers.map(x=> x===nomeAntigo?nomeNovo:x);
-      }
-      if(Object.keys(patch).length){ await mapasCol().doc(m.id).set(patch, {merge:true}); mapasMigrados++; }
-    }
-    resumo.mapasDeRelacoes = mapasMigrados;
-
-    // linhas do tempo: ownerName + listas visualizadores/editores
-    const linhas = await _adminGetColecaoUmaVez(linhasTempoCol());
-    let linhasMigradas = 0;
-    for(const l of linhas){
-      const patch = {};
-      if(l.data.ownerName === nomeAntigo) patch.ownerName = nomeNovo;
-      if(Array.isArray(l.data.visualizadores) && l.data.visualizadores.includes(nomeAntigo)){
-        patch.visualizadores = l.data.visualizadores.map(x=> x===nomeAntigo?nomeNovo:x);
-      }
-      if(Array.isArray(l.data.editores) && l.data.editores.includes(nomeAntigo)){
-        patch.editores = l.data.editores.map(x=> x===nomeAntigo?nomeNovo:x);
-      }
-      if(Object.keys(patch).length){ await linhasTempoCol().doc(l.id).set(patch, {merge:true}); linhasMigradas++; }
-    }
-    resumo.linhasDoTempo = linhasMigradas;
-
-    return resumo;
-  }
-
-  /* ---- 3) "excluir" a conta antiga ----
-     Importante: por segurança do próprio Firebase, o SDK de cliente só permite apagar a conta
-     de AUTENTICAÇÃO (login/senha) de quem estiver logado nela no momento — o mestre não consegue,
-     de dentro da própria sessão, apagar a conta de login de outra pessoa. O que dá pra fazer daqui
-     é apagar o PERFIL da conta antiga (o documento que lista as campanhas dela, usado só pra
-     preencher a telinha de "minhas campanhas" no login) — isso desvincula a conta antiga desta
-     campanha sem afetar nenhum dado já migrado. Pra apagar a conta de login em si, é preciso: (a)
-     pedir pra jogadora, já logada com a conta antiga, chamar authLogout() e depois logar de novo
-     nela e rodar `firebase.auth().currentUser.delete()` no console; ou (b) apagar o usuário pelo
-     Console do Firebase, em Authentication > Users. SEMPRE rode a migração (passo 2) ANTES disso,
-     ou os dados da conta antiga ficam órfãos (ownerName apontando pra um nome que ninguém mais loga). */
-  function adminApagarPerfilContaAntiga(nomeOuSlugAntigo){
-    if(!db) return Promise.reject(new Error('Sem conexão com o banco.'));
-    const slug = nicknameSlug(nomeOuSlugAntigo);
-    if(!slug) return Promise.reject(new Error('Nome/slug inválido.'));
-    return db.collection(USUARIOS_COLLECTION).doc(slug).delete().then(()=> slug);
-  }
-
-  // expõe pra uso avançado via console do navegador (F12), caso o mestre prefira rodar na mão
-  window.GDT_ADMIN = {
-    transferirFicha: adminTransferirFicha,
-    transferirTudoDoJogador: adminTransferirTudoDoJogador,
-    apagarPerfilContaAntiga: adminApagarPerfilContaAntiga
-  };
-
-  /* ---- UI simples (prompts), no mesmo estilo que o resto do app já usa pra ações do mestre ---- */
-  function abrirFerramentasContaMestre(){
-    if(!session || session.role !== 'mestre'){ toast('Só o mestre pode usar isso.'); return; }
-    const fichas = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='npcImportante');
-    const listaFichas = fichas.map((id,i)=> `${i+1}. ${fichasCache[id].nome||'Sem nome'} — dono atual: ${fichasCache[id].ownerName||'ninguém'}`).join('\n') || '(nenhuma ficha de jogador nesta campanha ainda)';
-
-    const escolha = prompt(
-      '🔧 Ferramentas de conta\n\n'+
-      '1 — Transferir o controle de UMA ficha para outro jogador\n'+
-      '2 — Transferir TUDO que um jogador criou (nome antigo → nome novo)\n'+
-      '3 — Apagar o perfil de uma conta antiga (depois de já migrar tudo)\n\n'+
-      'Digite 1, 2 ou 3:'
-    );
-    if(escolha==='1'){
-      const idx = prompt('Fichas desta campanha:\n\n'+listaFichas+'\n\nDigite o NÚMERO da ficha que quer transferir:');
-      const ficha = fichas[parseInt(idx,10)-1];
-      if(!ficha){ toast('Ficha inválida.'); return; }
-      const novoDono = prompt('Nome (nickname exato) do jogador que vai receber esta ficha:');
-      if(!novoDono) return;
-      adminTransferirFicha(ficha, novoDono.trim())
-        .then(r=> toast(`Ficha transferida de "${r.donoAntigo||'ninguém'}" para "${r.donoNovo}".`))
-        .catch(err=> toast('Erro: '+err.message));
-    } else if(escolha==='2'){
-      const nomeAntigo = prompt('Nome (nickname exato) da conta ANTIGA, de onde vai sair tudo:');
-      if(!nomeAntigo) return;
-      const nomeNovo = prompt('Nome (nickname exato) da conta NOVA, que vai receber tudo:');
-      if(!nomeNovo) return;
-      if(!confirm(`Confirma migrar TODAS as fichas, rolagens, iniciativa, intriga, diário, galerias, mapas e linha do tempo de "${nomeAntigo}" para "${nomeNovo}" nesta campanha?`)) return;
-      adminTransferirTudoDoJogador(nomeAntigo.trim(), nomeNovo.trim())
-        .then(resumo=>{
-          const linhas = Object.entries(resumo).map(([k,v])=> `${k}: ${v}`).join('\n');
-          alert('Migração concluída:\n\n'+linhas);
-        })
-        .catch(err=> toast('Erro: '+err.message));
-    } else if(escolha==='3'){
-      const nomeAntigo = prompt('Nome (nickname exato) OU slug da conta antiga cujo PERFIL você quer apagar (isso não apaga o login dela, só a lista de campanhas dela):');
-      if(!nomeAntigo) return;
-      if(!confirm('Você já migrou os dados dessa conta (passo 2)? Isso não pode ser desfeito por aqui.')) return;
-      adminApagarPerfilContaAntiga(nomeAntigo.trim())
-        .then(slug=> toast('Perfil da conta "'+slug+'" apagado.'))
-        .catch(err=> toast('Erro: '+err.message));
-    }
   }
 
   /* ============ inicialização ============ */
