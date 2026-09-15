@@ -1281,7 +1281,7 @@
         },
         onSnapshot(cb, errCb){
           return ref.onSnapshot(
-            snap=> cb({ exists: snap.exists, data: ()=> snap.data(), id: snap.id }),
+            snap=> cb({ exists: snap.exists, data: ()=> snap.data(), id: snap.id, metadata: snap.metadata }),
             errCb
           );
         },
@@ -1304,7 +1304,7 @@
         doc(id){ return wrapDocRef(id===undefined ? ref.doc() : ref.doc(id)); },
         onSnapshot(cb, errCb){
           return ref.onSnapshot(snap=>{
-            cb({ forEach(fn){ snap.forEach(doc=> fn({ id: doc.id, data: ()=> doc.data() })); } });
+            cb({ forEach(fn){ snap.forEach(doc=> fn({ id: doc.id, data: ()=> doc.data() })); }, metadata: snap.metadata });
           }, errCb);
         }
       };
