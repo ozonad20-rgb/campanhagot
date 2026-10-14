@@ -2508,6 +2508,180 @@ window.gdtEncaixarNoLimite = function(url, limite){
   .ct-ven-tit{font-family:var(--f-ui);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:.7rem 0 .3rem;}
   .ct-veneno b{color:#b9e3a8;}
 
+  /* ===== Torneios (dentro da aba Combate) ===== */
+  .torneio-modo{display:flex;width:100%;margin-bottom:.9rem;}
+  .torneio-modo .seg-btn{flex:1;justify-content:center;}
+  .t-sel select{margin-bottom:.5rem;}
+  .t-sel-acoes{display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;}
+  .t-sel-acoes .btn{flex:1;}
+  .t-abas{display:flex;width:100%;}
+  .t-abas .seg-btn{flex:1;justify-content:center;padding:.4rem .3rem;font-size:.84rem;white-space:nowrap;gap:.25rem;}
+  .t-ponto{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--crimson-bright);box-shadow:0 0 6px var(--crimson-bright);}
+  .t-av{flex:none;width:30px;height:30px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:var(--panel-2);border:1px solid var(--line);color:var(--gold);font-family:var(--f-ui);font-size:.85rem;}
+  .t-av img{width:100%;height:100%;object-fit:cover;}
+  .t-av.grande{width:52px;height:52px;font-size:1.3rem;border-color:var(--gold);}
+  .t-av.vazio{border-style:dashed;color:var(--muted);background:transparent;}
+  /* chaveamento */
+  .tc-box h3{flex-wrap:wrap;}
+  .tc-acoes{margin-left:auto;display:flex;gap:.3rem;}
+  .tc-dica{font-size:.8rem;margin:.1rem 0 .7rem;}
+  .tc-rodada{margin-bottom:.9rem;}
+  .tc-rodada-tit{font-family:var(--f-ui);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:.35rem;display:flex;align-items:center;gap:.5rem;}
+  .tc-rodada-tit::after{content:'';flex:1;height:1px;background:var(--line);}
+  .tc-partida{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.3rem;padding:.35rem;margin-bottom:.35rem;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.18);}
+  .tc-partida.ao-vivo{border-color:var(--crimson-bright);box-shadow:0 0 0 1px rgba(212,58,67,.35), 0 0 14px rgba(212,58,67,.18);}
+  .tc-partida.decidida{opacity:.92;}
+  .tc-slot{display:flex;align-items:center;gap:.35rem;min-width:0;padding:.15rem .25rem;border-radius:6px;}
+  .tc-slot:last-of-type{flex-direction:row-reverse;text-align:right;}
+  .tc-slot[data-declarar]{cursor:pointer;}
+  .tc-slot[data-declarar]:hover{background:rgba(243,197,69,.08);}
+  .tc-slot .tc-nome{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tc-slot.venceu .tc-nome{color:var(--gold-bright);font-weight:700;}
+  .tc-slot.perdeu{opacity:.45;}
+  .tc-slot.perdeu .tc-nome{text-decoration:line-through;}
+  .tc-slot.vazio .tc-nome{color:var(--muted);}
+  .tc-slot.editavel select{font-size:.85rem;padding:.2rem .3rem;min-width:0;}
+  .tc-coroa{font-size:.9rem;}
+  .tc-vs{width:30px;height:30px;border-radius:50%;border:1px solid var(--gold);background:var(--panel-2);color:var(--gold-bright);cursor:pointer;font-size:.95rem;display:inline-flex;align-items:center;justify-content:center;transition:transform .12s, background .12s;}
+  .tc-vs:hover{transform:scale(1.12);background:var(--gold);color:#241a0c;}
+  .tc-vs.off{border-color:var(--line);color:var(--muted);cursor:default;background:transparent;}
+  .tc-vs.ao-vivo{border-color:var(--crimson-bright);color:var(--crimson-bright);animation:t-pulso 1.4s infinite;}
+  .tc-bye{grid-column:1 / -1;justify-self:center;margin-top:.15rem;}
+  .tc-campeao,.t-vencedor{display:flex;align-items:center;gap:.8rem;padding:.7rem .9rem;margin-bottom:.8rem;border-radius:10px;border:1px solid var(--gold);background:linear-gradient(120deg, rgba(243,197,69,.16), rgba(243,197,69,.03));}
+  .tc-campeao small,.t-vencedor small{display:block;font-family:var(--f-ui);letter-spacing:.1em;text-transform:uppercase;font-size:.7rem;color:var(--gold);}
+  .tc-campeao b,.t-vencedor b{display:block;font-family:var(--f-ui);font-size:1.15rem;color:var(--gold-bright);}
+  .t-vencedor span:not(.t-vencedor-ico):not(.t-av){font-size:.85rem;color:var(--muted);}
+  .tc-campeao > span:last-child,.t-vencedor-ico{margin-left:auto;font-size:1.8rem;}
+  @keyframes t-pulso{0%,100%{box-shadow:0 0 0 0 rgba(212,58,67,.5);}50%{box-shadow:0 0 0 5px rgba(212,58,67,0);}}
+  /* arenas */
+  .t-arena-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem;}
+  .t-arena-tit{font-family:var(--f-ui);font-size:1.3rem;color:var(--gold-bright);letter-spacing:.02em;}
+  .t-tag{margin-left:auto;font-family:var(--f-ui);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:.12rem .6rem;color:var(--muted);}
+  .t-tag.vivo{border-color:var(--crimson-bright);color:var(--crimson-bright);}
+  .t-tag.fim{border-color:var(--gold);color:var(--gold);}
+  .tj-arena,.tl-arena,.ta-arena{background:linear-gradient(170deg, var(--panel-2), var(--panel) 70%);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:12px;padding:1rem 1.1rem;margin-bottom:1rem;box-shadow:0 6px 20px rgba(0,0,0,.35);}
+  .t-vazio{text-align:center;padding:2.2rem 1rem;border:1px dashed var(--line);border-radius:12px;margin-bottom:1rem;}
+  .t-vazio-ico{font-size:2.4rem;margin-bottom:.4rem;}
+  .t-vazio p{margin:.2rem 0;}
+  .t-regra{margin-top:.8rem;font-size:.88rem;color:var(--muted);}
+  .t-regra summary{cursor:pointer;color:var(--gold);font-family:var(--f-ui);}
+  .t-regra p{margin:.4rem 0;}
+  .t-regra b{color:#e8dcc0;}
+  /* justa */
+  .tj-lica{display:grid;grid-template-columns:1fr minmax(170px, .8fr) 1fr;gap:.8rem;align-items:stretch;}
+  .tj-cav{border:1px solid var(--line);border-radius:10px;padding:.8rem;background:rgba(0,0,0,.2);display:flex;flex-direction:column;gap:.55rem;}
+  .tj-cav.lado-a{border-left:4px solid var(--sapphire-bright);}
+  .tj-cav.lado-b{border-right:4px solid var(--crimson-bright);}
+  .tj-cav.venceu{box-shadow:0 0 0 1px var(--gold), 0 0 18px rgba(243,197,69,.25);}
+  .tj-cav.perdeu{opacity:.6;}
+  .tj-cav-topo{display:flex;gap:.6rem;align-items:center;}
+  .tj-cav-id b{display:block;font-family:var(--f-ui);font-size:1.08rem;color:var(--gold-bright);}
+  .tj-cav-id small{color:var(--muted);font-size:.8rem;}
+  .tj-selo{color:var(--gold);}
+  .tj-stats{display:grid;grid-template-columns:repeat(auto-fill, minmax(88px,1fr));gap:.35rem;}
+  .tj-stats span{background:rgba(0,0,0,.25);border:1px solid var(--line-soft, var(--line));border-radius:7px;padding:.3rem .4rem;font-size:.82rem;line-height:1.25;}
+  .tj-stats small{display:block;font-family:var(--f-ui);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+  .tj-stats b{font-size:1.05rem;color:#f0e6c8;}
+  .tj-stats .zero b{color:var(--danger-bright);}
+  .tj-rol{border-radius:8px;padding:.45rem .5rem;background:rgba(0,0,0,.28);font-size:.9rem;}
+  .tj-rol.sela.ok{border-left:3px solid var(--emerald-bright);}
+  .tj-rol.sela.caiu{border-left:3px solid var(--danger-bright);}
+  .tj-dados{margin-bottom:.15rem;}
+  .tj-total{font-size:1.25rem;color:var(--gold-bright);}
+  .tj-graus{color:var(--emerald-bright);font-weight:700;}
+  .tj-falha{color:var(--danger-bright);font-weight:700;}
+  .tj-trap{color:var(--danger-bright);font-size:.85em;}
+  .tj-acao{display:flex;flex-direction:column;gap:.4rem;margin-top:auto;}
+  .tj-acao .btn-grande{width:100%;padding:.7rem;font-size:1.05rem;}
+  .tj-acao .btn small{font-weight:400;opacity:.85;font-size:.8rem;}
+  .tj-trapacear{margin:0;font-size:.82rem;text-transform:none;letter-spacing:0;color:var(--muted);}
+  .tj-pronto{text-align:center;font-size:.9rem;padding:.4rem;}
+  .tj-desistir{align-self:flex-start;}
+  .tj-centro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:.5rem;}
+  .tj-lancas{display:flex;align-items:center;width:100%;font-size:1.6rem;}
+  .tj-lancas i{flex:1;height:3px;margin:0 .3rem;background:linear-gradient(90deg, var(--sapphire-bright), var(--gold) 50%, var(--crimson-bright));border-radius:2px;}
+  .tj-lancas .esp{transform:scaleX(-1);}
+  .tj-fase{font-family:var(--f-ui);font-size:1.15rem;color:var(--gold-bright);}
+  .tj-fase small{display:block;font-family:var(--f-body);font-size:.85rem;color:var(--muted);margin-top:.3rem;}
+  .tj-res{list-style:none;padding:0;margin:.5rem 0;font-family:var(--f-body);font-size:.88rem;color:#e8dcc0;text-align:left;}
+  .tj-res li{margin-bottom:.35rem;}
+  .tj-fim{font-family:var(--f-body);font-size:.98rem;margin-bottom:.5rem;}
+  .tj-trapaca{margin-top:.8rem;border:1px solid var(--danger-bright);border-radius:9px;padding:.6rem .75rem;background:rgba(184,38,47,.12);font-size:.9rem;}
+  .tj-trap-linha{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;}
+  .tj-trap-linha input.num{width:56px;}
+  .tj-trap-linha .check-line{margin:0;text-transform:none;letter-spacing:0;}
+  .tj-hist{margin-top:.7rem;font-size:.82rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;}
+  .tj-hist-item{border:1px solid var(--line);border-radius:999px;padding:.08rem .55rem;}
+  .t-resgate{border:1px dashed var(--gold);border-radius:9px;padding:.6rem .75rem;margin-bottom:.8rem;font-size:.92rem;}
+  .t-resgate-acoes{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-top:.5rem;}
+  .t-resgate-acoes label{margin:0;}
+  .t-resgate-acoes input.num{width:110px;}
+  /* liça */
+  .t-lica-nota{font-size:.9rem;color:var(--muted);margin:0 0 .8rem;}
+  .tl-duelo{display:grid;grid-template-columns:1fr auto 1fr;gap:.6rem;align-items:start;}
+  .tl-vs{align-self:center;font-family:var(--f-ui);font-size:2rem;color:var(--gold);}
+  .tl-lado{min-width:0;display:flex;flex-direction:column;gap:.4rem;}
+  .tl-lado .cc{margin:0;}
+  /* arquearia */
+  .ta-config{display:flex;flex-direction:column;gap:.8rem;}
+  .ta-linha-comp{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .ta-chip{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--line);border-radius:999px;padding:.2rem .7rem .2rem .2rem;font-size:.9rem;}
+  .ta-chip small{font-size:.75rem;}
+  .ta-config-acoes{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;}
+  .ta-rod{display:flex;align-items:center;gap:.4rem;margin:0;}
+  .ta-rod input{width:60px;}
+  .ta-alvo{margin-bottom:.9rem;}
+  .ta-campo{position:relative;height:46px;border-radius:9px;background:linear-gradient(180deg, #2d3a22, #1f2918);border:1px solid #3d4b2c;overflow:hidden;display:flex;align-items:center;padding-left:.5rem;}
+  .ta-campo i{height:2px;background:repeating-linear-gradient(90deg, rgba(243,197,69,.55) 0 8px, transparent 8px 14px);transition:width .6s ease;}
+  .ta-arqueiro{font-size:1.4rem;}
+  .ta-target{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:1.6rem;transition:left .6s ease;}
+  .ta-dif{margin-top:.35rem;font-size:.92rem;color:var(--muted);}
+  .ta-dif b{color:var(--gold-bright);}
+  .ta-tabela-wrap{overflow-x:auto;}
+  .ta-tabela{width:100%;border-collapse:collapse;font-size:.9rem;}
+  .ta-tabela th,.ta-tabela td{padding:.35rem .4rem;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap;}
+  .ta-tabela thead th{font-family:var(--f-ui);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;}
+  .ta-tabela thead th small{display:block;color:var(--gold);letter-spacing:0;}
+  .ta-tabela tbody th{text-align:left;display:flex;align-items:center;gap:.45rem;font-weight:500;}
+  .ta-tabela tr.ativo th span{color:var(--gold-bright);}
+  .ta-tabela tr.campeao{background:rgba(243,197,69,.08);}
+  .ta-tabela td.ok{color:var(--emerald-bright);font-weight:700;}
+  .ta-tabela td.erro{color:var(--danger-bright);text-decoration:line-through;opacity:.8;}
+  .ta-tabela td.fora{color:var(--muted);opacity:.4;}
+  .ta-tabela td.espera{color:var(--muted);}
+  .ta-vit{color:var(--gold-bright);letter-spacing:.1em;}
+  .ta-acao{text-align:right !important;}
+  .ta-hists{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.7rem;font-size:.85rem;}
+  .ta-hist{border:1px solid var(--line);border-radius:999px;padding:.08rem .6rem;}
+  .ta-mestre{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.8rem;justify-content:flex-end;}
+  .ta-placar{display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--line);}
+  .ta-placar span{flex:1;}
+  .ta-placar b{color:var(--gold-bright);font-size:1.1rem;}
+  .ta-arena.ouro{border-top-color:#ffd54a;box-shadow:0 0 0 1px rgba(255,213,74,.5), 0 0 30px rgba(255,213,74,.18);}
+  .ta-ouro-tit{color:#ffd54a;text-shadow:0 0 12px rgba(255,213,74,.5);}
+  /* escolha de competidores */
+  .t-escolha-lista{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;}
+  .t-escolha{display:flex;align-items:center;gap:.55rem;padding:.4rem .6rem;margin:0;border-bottom:1px solid var(--line);cursor:pointer;text-transform:none;letter-spacing:0;font-size:.95rem;color:#e8dcc0;}
+  .t-escolha:last-child{border-bottom:none;}
+  .t-escolha input{width:auto;}
+  .t-escolha-nome{flex:1;}
+  /* anúncio */
+  .torneio-anuncio{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:650;min-width:300px;max-width:min(560px, 92vw);text-align:center;cursor:pointer;
+    background:linear-gradient(160deg, var(--panel-2), var(--panel));border:1px solid var(--gold);border-top:4px solid var(--gold);border-radius:14px;padding:1.1rem 1.4rem;box-shadow:0 20px 60px rgba(0,0,0,.7);animation:t-anuncio .35s ease-out;}
+  .torneio-anuncio .ta-tit{font-family:var(--f-ui);font-size:1.6rem;color:var(--gold-bright);}
+  .torneio-anuncio .ta-txt{margin-top:.3rem;color:#e8dcc0;}
+  .torneio-anuncio.ouro{border-color:#ffd54a;border-top-color:#ffd54a;box-shadow:0 0 0 2px rgba(255,213,74,.35), 0 20px 60px rgba(0,0,0,.7);}
+  .torneio-anuncio.ouro .ta-tit{color:#ffd54a;font-size:2rem;}
+  @keyframes t-anuncio{from{opacity:0;transform:translate(-50%,-14px);}to{opacity:1;transform:translate(-50%,0);}}
+  @media (prefers-reduced-motion: reduce){ .torneio-anuncio,.tc-vs.ao-vivo{animation:none;} }
+  @media (max-width: 1100px){
+    .tj-lica{grid-template-columns:1fr 1fr;}
+    .tj-centro{grid-column:1 / -1;order:-1;}
+    .tl-duelo{grid-template-columns:1fr;}
+    .tl-vs{display:none;}
+  }
+  @media (max-width: 640px){ .tj-lica{grid-template-columns:1fr;} }
+
   /* ===== Fashion Week ===== */
   .fw-btn{border-color:rgba(214,170,90,.6);background:linear-gradient(180deg, rgba(214,170,90,.18), rgba(214,170,90,.05));color:var(--gold-bright);}
   .fw-dialog{width:min(1200px,100%);max-width:none;height:min(92vh,980px);display:flex;flex-direction:column;}
@@ -3468,6 +3642,7 @@ window.gdtEncaixarNoLimite = function(url, limite){
     subscribeCartas();
     subscribeBattlemap();
     subscribeAtaques();
+    subscribeTorneios();
     subscribeInfluencias();
     subscribePosturas();
   }
@@ -4432,6 +4607,7 @@ window.gdtEncaixarNoLimite = function(url, limite){
       fichasCache = {};
       snap.forEach(doc=> fichasCache[doc.id] = doc.data());
       try{ verificarDerrotas(); }catch(e){ console.error(e); }
+      try{ torneioVerificarFichas(); }catch(e){ console.error(e); }
       renderFichasList();
       if(currentEditingId && fichasCache[currentEditingId]) refreshEditorReadonlyBits();
       /* mantém a ficha resumida das abas Combate e Intriga sempre em dia com a ficha completa
@@ -10036,6 +10212,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     const wrap = document.getElementById('iniciativaWrap');
     if(!wrap) return;
     if(typeof bmArrasto!=='undefined' && bmArrasto){ bmIniciativaPendente = true; return; }
+    if(torneioModo){ renderTorneiosTab(); return; }
     bmAgendar();
     if(combateFichaSelecionada && !fichasCache[combateFichaSelecionada]) combateFichaSelecionada = null;
     const entries = combateListaEntradas();
@@ -10099,6 +10276,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     wrap.innerHTML = `
       <div id="combateLayout" class="painel-duplo">
         <div id="combateListaCol" class="painel-lista">
+          ${torneioModoSwitchHtml()}
           ${rollPanelHtml}
           ${addManualHtml}
           <div class="panel-box">
@@ -10134,6 +10312,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       const l = document.getElementById('combateListaCol'); if(l && rolLista) l.scrollTop = rolLista;
       const L = document.getElementById('combateLayout'); if(L && rolLayout) L.scrollTop = rolLayout;
       if(window.scrollY !== rolJanela) window.scrollTo(0, rolJanela); }
+    torneioWireModo(wrap);
     wrap.querySelectorAll('[data-turno]').forEach(b=> b.addEventListener('click', (ev)=>{ ev.stopPropagation(); turnoAvancar(b.dataset.turno); }));
     const btnFin = document.getElementById('btnFinalizarCombate');
     if(btnFin) btnFin.addEventListener('click', (ev)=>{ ev.stopPropagation(); finalizarCombate(); });
@@ -11105,6 +11284,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       fer: 0, lesao: false
     };
     if(ven){ st.direto = true; st.danoDireto = ven.dano||0; st.va = 0; }
+    if(ataque && ataque.danoDireto!=null){ st.direto = true; st.danoDireto = ataque.danoDireto; }
     const ov = document.createElement('div'); ov.className = 'ui-overlay';
     const box = document.createElement('div'); box.className = 'ui-dialog dano-dialog';
     ov.appendChild(box); document.body.appendChild(ov);
@@ -11143,7 +11323,8 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       box.innerHTML = `
         <div class="ui-dialog-head"><h3>🩸 Receber dano — ${escapeHtml(f.nome||'')}</h3>${ataque?'':'<button class="icon-btn" data-x>✕</button>'}</div>
         ${ven?`<p class="dano-origem ven-aviso">🧪 <b>${escapeHtml(ven.nome)}</b> venceu o Vigor de ${escapeHtml(f.nome||'')}: ${ven.dano?`<b>${ven.dano} de dano</b> (veneno ignora armadura)`:''}${ven.dano&&ven.lesoes?' e ':''}${ven.lesoes?`<b>${ven.lesoes} lesão(ões)</b>, marcada(s) ao aplicar`:''}.</p>`:''}
-        ${ataque?`<p class="dano-origem"><b>${escapeHtml(ataque.atacanteNome)}</b> atacou com <b>${escapeHtml(ataque.armaNome||'um ataque')}</b>: tirou <b>${ataque.total}</b> contra sua Defesa ${ataque.defesa}.</p>`:''}
+        ${ataque && ataque.origemTxt?`<p class="dano-origem">🐎 ${escapeHtml(ataque.origemTxt)}</p>`:''}
+        ${ataque && !ataque.origemTxt?`<p class="dano-origem"><b>${escapeHtml(ataque.atacanteNome)}</b> atacou com <b>${escapeHtml(ataque.armaNome||'um ataque')}</b>: tirou <b>${ataque.total}</b> contra sua Defesa ${ataque.defesa}.</p>`:''}
         ${ataque && ataque.veneno ? `<p class="dano-origem ven-aviso">🧪 A arma estava envenenada com <b>${escapeHtml(ataque.veneno.nome)}</b>: ${ataque.veneno.total} contra seu Vigor passivo ${ataque.veneno.passivo} — ${ataque.veneno.graus ? `<b>o veneno te afetou</b> (${escapeHtml((ataque.veneno.efeitos||[]).join(', '))})` : 'você resistiu por enquanto'}. Ele fica no seu organismo por ${escapeHtml(ataque.veneno.duracao||'')}.${ataque.veneno.fatal?' <b>☠ Dose fatal.</b>':''}</p>` : ''}
         <div class="seg">
           <button type="button" class="seg-btn ${!st.direto?'on':''}" data-direto="0">Pelo ataque</button>
@@ -11380,6 +11561,980 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       ownerName: session.playerName, clientTime: Date.now()
     }).then(()=> toast('Iniciativa de ' + (f.nome||'seu personagem') + ': ' + total))
       .catch(err=> toast('Erro: ' + err.message));
+  }
+
+  /* ============================================================================================
+     ============ TORNEIOS (dentro da aba Combate) — Capítulo 9, "Torneios", p. 210-211 ==========
+     ============================================================================================
+     Um documento por torneio em torneios/{id}:
+       { nome, criadoEm, criadoPor,
+         justa:{tamanho, partidas:{"r_m":{a,b,v,did}}, ativa, campeao},
+         lica: (igual à justa),
+         arq:{status, rodadas, competidores:{fid:{ordem}}, rodada, tiro, tiros:{"R_T":{dif, ativos, rol, fim, passaram}},
+              vencRodada:{R: fid}, ouro:{ativo, ids}, campeao},
+         disputas:{did:{tipo, chave, a, b, status, vencedor, motivo, ...}} }
+     Tudo é guardado em mapas (nunca listas dentro de listas) e só se ACRESCENTA chave nova —
+     assim duas pessoas rolando ao mesmo tempo não apagam a rolagem uma da outra.
+
+     JUSTA: os dois investem ao mesmo tempo. Cada um testa Luta (Lanças B; + Torneios B com o
+     benefício Cavaleiro de Torneio) contra o resultado passivo de Lidar com Animais do outro
+     (graduação × 4 + Cavalgar B; + Torneios B com o benefício). Graus → Tabela 9-4: quem foi
+     atingido testa Lidar com Animais (Cavalgar) contra 9 / 12 / 15 / 18 para não cair.
+     Com 2+ graus a lança fere (dano × graus). Quem cai sofre dano como se o atacante tivesse
+     um grau a mais e perde a justa — e entrega cavalo e armadura (ou paga o resgate).
+     LIÇA: combate normal (os dois entram na ordem de iniciativa); perde quem sofrer o primeiro
+     ferimento ou lesão, chegar a Saúde 0 ou desistir.
+     ARQUEARIA: todos disparam (Pontaria) contra Rotineira (6); quem erra fica pra trás; enquanto
+     mais de um acertar, o alvo recua (+3). O último de pé vence a rodada. Após as rodadas
+     definidas pelo mestre, vence quem ganhou mais; empate → Tiro de Ouro. */
+  const TORNEIO_DIF_SELA = [9, 12, 15, 18];
+  const TORNEIO_LANCA_PADRAO = {nome:'Lança de Torneio', habilidade:'luta', especialidadeNome:'Lanças', dano:'Lidar com Animais+3',
+    qualidades:'Comprida, Frágil, Lenta, Montada, Poderosa, Volume 1', treino:'1B'};
+  let torneiosCache = {};
+  let unsubTorneios = null;
+  let torneioModo = false;
+  let torneioSelId = null;
+  let torneioAba = 'justa';
+  const torneioVistos = {fim:new Set(), ativas:new Set(), ouro:new Set(), resolvendo:new Set(), primeiro:true};
+
+  function torneiosCol(){ return db.collection(COLLECTION).doc(session.campaignId).collection('torneios'); }
+  function torneioAtual(){ return torneioSelId ? torneiosCache[torneioSelId] : null; }
+  function tSalvar(tid, patch){ return torneiosCol().doc(tid).set(patch, {merge:true}).catch(err=> toast('Erro: ' + err.message)); }
+  function tId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function tF(fid){ return fid ? fichasCache[fid] : null; }
+  function tNome(fid){ const f = tF(fid); return f ? (f.nome||'Sem nome') : (fid ? '(ficha removida)' : '—'); }
+  function tPode(fid){ const f = tF(fid); return session.role==='mestre' || (f && ehControlador(f)); }
+  function tAvatar(fid, cls){
+    const f = tF(fid);
+    if(f && f.foto) return `<span class="t-av ${cls||''}"><img src="${f.foto}" alt=""></span>`;
+    return `<span class="t-av ${cls||''}">${escapeHtml(((f&&f.nome)||'?').trim().charAt(0).toUpperCase())}</span>`;
+  }
+  function tSaude(fid){ const f = tF(fid); if(!f) return {atual:0, max:0}; const d = calc(f); return {atual: Math.max(0, d.saude - (f.danoSaude||0)), max: d.saude}; }
+  function tDifNome(d){ return d<=0 ? 'Automática' : d<=3 ? 'Fácil' : d<=6 ? 'Rotineira' : d<=9 ? 'Desafiadora' : d<=12 ? 'Formidável' : d<=15 ? 'Difícil' : d<=18 ? 'Muito Difícil' : 'Heroica'; }
+
+  /* ---------- números da ficha usados no torneio ---------- */
+  function tEspBonus(f, hab, re){
+    const g = gradHab(f, hab);
+    const e = getEspecialidadesList(f, hab).find(x=> re.test(normTxt(x.nome)));
+    return e ? {nome: e.nome, bonus: Math.min(e.bonus||1, g)} : null;
+  }
+  function tCavaleiroTorneio(f){ return !!(f && (f.qualidadesLista||[]).some(q=> /cavaleiro de torneio/.test(normTxt(q.nome||'')))); }
+  function tLanca(f){
+    const a = (f && f.armas || []).find(x=> /torneio/.test(normTxt(x.nome||'')) && /lanca/.test(normTxt(x.nome||'')));
+    return a || TORNEIO_LANCA_PADRAO;
+  }
+  /* resultado passivo de Lidar com Animais: graduação × 4 + dados de bônus de Cavalgar (+ Torneios com o benefício) */
+  function tPassivoLcA(f){
+    const g = gradHab(f, 'lidarAnimais');
+    const cav = tEspBonus(f, 'lidarAnimais', /^cavalgar/);
+    const tor = tCavaleiroTorneio(f) ? tEspBonus(f, 'status', /^torneio/) : null;
+    const partes = [`${g}×4`];
+    if(cav) partes.push(`+${cav.bonus} Cavalgar`);
+    if(tor) partes.push(`+${tor.bonus} Torneios`);
+    return {valor: g*4 + (cav?cav.bonus:0) + (tor?tor.bonus:0), txt: partes.join(' ')};
+  }
+  /* teste de Luta na justa: Luta + Lanças B (+ Torneios B), menos o treinamento da lança (1B) */
+  function tPoolLuta(f){
+    const grad = gradHab(f, 'luta');
+    const lanca = tLanca(f);
+    const esp = tEspBonus(f, 'luta', /^lanca/);
+    const tor = tCavaleiroTorneio(f) ? tEspBonus(f, 'status', /^torneio/) : null;
+    let bonus = Math.min((esp?esp.bonus:0) + (tor?tor.bonus:0), grad);
+    const treino = lanca===TORNEIO_LANCA_PADRAO ? 1 : treinoArma(lanca);
+    let penDados = 0;
+    bonus -= treino;
+    if(bonus < 0){ penDados = -bonus; bonus = 0; }
+    const dano = danoArmaNumerico(f, lanca);
+    const txt = `Luta ${grad}D${bonus?` + ${bonus}B`:''}${penDados?` − ${penDados}D`:''}`;
+    const det = [esp?`${esp.nome} ${esp.bonus}B`:'sem Lanças', tor?`Torneios ${tor.bonus}B`:'', treino?`treino da lança −${treino}B`:''].filter(Boolean).join(' · ');
+    return {grad, bonus, penDados, dano: dano||0, lanca, txt, det};
+  }
+  function tPoolSela(f){
+    const grad = gradHab(f, 'lidarAnimais');
+    const cav = tEspBonus(f, 'lidarAnimais', /^cavalgar/);
+    return {grad, bonus: cav ? cav.bonus : 0, txt: `Lidar com Animais ${grad}D${cav?` + ${cav.bonus}B`:''}`};
+  }
+  function tPoolPontaria(f){
+    const grad = gradHab(f, 'pontaria');
+    const arco = (f.armas||[]).find(a=> a.habilidade==='pontaria');
+    let e = arco ? armaEspAtual(f, arco) : null;
+    if(!e){ e = getEspecialidadesList(f, 'pontaria').filter(x=> !x.custom).sort((x,y)=> (y.bonus||1)-(x.bonus||1))[0] || null; }
+    const bonus = e ? Math.min(e.bonus||1, grad) : 0;
+    return {grad, bonus, txt: `Pontaria ${grad}D${bonus?` + ${bonus}B`:''}${e?` (${e.nome})`:''}${arco?` · ${arco.nome}`:''}`};
+  }
+  function tRolar(f, hab, grad, bonus, penExtra, dif){
+    const pen = penalidadesFerimentosLesoes(f, hab);
+    const r = rollDiceCore(grad, Math.min(bonus, grad), pen.penalty + (penExtra||0), pen.mod);
+    recordRollHistory(f.nome||'Ficha', hab, grad, bonus, pen.penalty + (penExtra||0), pen.mod, r.total, dif, f.rollVisibility==='privada', r.rolls, r.discarded);
+    return {total: r.total, rolls: r.rolls, disc: Array.from(r.discarded), mod: pen.mod, pen: pen.penalty + (penExtra||0)};
+  }
+  function tDadosHtml(r){ return r ? buildDiceHtml(r.rolls||[], new Set(r.disc||[])) : ''; }
+
+  /* ---------- assinatura ---------- */
+  function subscribeTorneios(){
+    if(unsubTorneios) unsubTorneios();
+    torneioVistos.primeiro = true;
+    unsubTorneios = torneiosCol().onSnapshot(snap=>{
+      torneiosCache = {};
+      snap.forEach(doc=> torneiosCache[doc.id] = doc.data());
+      if(torneioSelId && !torneiosCache[torneioSelId]) torneioSelId = null;
+      try{ torneioAoMudar(); }catch(e){ console.error(e); }
+      torneioVistos.primeiro = false;
+      if(torneioModo) renderIniciativaTabPreservandoFoco();
+    }, err=> console.error(err));
+  }
+
+  /* avisos, Tiro de Ouro e resoluções automáticas (feitas pelo cliente do mestre) */
+  function torneioAoMudar(){
+    Object.keys(torneiosCache).forEach(tid=>{
+      const t = torneiosCache[tid];
+      Object.keys(t.disputas||{}).forEach(did=>{
+        const d = t.disputas[did];
+        const chave = tid + '/' + did;
+        if(d.status==='andamento' && !torneioVistos.ativas.has(chave)){
+          torneioVistos.ativas.add(chave);
+          if(!torneioVistos.primeiro && session.role!=='mestre' && (tPode(d.a) || tPode(d.b))){
+            toast(`${d.tipo==='justa'?'🐎 Sua justa':'⚔ Sua liça'} começou: ${tNome(d.a)} × ${tNome(d.b)} (Combate → Torneios)`);
+            const pane = document.querySelector('.tab-pane.active');
+            if(pane && pane.id==='paneIniciativa') torneioIrPara(tid, d.tipo);
+          }
+        }
+        if(d.status==='fim' && !torneioVistos.fim.has(chave)){
+          torneioVistos.fim.add(chave);
+          if(!torneioVistos.primeiro) torneioAnuncio(`🏆 ${tNome(d[d.vencedor])}`, `vence a ${d.tipo==='justa'?'justa':'liça'} contra ${tNome(d[d.vencedor==='a'?'b':'a'])} — ${tMotivoTxt(d)}`);
+        }
+        if(session.role==='mestre' && d.status==='andamento' && d.tipo==='justa') justaResolverSePronto(tid, did);
+      });
+      const arq = t.arq || {};
+      const chaveArq = tid + '/arq/' + (arq.iniciadoEm||0);
+      if(arq.status==='andamento' && !torneioVistos.ativas.has(chaveArq)){
+        torneioVistos.ativas.add(chaveArq);
+        if(!torneioVistos.primeiro && session.role!=='mestre' && arqCompetidores(arq).some(fid=> tPode(fid))){
+          toast('🏹 A arquearia começou! (Combate → Torneios)');
+          const pane = document.querySelector('.tab-pane.active');
+          if(pane && pane.id==='paneIniciativa') torneioIrPara(tid, 'arq');
+        }
+      }
+      const chaveOuro = tid + '/ouro/' + (arq.iniciadoEm||0);
+      if(arq.ouro && arq.ouro.ativo && arq.status==='andamento' && !torneioVistos.ouro.has(chaveOuro)){
+        torneioVistos.ouro.add(chaveOuro);
+        torneioIrPara(tid, 'arq');
+        torneioAnuncio('🎯 Tiro de Ouro!', `Empate entre ${Object.keys(arq.ouro.ids||{}).map(tNome).join(', ')} — uma rodada extra decide o campeão da arquearia.`, true);
+      }
+      if(session.role==='mestre' && arq.status==='andamento') arqResolverSePronto(tid);
+    });
+  }
+  function torneioIrPara(tid, aba){
+    torneioModo = true; torneioSelId = tid; torneioAba = aba;
+    const btn = document.querySelector('.tab-btn[data-tab="iniciativa"]');
+    if(btn && !btn.classList.contains('active')) switchTab('iniciativa'); else renderIniciativaTab();
+  }
+  function torneioAnuncio(titulo, texto, ouro){
+    const el = document.createElement('div');
+    el.className = 'torneio-anuncio' + (ouro ? ' ouro' : '');
+    el.innerHTML = `<div class="ta-tit">${escapeHtml(titulo)}</div><div class="ta-txt">${escapeHtml(texto)}</div>`;
+    document.body.appendChild(el);
+    el.addEventListener('click', ()=> el.remove());
+    setTimeout(()=> el.remove(), ouro ? 6500 : 5000);
+  }
+  function tMotivoTxt(d){
+    return ({queda:'derrubado da sela', derrotado:'Saúde reduzida a zero', desistencia:'desistência', trapaca:'desqualificado por trapaça',
+      sangue:'primeiro sangue', manual:'decisão do mestre'})[d.motivo] || '';
+  }
+
+  /* ---------- criar / apagar torneio ---------- */
+  function tVazioChave(){ return {tamanho:0, partidas:{}, ativa:null, campeao:null}; }
+  function tArqPadrao(){ return {status:'config', rodadas:3, competidores:{}, rodada:1, tiro:1, tiros:{}, vencRodada:{}, ouro:null, campeao:null}; }
+  function tDialogo(titulo, corpo, okTxt, aoOk, largura){
+    const ov = document.createElement('div'); ov.className = 'ui-overlay';
+    ov.innerHTML = `<div class="ui-dialog" style="max-width:${largura||460}px;">
+      <div class="ui-dialog-head"><h3>${titulo}</h3><button class="icon-btn" data-x>✕</button></div>
+      <div class="t-dlg-corpo">${corpo}</div>
+      <div class="ui-dialog-actions"><button class="btn ghost" data-x>Cancelar</button><div class="topbar-fill"></div><button class="btn primary" data-ok>${okTxt}</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    const fechar = ()=> ov.remove();
+    ov.addEventListener('mousedown', ev=>{ if(ev.target===ov) fechar(); });
+    ov.querySelectorAll('[data-x]').forEach(b=> b.addEventListener('click', fechar));
+    ov.querySelector('[data-ok]').addEventListener('click', ()=>{ if(aoOk(ov) !== false) fechar(); });
+    const inp = ov.querySelector('input[type=text]'); if(inp) setTimeout(()=> inp.focus(), 30);
+    return ov;
+  }
+  function torneioNovo(){
+    tDialogo('🏆 Novo torneio', `<label>Nome do torneio</label><input type="text" data-nome placeholder="ex: Torneio da Mão" maxlength="60">`, 'Criar', (ov)=>{
+      const nome = ov.querySelector('[data-nome]').value.trim();
+      if(!nome){ toast('Dê um nome ao torneio.'); return false; }
+      const id = tId();
+      torneiosCol().doc(id).set({nome, criadoEm: Date.now(), criadoPor: session.playerName, justa: tVazioChave(), lica: tVazioChave(), arq: tArqPadrao(), disputas:{}})
+        .then(()=>{ torneioSelId = id; torneioAba = 'justa'; renderIniciativaTab(); })
+        .catch(err=> toast('Erro: ' + err.message));
+    });
+  }
+  function torneioApagar(tid){
+    const t = torneiosCache[tid]; if(!t) return;
+    if(!confirm(`Apagar o torneio "${t.nome}"? Os chaveamentos e resultados somem (as fichas não são afetadas).`)) return;
+    torneiosCol().doc(tid).delete().then(()=>{ torneioSelId = null; renderIniciativaTab(); });
+  }
+
+  /* ---------- seleção de competidores (fichas de jogadores e NPCs importantes) ---------- */
+  function tEscolherFichas(titulo, jaMarcados, okTxt, aoOk, extraHtml){
+    const ids = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='dragao')
+      .sort((a,b)=> (fichasCache[a].tipo==='npcImportante') - (fichasCache[b].tipo==='npcImportante') || (fichasCache[a].nome||'').localeCompare(fichasCache[b].nome||''));
+    const item = (id)=>{ const f = fichasCache[id]; return `<label class="t-escolha"><input type="checkbox" value="${id}" ${jaMarcados.includes(id)?'checked':''}>${tAvatar(id)}
+      <span class="t-escolha-nome">${escapeHtml(f.nome||'Sem nome')}</span><span class="muted">${f.tipo==='npcImportante'?'NPC':'jogador'+(f.ownerName?' · '+escapeHtml(f.ownerName):'')}</span></label>`; };
+    const corpo = `<input type="text" data-busca placeholder="Buscar personagem…" style="margin-bottom:.5rem;">
+      <div class="t-escolha-lista">${ids.map(item).join('') || '<p class="muted">Nenhuma ficha na campanha.</p>'}</div>${extraHtml||''}
+      <p class="muted" data-conta style="margin:.5rem 0 0;"></p>`;
+    const ov = tDialogo(titulo, corpo, okTxt, (ov)=> aoOk(Array.from(ov.querySelectorAll('.t-escolha input:checked')).map(i=> i.value), ov), 560);
+    const conta = ()=>{ ov.querySelector('[data-conta]').textContent = ov.querySelectorAll('.t-escolha input:checked').length + ' selecionado(s)'; };
+    ov.addEventListener('change', conta); conta();
+    ov.querySelector('[data-busca]').addEventListener('input', (ev)=>{
+      const q = normTxt(ev.target.value);
+      ov.querySelectorAll('.t-escolha').forEach(l=>{ l.style.display = normTxt(l.textContent).includes(q) ? '' : 'none'; });
+    });
+  }
+  function tEmbaralhar(arr){ const a = arr.slice(); for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; }
+
+  /* ---------- chaveamento (justa e liça) ---------- */
+  function tRodadas(tam){ return tam>1 ? Math.round(Math.log2(tam)) : 0; }
+  function tNomeRodada(r, total){
+    const falta = total - r;
+    return falta===1 ? 'Final' : falta===2 ? 'Semifinal' : falta===3 ? 'Quartas de final' : falta===4 ? 'Oitavas de final' : `Rodada ${r+1}`;
+  }
+  function chaveCriar(tid, tipo){
+    const t = torneiosCache[tid]; if(!t) return;
+    const atual = t[tipo] && t[tipo].partidas ? Object.values(t[tipo].partidas).filter(p=> p).flatMap(p=> [p.a,p.b]).filter(Boolean) : [];
+    const nomeTipo = tipo==='justa' ? 'justa' : 'liça';
+    tEscolherFichas(`Chaveamento da ${nomeTipo}`, Array.from(new Set(atual)), 'Montar chaveamento', (ids, ov)=>{
+      if(ids.length < 2){ toast('Escolha pelo menos 2 competidores.'); return false; }
+      if(t[tipo] && t[tipo].ativa){ toast('Termine a disputa em andamento antes de refazer o chaveamento.'); return false; }
+      const sortear = ov.querySelector('[data-sortear]').checked;
+      let tam = 2; while(tam < ids.length) tam *= 2;
+      const ordem = sortear ? tEmbaralhar(ids) : ids;
+      const R = tRodadas(tam);
+      const partidas = {};
+      for(let r=0;r<R;r++){ const n = tam >> (r+1); for(let m=0;m<n;m++) partidas[`${r}_${m}`] = {a:null, b:null, v:null, did:null}; }
+      /* espalha os "byes" (vagas vazias) — um competidor por partida antes de dobrar */
+      const n0 = tam/2;
+      ordem.forEach((fid, i)=>{ const m = i % n0; const lado = i < n0 ? 'a' : 'b'; partidas[`0_${m}`][lado] = fid; });
+      tSalvar(tid, {[tipo]: {tamanho: tam, partidas, ativa: null, campeao: null}});
+    }, `<label class="check-line" style="margin-top:.6rem;"><input type="checkbox" data-sortear checked> Sortear as posições iniciais</label>`);
+  }
+  function chaveSortear(tid, tipo){
+    const t = torneiosCache[tid]; const c = t && t[tipo]; if(!c || !c.tamanho) return;
+    const n0 = c.tamanho/2;
+    const algumDecidido = Object.keys(c.partidas||{}).some(k=> c.partidas[k] && (c.partidas[k].v || c.partidas[k].did));
+    if(algumDecidido){ toast('Já há disputas decididas — sortear agora bagunçaria o chaveamento.'); return; }
+    const ids = []; for(let m=0;m<n0;m++){ const p = c.partidas[`0_${m}`]||{}; if(p.a) ids.push(p.a); if(p.b) ids.push(p.b); }
+    const ordem = tEmbaralhar(ids);
+    const patch = {};
+    for(let m=0;m<n0;m++) patch[`0_${m}`] = {a:null, b:null};
+    ordem.forEach((fid, i)=>{ const m = i % n0; patch[`0_${m}`][i < n0 ? 'a' : 'b'] = fid; });
+    tSalvar(tid, {[tipo]: {partidas: patch}});
+    toast('🎲 Posições sorteadas.');
+  }
+  function chaveTrocarSlot(tid, tipo, chave, lado, fid){
+    tSalvar(tid, {[tipo]: {partidas: {[chave]: {[lado]: fid || null}}}});
+  }
+  /* registra o vencedor de uma partida e o leva para a próxima rodada */
+  function chaveAvancar(t, tipo, chave, lado){
+    const c = t[tipo]; const p = c.partidas[chave]; if(!p) return {};
+    const [r, m] = chave.split('_').map(Number);
+    const vencedorFid = p[lado];
+    const patch = {partidas: {[chave]: {v: lado}}};
+    const R = tRodadas(c.tamanho);
+    if(r+1 < R){ patch.partidas[`${r+1}_${m>>1}`] = {[m%2===0 ? 'a' : 'b']: vencedorFid}; }
+    else patch.campeao = vencedorFid;
+    return patch;
+  }
+  function chaveDeclararVencedor(tid, tipo, chave, lado){
+    const t = torneiosCache[tid]; if(!t) return;
+    const p = t[tipo].partidas[chave];
+    if(!confirm(`Declarar ${tNome(p[lado])} vencedor desta partida?`)) return;
+    tSalvar(tid, {[tipo]: chaveAvancar(t, tipo, chave, lado)});
+  }
+
+  /* ---------- disputas ---------- */
+  function disputaIniciar(tid, tipo, chave){
+    const t = torneiosCache[tid]; if(!t) return;
+    const c = t[tipo]; const p = c.partidas[chave];
+    if(!p || !p.a || !p.b){ toast('A partida precisa de dois competidores.'); return; }
+    if(c.ativa && t.disputas && t.disputas[c.ativa] && t.disputas[c.ativa].status==='andamento'){ toast(`Já há uma ${tipo==='justa'?'justa':'liça'} em andamento neste torneio.`); torneioAba = tipo; renderIniciativaTab(); return; }
+    if(p.a===p.b){ toast('O mesmo personagem está dos dois lados.'); return; }
+    const zerados = [p.a, p.b].filter(fid=> tF(fid) && tSaude(fid).atual<=0);
+    if(zerados.length && !confirm(`${zerados.map(tNome).join(' e ')} está com Saúde 0 — a disputa terminaria na hora. Recupere a Saúde na ficha antes. Iniciar mesmo assim?`)) return;
+    const did = tId();
+    const disputa = {tipo, chave, a: p.a, b: p.b, status:'andamento', vencedor:null, motivo:null, criadoEm: Date.now()};
+    if(tipo==='justa'){ disputa.embate = 1; disputa.embates = {}; }
+    if(tipo==='lica'){
+      const base = {};
+      ['a','b'].forEach(l=>{ const f = tF(p[l]); base[l] = {fer: contarMarcados(f.ferimentos), les: contarMarcados(f.lesoes)}; });
+      disputa.base = base;
+      const outros = Object.keys(iniciativaCache).filter(id=> id!==p.a && id!==p.b);
+      if(outros.length && !confirm(`Há ${outros.length} participante(s) na ordem de combate. Os dois competidores da liça entram junto com eles. Continuar?`)) return;
+      ['a','b'].forEach(l=>{
+        const f = tF(p[l]);
+        const pen = penalidadesFerimentosLesoes(f, 'agilidade');
+        const total = rollDiceCore(gradHab(f,'agilidade'), 0, pen.penalty, pen.mod).total;
+        iniciativaCol().doc(p[l]).set({nome: f.nome||'Sem nome', valor: total, tipo: f.tipo==='npcImportante'?'npc':'pj', ownerName: f.ownerName||null, clientTime: Date.now(), torneio: did}, {merge:true});
+      });
+    }
+    tSalvar(tid, {disputas: {[did]: disputa}, [tipo]: {ativa: did, partidas: {[chave]: {did}}}});
+    torneioAba = tipo;
+  }
+  function disputaFinalizar(tid, did, vencedor, motivo, extra){
+    const t = torneiosCache[tid]; if(!t) return;
+    const d = t.disputas && t.disputas[did]; if(!d || d.status!=='andamento') return;
+    const patch = {disputas: {[did]: Object.assign({status:'fim', vencedor, motivo, fimEm: Date.now()}, extra||{})}};
+    const c = t[d.tipo];
+    if(c && c.partidas && c.partidas[d.chave]) patch[d.tipo] = Object.assign({ativa: null}, chaveAvancar(t, d.tipo, d.chave, vencedor));
+    if(d.tipo==='justa'){
+      const perd = d[vencedor==='a'?'b':'a'];
+      patch.disputas[did].resgate = Object.assign({status:'pendente'}, tResgateSugerido(perd));
+    }
+    tSalvar(tid, patch);
+    if(d.tipo==='lica'){
+      /* tira da ordem de combate só quem entrou pela liça */
+      [d.a, d.b].forEach(fid=>{ const ini = iniciativaCache[fid]; if(ini && ini.torneio===did) iniciativaCol().doc(fid).delete().catch(()=>{}); });
+    }
+  }
+  function disputaDesistir(tid, did, lado){
+    const t = torneiosCache[tid]; const d = t && t.disputas[did]; if(!d) return;
+    if(!confirm(`${tNome(d[lado])} desiste da ${d.tipo==='justa'?'justa':'liça'}?`)) return;
+    disputaFinalizar(tid, did, lado==='a'?'b':'a', 'desistencia');
+  }
+  /* liça e justa: o cliente do mestre observa as fichas — primeiro ferimento/lesão ou Saúde 0 encerra */
+  function torneioVerificarFichas(){
+    if(!session || session.role!=='mestre') return;
+    Object.keys(torneiosCache).forEach(tid=>{
+      const t = torneiosCache[tid];
+      Object.keys(t.disputas||{}).forEach(did=>{
+        const d = t.disputas[did];
+        if(d.status!=='andamento') return;
+        const perdeu = {};
+        ['a','b'].forEach(l=>{
+          const f = tF(d[l]); if(!f) return;
+          if(tSaude(d[l]).atual <= 0) perdeu[l] = 'derrotado';
+          else if(d.tipo==='lica' && d.base && d.base[l] && (contarMarcados(f.ferimentos) > d.base[l].fer || contarMarcados(f.lesoes) > d.base[l].les)) perdeu[l] = 'sangue';
+        });
+        const k = Object.keys(perdeu);
+        if(k.length===1) disputaFinalizar(tid, did, k[0]==='a'?'b':'a', perdeu[k[0]]);
+        else if(k.length===2 && d.tipo==='lica') disputaFinalizar(tid, did, perdeu.a==='derrotado' && perdeu.b!=='derrotado' ? 'b' : 'a', perdeu.a);
+      });
+    });
+  }
+
+  /* ---------- justa: estado do embate (calculado a partir das rolagens guardadas) ---------- */
+  function justaEstado(d){
+    const n = d.embate || 1;
+    const e = (d.embates||{})[n] || {};
+    const L = e.luta || {}, S = e.sela || {};
+    const st = {n, e, L, S, fase:'luta', hits:{}, precisaSela:{}, caiu:{}, dano:{}, vencedor:null};
+    if(!(L.a && L.b)) return st;
+    ['a','b'].forEach(X=>{
+      const Y = X==='a' ? 'b' : 'a';
+      const g = grausDeSucesso(L[X].total, L[X].dif);
+      st.hits[X] = {g, critica: !g && L[X].total <= L[X].dif - 5, trapaca: !!L[X].trapaca};
+      if(g>=1) st.precisaSela[Y] = TORNEIO_DIF_SELA[Math.min(g,4)-1];
+    });
+    st.fase = Object.keys(st.precisaSela).some(Y=> !S[Y]) ? 'sela' : 'fim';
+    if(st.fase==='fim'){
+      ['a','b'].forEach(Y=>{
+        const X = Y==='a' ? 'b' : 'a';
+        const g = st.hits[X].g;
+        st.caiu[Y] = st.precisaSela[Y] ? S[Y].total < st.precisaSela[Y] : false;
+        let mult = (st.hits[X].trapaca && g>=1) || g>=2 ? g : 0;
+        if(st.caiu[Y]) mult = g + 1;
+        st.dano[Y] = (L[X].dano||0) * mult;
+      });
+      if(st.caiu.a !== st.caiu.b) st.vencedor = st.caiu.a ? 'b' : 'a';
+    }
+    return st;
+  }
+  function justaInvestir(tid, did, lado, trapaca){
+    const t = torneiosCache[tid]; const d = t && t.disputas[did]; if(!d) return;
+    const st = justaEstado(d);
+    if(st.fase!=='luta' || st.L[lado]) return;
+    const f = tF(d[lado]), fo = tF(d[lado==='a'?'b':'a']);
+    if(!f || !fo){ toast('Ficha não encontrada.'); return; }
+    const pool = tPoolLuta(f);
+    const dif = tPassivoLcA(fo).valor;
+    const r = tRolar(f, 'luta', pool.grad, pool.bonus, pool.penDados, dif);
+    const roll = Object.assign(r, {dif, dano: pool.dano, pool: pool.txt, trapaca: !!trapaca, quem: session.playerName});
+    if(trapaca){
+      const eng = tEspBonus(f, 'enganacao', /^blefar|^atuar/);
+      const re = tRolar(f, 'enganacao', gradHab(f,'enganacao'), eng?eng.bonus:0, 0, null);
+      roll.enganacao = re.total;
+    }
+    tSalvar(tid, {disputas: {[did]: {embates: {[st.n]: {luta: {[lado]: roll}}}}}});
+  }
+  function justaSela(tid, did, lado){
+    const t = torneiosCache[tid]; const d = t && t.disputas[did]; if(!d) return;
+    const st = justaEstado(d);
+    if(st.fase!=='sela' || !st.precisaSela[lado] || st.S[lado]) return;
+    const f = tF(d[lado]); const pool = tPoolSela(f);
+    const r = tRolar(f, 'lidarAnimais', pool.grad, pool.bonus, 0, st.precisaSela[lado]);
+    tSalvar(tid, {disputas: {[did]: {embates: {[st.n]: {sela: {[lado]: Object.assign(r, {dif: st.precisaSela[lado], pool: pool.txt})}}}}}});
+  }
+  /* mestre: quando o embate termina, grava o resultado, manda o dano para quem controla cada
+     cavaleiro (tela de Receber dano, com armadura, ferimentos e lesões) e decide a justa */
+  function justaResolverSePronto(tid, did){
+    const t = torneiosCache[tid]; const d = t.disputas[did];
+    const st = justaEstado(d);
+    if(st.fase!=='fim' || st.e.res) return;
+    const chave = `${tid}/${did}/${st.n}`;
+    if(torneioVistos.resolvendo.has(chave)) return;
+    torneioVistos.resolvendo.add(chave);
+    tSalvar(tid, {disputas: {[did]: {embates: {[st.n]: {res: {caiu: st.caiu, dano: st.dano, resolvidoEm: Date.now()}}}}}});
+    ['a','b'].forEach(Y=>{
+      const X = Y==='a' ? 'b' : 'a';
+      if(!st.dano[Y] || !tF(d[Y])) return;
+      const g = st.hits[X].g;
+      ataquesCol().doc().set({
+        atacanteId: d[X], atacanteNome: tNome(d[X]), alvoId: d[Y], alvoFichaId: d[Y], alvoNome: tNome(d[Y]),
+        armaNome: 'Lança de Torneio', total: st.L[X].total, defesa: st.L[X].dif, graus: g, acertou: true,
+        danoBase: st.L[X].dano||0, perfurante: 0, danoBruto: st.dano[Y], danoDireto: st.dano[Y],
+        origemTxt: `Justa, embate ${st.n}: ${tNome(d[X])} tirou ${st.L[X].total} contra seu Lidar com Animais passivo ${st.L[X].dif} (${g} grau${g>1?'s':''})`
+          + (st.caiu[Y] ? ' e você caiu da sela — dano como se ele tivesse um grau a mais' : '')
+          + (st.hits[X].trapaca ? ' · golpe desleal: dano normal de combate' : '') + '.',
+        por: session.playerName, clientTime: Date.now()
+      });
+    });
+    if(st.vencedor) setTimeout(()=> disputaFinalizar(tid, did, st.vencedor, 'queda'), 400);
+  }
+  function justaProximoEmbate(tid, did){
+    const d = torneiosCache[tid].disputas[did];
+    tSalvar(tid, {disputas: {[did]: {embate: (d.embate||1) + 1}}});
+  }
+  function justaJuizes(tid, did, n, lado, grad){
+    const d = torneiosCache[tid].disputas[did];
+    const L = d.embates[n].luta[lado];
+    const r = rollDiceCore(grad, 0, 0, 0);
+    const pego = r.total >= (L.enganacao||0);
+    tSalvar(tid, {disputas: {[did]: {embates: {[n]: {luta: {[lado]: {juizes: {total: r.total, rolls: r.rolls, grad, pego}}}}}}}});
+    toast(pego ? `👁 Os juízes perceberam a trapaça de ${tNome(d[lado])}! (${r.total} contra ${L.enganacao})` : `Os juízes não perceberam nada (${r.total} contra ${L.enganacao}).`);
+  }
+  function justaDesqualificar(tid, did, lado, infamia){
+    const d = torneiosCache[tid].disputas[did];
+    if(!confirm(`Desqualificar ${tNome(d[lado])} por trapaça?`)) return;
+    if(infamia){
+      const f = tF(d[lado]);
+      if(f){
+        const valor = rollFeitoReputacao('comum');
+        if(!f.reputacao) f.reputacao = {renome:0, infamia:0, historico:[]};
+        if(!f.reputacao.historico) f.reputacao.historico = [];
+        f.reputacao.infamia = (f.reputacao.infamia||0) + valor;
+        f.reputacao.historico.unshift({trilha:'infamia', tipo:'comum', valor, desc:`Pego trapaceando na justa (${torneiosCache[tid].nome})`, data: Date.now()});
+        scheduleFichaSave(d[lado], f); flushFichaSave();
+        toast(`+${valor} de Infâmia para ${f.nome}.`);
+      }
+    }
+    if(d.status==='andamento') disputaFinalizar(tid, did, lado==='a'?'b':'a', 'trapaca');
+  }
+
+  /* ---------- resgate: cavalo + armadura do perdedor ---------- */
+  function tPrecoCatalogo(cats, nome){
+    const n = normTxt(nome||'');
+    for(const cat of cats){
+      const it = (CATALOGO_LOJA[cat]||[]).find(x=> normTxt(x.nome)===n) || (CATALOGO_LOJA[cat]||[]).find(x=> n.includes(normTxt(x.nome)));
+      if(it){ const v = parsePrecoParaVintens(it.preco); if(v!=null) return Math.round(v); }
+    }
+    return 0;
+  }
+  function tCavaloDe(f){
+    const montarias = (CATALOGO_LOJA['Montarias']||[]).map(x=> x.nome).filter(x=> !/alforje|aliment|estabul/i.test(normTxt(x)));
+    const itens = (f && f.equipamentosGerais || []).map((it,i)=> ({it, i})).filter(({it})=> montarias.some(m=> normTxt(it.nome||'').includes(normTxt(m))) || /cavalo|corcel/.test(normTxt(it.nome||'')));
+    return itens[0] || null;
+  }
+  function tArmaduraDe(f){
+    const arms = (f && f.armaduras) || [];
+    const usadas = arms.some(a=> 'equipada' in a) ? arms.filter(a=> a.equipada) : arms;
+    const a = usadas.slice().sort((x,y)=> (parseInt(y.valor,10)||0)-(parseInt(x.valor,10)||0))[0];
+    return a ? {it: a, i: arms.indexOf(a)} : null;
+  }
+  function tResgateSugerido(fid){
+    const f = tF(fid);
+    const cav = tCavaloDe(f), arm = tArmaduraDe(f);
+    const vCav = cav ? tPrecoCatalogo(['Montarias'], cav.it.nome) : 0;
+    const vArm = arm ? tPrecoCatalogo(['Armaduras'], arm.it.nome) : 0;
+    return {cavalo: cav ? cav.it.nome : null, armadura: arm ? arm.it.nome : null, valor: vCav + vArm};
+  }
+  function resgatePagar(tid, did){
+    const d = torneiosCache[tid].disputas[did];
+    const venc = d[d.vencedor], perd = d[d.vencedor==='a'?'b':'a'];
+    const fv = tF(venc), fp = tF(perd);
+    const inp = document.querySelector(`[data-resgatevalor="${did}"]`);
+    const valor = Math.max(0, Math.round(parseFloat(inp ? inp.value : d.resgate.valor) || 0));
+    if(!fv || !fp) return;
+    const tem = moedaTotalVintens(fp.moedas);
+    if(tem < valor && !confirm(`${fp.nome} só tem ${formatarPrecoVc(tem)}. Pagar mesmo assim (a carteira fica zerada)?`)) return;
+    const pago = Math.min(tem, valor);
+    fp.moedas = moedaBreakdownObj(tem - pago);
+    fv.moedas = moedaBreakdownObj(moedaTotalVintens(fv.moedas) + pago);
+    scheduleFichaSave(perd, fp); scheduleFichaSave(venc, fv); flushFichaSave();
+    tSalvar(tid, {disputas: {[did]: {resgate: {status:'pago', valor: pago}}}});
+    toast(`💰 ${fp.nome} pagou ${formatarPrecoVc(pago)} de resgate a ${fv.nome}.`);
+  }
+  function resgateEntregar(tid, did){
+    const d = torneiosCache[tid].disputas[did];
+    const venc = d[d.vencedor], perd = d[d.vencedor==='a'?'b':'a'];
+    const fv = tF(venc), fp = tF(perd); if(!fv || !fp) return;
+    const cav = tCavaloDe(fp), arm = tArmaduraDe(fp);
+    if(!cav && !arm){ toast(`${fp.nome} não tem cavalo nem armadura no inventário.`); }
+    const levados = [];
+    if(arm){ fp.armaduras.splice(arm.i, 1); if(!fv.armaduras) fv.armaduras = []; fv.armaduras.push(Object.assign({}, arm.it, {equipada:false})); levados.push(arm.it.nome); }
+    if(cav){ const c = fp.equipamentosGerais.splice(cav.i, 1)[0]; if(!fv.equipamentosGerais) fv.equipamentosGerais = []; fv.equipamentosGerais.push(c); levados.push(c.nome); }
+    scheduleFichaSave(perd, fp); scheduleFichaSave(venc, fv); flushFichaSave();
+    tSalvar(tid, {disputas: {[did]: {resgate: {status:'entregue', levados}}}});
+    if(levados.length) toast(`🐎 ${fv.nome} recebeu: ${levados.join(' e ')}.`);
+  }
+
+  /* ---------- arquearia ---------- */
+  function arqChaveRodada(arq){ return (arq.ouro && arq.ouro.ativo) ? 'O' : String(arq.rodada||1); }
+  function arqTiroAtual(arq){ const k = `${arqChaveRodada(arq)}_${arq.tiro||1}`; return {k, tiro: (arq.tiros||{})[k]}; }
+  function arqCompetidores(arq){ const c = arq.competidores || {}; return Object.keys(c).filter(fid=> fichasCache[fid]).sort((x,y)=> (c[x].ordem||0)-(c[y].ordem||0)); }
+  function arqVitorias(arq){ const v = {}; Object.keys(arq.vencRodada||{}).forEach(r=>{ if(r!=='O'){ const fid = arq.vencRodada[r]; v[fid] = (v[fid]||0) + 1; } }); return v; }
+  function arqEscolher(tid){
+    const arq = torneiosCache[tid].arq || {};
+    tEscolherFichas('🏹 Competidores da arquearia', Object.keys(arq.competidores||{}), 'Salvar', (ids)=>{
+      const comp = {}; ids.forEach((fid,i)=> comp[fid] = {ordem: i});
+      /* reescreve a lista inteira (sem merge nesse campo) */
+      const t = torneiosCache[tid];
+      const novo = Object.assign({}, t.arq || tArqPadrao(), {competidores: comp});
+      torneiosCol().doc(tid).set(Object.assign({}, t, {arq: novo})).catch(err=> toast('Erro: ' + err.message));
+    });
+  }
+  function arqIniciar(tid){
+    const t = torneiosCache[tid]; const arq = t.arq || {};
+    const comp = arqCompetidores(arq);
+    if(comp.length < 2){ toast('A arquearia precisa de pelo menos 2 competidores.'); return; }
+    const rodadas = Math.max(1, Math.min(9, parseInt((document.querySelector('[data-arqrodadas]')||{}).value,10) || arq.rodadas || 3));
+    const ativos = {}; comp.forEach(fid=> ativos[fid] = true);
+    const novo = {status:'andamento', rodadas, competidores: arq.competidores, rodada:1, tiro:1,
+      tiros: {'1_1': {dif:6, ativos, rol:{}, fim:false}}, vencRodada:{}, ouro:null, campeao:null, iniciadoEm: Date.now()};
+    torneiosCol().doc(tid).set(Object.assign({}, t, {arq: novo})).catch(err=> toast('Erro: ' + err.message));
+    toast('🏹 Arquearia iniciada! Todos disparam contra Rotineira (6).');
+  }
+  function arqReiniciar(tid){
+    const t = torneiosCache[tid];
+    if(!confirm('Recomeçar a arquearia? Os resultados atuais somem (os competidores continuam).')) return;
+    const novo = Object.assign(tArqPadrao(), {competidores: (t.arq||{}).competidores || {}, rodadas: (t.arq||{}).rodadas || 3});
+    torneiosCol().doc(tid).set(Object.assign({}, t, {arq: novo})).catch(err=> toast('Erro: ' + err.message));
+  }
+  function arqDisparar(tid, fid){
+    const arq = torneiosCache[tid].arq; const {k, tiro} = arqTiroAtual(arq);
+    if(!tiro || tiro.fim || !tiro.ativos[fid] || (tiro.rol||{})[fid]) return;
+    const f = tF(fid); const pool = tPoolPontaria(f);
+    const r = tRolar(f, 'pontaria', pool.grad, pool.bonus, 0, tiro.dif);
+    tSalvar(tid, {arq: {tiros: {[k]: {rol: {[fid]: Object.assign(r, {pool: pool.txt})}}}}});
+  }
+  function arqDispararTodos(tid, soNpcs){
+    const arq = torneiosCache[tid].arq; const {tiro} = arqTiroAtual(arq); if(!tiro) return;
+    Object.keys(tiro.ativos||{}).forEach(fid=>{
+      const f = tF(fid); if(!f || (tiro.rol||{})[fid]) return;
+      if(soNpcs && f.tipo!=='npcImportante' && f.ownerName) return;
+      arqDisparar(tid, fid);
+    });
+  }
+  /* mestre: quando todos os ativos dispararam, decide quem segue, sobe a dificuldade ou fecha a rodada */
+  function arqResolverSePronto(tid){
+    const t = torneiosCache[tid]; const arq = t.arq; const {k, tiro} = arqTiroAtual(arq);
+    if(!tiro || tiro.fim) return;
+    const ativos = Object.keys(tiro.ativos||{});
+    if(!ativos.length || ativos.some(fid=> !(tiro.rol||{})[fid])) return;
+    const chave = tid + '/arq/' + (arq.iniciadoEm||0) + '/' + k;
+    if(torneioVistos.resolvendo.has(chave)) return;
+    torneioVistos.resolvendo.add(chave);
+    setTimeout(()=>{
+      const t2 = torneiosCache[tid]; if(!t2) return;
+      const arq2 = t2.arq; const cur = arqTiroAtual(arq2);
+      if(cur.k!==k || !cur.tiro || cur.tiro.fim) return;
+      const passaram = ativos.filter(fid=> cur.tiro.rol[fid].total >= cur.tiro.dif);
+      const pm = {}; passaram.forEach(fid=> pm[fid] = true);
+      const patch = {tiros: {[k]: {fim: true, passaram: pm}}};
+      const rk = arqChaveRodada(arq2);
+      if(passaram.length > 1){
+        patch.tiro = (arq2.tiro||1) + 1;
+        patch.tiros[`${rk}_${patch.tiro}`] = {dif: cur.tiro.dif + 3, ativos: pm, rol:{}, fim:false};
+      } else if(passaram.length === 0){
+        const at = {}; ativos.forEach(fid=> at[fid] = true);
+        patch.tiro = (arq2.tiro||1) + 1;
+        patch.tiros[`${rk}_${patch.tiro}`] = {dif: cur.tiro.dif, ativos: at, rol:{}, fim:false, repetido: true};
+      } else {
+        const venc = passaram[0];
+        patch.vencRodada = {[rk]: venc};
+        if(rk==='O'){
+          patch.status = 'fim'; patch.campeao = venc; patch.ouro = {ativo:false, ids: arq2.ouro.ids, vencedor: venc};
+        } else if((arq2.rodada||1) < (arq2.rodadas||1)){
+          const todos = {}; arqCompetidores(arq2).forEach(fid=> todos[fid] = true);
+          patch.rodada = (arq2.rodada||1) + 1; patch.tiro = 1;
+          patch.tiros[`${patch.rodada}_1`] = {dif: 6, ativos: todos, rol:{}, fim:false};
+        } else {
+          const v = arqVitorias(Object.assign({}, arq2, {vencRodada: Object.assign({}, arq2.vencRodada, {[rk]: venc})}));
+          const max = Math.max(...Object.values(v));
+          const empatados = Object.keys(v).filter(fid=> v[fid]===max);
+          if(empatados.length===1){ patch.status = 'fim'; patch.campeao = empatados[0]; }
+          else {
+            const ids = {}; empatados.forEach(fid=> ids[fid] = true);
+            patch.ouro = {ativo: true, ids}; patch.tiro = 1;
+            patch.tiros['O_1'] = {dif: 6, ativos: ids, rol:{}, fim:false};
+          }
+        }
+      }
+      tSalvar(tid, {arq: patch});
+    }, 1300);
+  }
+
+  /* ============ tela ============ */
+  function torneioModoSwitchHtml(){
+    return `<div class="seg torneio-modo" role="tablist">
+      <button type="button" class="seg-btn ${torneioModo?'':'on'}" data-tmodo="0">⚔️ Combate</button>
+      <button type="button" class="seg-btn ${torneioModo?'on':''}" data-tmodo="1">🏆 Torneios</button>
+    </div>`;
+  }
+  function torneioWireModo(root){
+    root.querySelectorAll('[data-tmodo]').forEach(b=> b.addEventListener('click', ()=>{ torneioModo = b.dataset.tmodo==='1'; renderIniciativaTab(); }));
+  }
+  function slotHtml(t, tipo, chave, p, lado, editavel){
+    const fid = p[lado];
+    const venceu = p.v===lado, perdeu = p.v && p.v!==lado;
+    if(editavel){
+      const opts = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='dragao').sort((x,y)=> (fichasCache[x].nome||'').localeCompare(fichasCache[y].nome||''))
+        .map(id=> `<option value="${id}" ${id===fid?'selected':''}>${escapeHtml(fichasCache[id].nome||'Sem nome')}</option>`).join('');
+      return `<div class="tc-slot editavel">${fid?tAvatar(fid):'<span class="t-av vazio">?</span>'}<select data-slot="${chave}.${lado}"><option value="">— vaga —</option>${opts}</select></div>`;
+    }
+    const podeDeclarar = session.role==='mestre' && p.a && p.b && !p.v && !(p.did && t.disputas && t.disputas[p.did] && t.disputas[p.did].status==='andamento');
+    return `<div class="tc-slot ${venceu?'venceu':''} ${perdeu?'perdeu':''} ${fid?'':'vazio'}" ${podeDeclarar?`data-declarar="${chave}.${lado}" title="Declarar vencedor"`:''}>
+      ${fid?tAvatar(fid):'<span class="t-av vazio"></span>'}<span class="tc-nome">${fid?escapeHtml(tNome(fid)):'<em>a definir</em>'}</span>${venceu?'<span class="tc-coroa">🏆</span>':''}</div>`;
+  }
+  function chaveHtml(t, tipo){
+    const c = t[tipo] || {};
+    const nomeTipo = tipo==='justa' ? 'justa' : 'liça';
+    const mestre = session.role==='mestre';
+    if(!c.tamanho){
+      return `<div class="panel-box"><h3>${tipo==='justa'?'🐎':'⚔'} Chaveamento da ${nomeTipo}</h3>
+        <p class="muted">Nenhum chaveamento ainda.</p>
+        ${mestre?`<button type="button" class="btn primary" data-chavecriar="${tipo}" style="width:100%;">Montar chaveamento</button>`:''}</div>`;
+    }
+    const R = tRodadas(c.tamanho);
+    const primeiraLivre = !Object.keys(c.partidas||{}).some(k=> c.partidas[k] && (c.partidas[k].v || c.partidas[k].did));
+    let html = '';
+    for(let r=0;r<R;r++){
+      const n = c.tamanho >> (r+1);
+      html += `<div class="tc-rodada"><div class="tc-rodada-tit">${tNomeRodada(r, R)}</div>`;
+      for(let m=0;m<n;m++){
+        const chave = `${r}_${m}`; const p = (c.partidas||{})[chave] || {};
+        const d = p.did && t.disputas ? t.disputas[p.did] : null;
+        const emAndamento = d && d.status==='andamento';
+        const editavel = mestre && r===0 && !p.v && !p.did;
+        const podeIniciar = mestre && p.a && p.b && !p.v && !emAndamento && !c.ativa;
+        const bye = mestre && !p.v && ((p.a && !p.b) || (!p.a && p.b)) && r===0 && !editavel;
+        html += `<div class="tc-partida ${emAndamento?'ao-vivo':''} ${p.v?'decidida':''}">
+          ${slotHtml(t, tipo, chave, p, 'a', editavel)}
+          <div class="tc-meio">${emAndamento ? `<button type="button" class="tc-vs ao-vivo" data-verdisputa="${tipo}" title="Disputa em andamento">●</button>`
+            : podeIniciar ? `<button type="button" class="tc-vs" data-iniciar="${chave}" title="Iniciar a ${nomeTipo}">⚔</button>`
+            : `<span class="tc-vs off">${p.v?'✓':'×'}</span>`}</div>
+          ${slotHtml(t, tipo, chave, p, 'b', editavel)}
+          ${(mestre && !p.v && ((p.a && !p.b) || (!p.a && p.b))) ? `<button type="button" class="btn btn-mini ghost tc-bye" data-bye="${chave}.${p.a?'a':'b'}">➜ avança sem disputa</button>` : ''}
+        </div>`;
+        void bye;
+      }
+      html += `</div>`;
+    }
+    return `<div class="panel-box tc-box"><h3>${tipo==='justa'?'🐎':'⚔'} Chaveamento da ${nomeTipo}
+        ${mestre?`<span class="tc-acoes">${primeiraLivre?`<button type="button" class="btn btn-mini" data-chavesortear="${tipo}" title="Sortear as posições iniciais">🎲 Sortear</button>`:''}<button type="button" class="btn btn-mini ghost" data-chavecriar="${tipo}" title="Escolher competidores de novo">↺ Refazer</button></span>`:''}</h3>
+      ${c.campeao?`<div class="tc-campeao">${tAvatar(c.campeao,'grande')}<div><small>Campeão da ${nomeTipo}</small><b>${escapeHtml(tNome(c.campeao))}</b></div><span>🏆</span></div>`:''}
+      ${mestre && primeiraLivre ? `<p class="muted tc-dica">Troque os nomes da primeira rodada nos seletores ou sorteie. Clique em ⚔ entre dois competidores para começar.</p>` : (mestre ? `<p class="muted tc-dica">Clique em ⚔ para iniciar a próxima disputa; clique num nome para declarar vencedor manualmente.</p>` : '')}
+      <div class="tc-chave">${html}</div></div>`;
+  }
+
+  function cavaleiroHtml(t, tid, did, d, lado, st){
+    const fid = d[lado], f = tF(fid), outro = d[lado==='a'?'b':'a'], fo = tF(outro);
+    if(!f) return `<div class="tj-cav vazio">Ficha não encontrada.</div>`;
+    const pode = tPode(fid) && d.status==='andamento';
+    const pool = tPoolLuta(f), pas = tPassivoLcA(f), sela = tPoolSela(f), sd = tSaude(fid);
+    const L = st.L[lado], S = st.S[lado];
+    const ambos = st.L.a && st.L.b;
+    const verTrapaca = session.role==='mestre' || tPode(fid);
+    let acao = '';
+    if(d.status==='andamento'){
+      if(st.fase==='luta'){
+        acao = L ? `<div class="tj-pronto">✔ Investida feita${verTrapaca && L.trapaca?' <span class="tj-trap">(desleal)</span>':''}<br><small class="muted">aguardando o adversário…</small></div>`
+          : pode ? `<label class="check-line tj-trapacear" title="Mirar num ponto desprotegido ou na montaria: causa dano normal de combate, mas um teste de Enganação esconde a trapaça dos juízes"><input type="checkbox" data-trapaca="${lado}"> Trapacear</label>
+                   <button type="button" class="btn primary btn-grande tj-investir" data-investir="${lado}">🐎 Investir!</button>`
+          : `<div class="tj-pronto muted">aguardando ${escapeHtml(f.ownerName||'o mestre')}…</div>`;
+      } else if(st.fase==='sela' && st.precisaSela[lado]){
+        acao = S ? '' : pode ? `<button type="button" class="btn crimson btn-grande" data-sela="${lado}">🛡 Manter-se na sela<br><small>${tDifNome(st.precisaSela[lado])} (${st.precisaSela[lado]})</small></button>`
+          : `<div class="tj-pronto muted">${escapeHtml(f.nome)} precisa se manter na sela (${st.precisaSela[lado]})…</div>`;
+      }
+    }
+    const resLuta = (L && (ambos || tPode(fid))) ? (()=>{
+      const h = st.hits[lado];
+      return `<div class="tj-rol"><div class="tj-dados">${tDadosHtml(L)}</div>
+        <div><b class="tj-total">${L.total}</b> contra <b>${L.dif}</b>${h ? (h.g ? ` · <span class="tj-graus">${h.g} grau${h.g>1?'s':''}</span>` : (h.critica ? ' · <span class="tj-falha">falha crítica</span>' : ' · <span class="tj-falha">falha</span>')) : ''}</div></div>`;
+    })() : '';
+    const resSela = S ? `<div class="tj-rol sela ${S.total>=S.dif?'ok':'caiu'}"><div class="tj-dados">${tDadosHtml(S)}</div><div>Sela: <b class="tj-total">${S.total}</b> contra <b>${S.dif}</b> — ${S.total>=S.dif?'firme na sela':'<b>caiu!</b>'}</div></div>` : '';
+    return `<div class="tj-cav lado-${lado} ${d.vencedor===lado?'venceu':''} ${d.vencedor && d.vencedor!==lado?'perdeu':''}">
+      <div class="tj-cav-topo">${tAvatar(fid,'grande')}<div class="tj-cav-id"><b>${escapeHtml(f.nome||'')}</b>
+        <small>${f.tipo==='npcImportante'?'NPC':escapeHtml(f.ownerName||'jogador')}${tCavaleiroTorneio(f)?' · <span class="tj-selo" title="Benefício Cavaleiro de Torneio">🏅 Cavaleiro de Torneio</span>':''}</small></div></div>
+      <div class="tj-stats">
+        <span title="${escapeHtml(pool.det)}"><small>Ataque</small>${pool.txt}</span>
+        <span title="${escapeHtml(pas.txt)}"><small>LcA passivo</small><b>${pas.valor}</b></span>
+        <span title="${escapeHtml(pool.lanca.nome||'')}"><small>Dano da lança</small><b>${pool.dano}</b></span>
+        <span><small>VA</small><b>${vaFicha(f)}</b></span>
+        <span class="${sd.atual<=0?'zero':''}"><small>Saúde</small><b>${sd.atual}</b>/${sd.max}</span>
+      </div>
+      ${resLuta}${resSela}
+      <div class="tj-acao">${acao}</div>
+      ${d.status==='andamento' && pode ? `<button type="button" class="btn btn-mini ghost tj-desistir" data-desistir="${lado}">🏳 Desistir</button>` : ''}
+    </div>`;
+  }
+  function justaArenaHtml(t, tid, did){
+    const d = t.disputas[did];
+    const st = justaEstado(d);
+    const mestre = session.role==='mestre';
+    const [r] = (d.chave||'0_0').split('_').map(Number);
+    const R = tRodadas((t.justa||{}).tamanho||2);
+    let centro = '';
+    if(st.fase==='luta') centro = `<div class="tj-fase">Embate ${st.n}<small>Os dois investem ao mesmo tempo: cada um testa Luta contra o Lidar com Animais passivo do outro.</small></div>`;
+    else if(st.fase==='sela') centro = `<div class="tj-fase">Embate ${st.n}<small>Lanças no escudo! Quem foi atingido testa Lidar com Animais (Cavalgar) para não cair.</small></div>`;
+    else {
+      const linhas = ['a','b'].map(X=>{
+        const Y = X==='a'?'b':'a'; const h = st.hits[X];
+        let txt;
+        if(h.critica) txt = `${tNome(d[X])}: falha crítica — erro na carga.`;
+        else if(!h.g) txt = `${tNome(d[X])}: a lança quebra no escudo, sem outro efeito.`;
+        else txt = `${tNome(d[X])}: ${h.g===1?'lança quebra no escudo':'a lança atinge'} — ${tNome(d[Y])} ${st.caiu[Y]?'<b>caiu</b>':'ficou na sela'}${st.dano[Y]?` · ${st.dano[Y]} de dano antes da armadura`:''}${h.trapaca?' <span class="tj-trap">(golpe desleal)</span>':''}.`;
+        return `<li>${txt}</li>`;
+      }).join('');
+      const fimTxt = st.vencedor ? `<b>${escapeHtml(tNome(d[st.vencedor]))}</b> derrubou o adversário!`
+        : (st.caiu.a && st.caiu.b ? 'Os dois caíram! Ninguém vence este embate.' : 'Ninguém caiu — nova investida.');
+      centro = `<div class="tj-fase">Embate ${st.n}<ul class="tj-res">${linhas}</ul><div class="tj-fim">${fimTxt}</div>
+        ${mestre && d.status==='andamento' && !st.vencedor && st.e.res ? `<button type="button" class="btn primary" data-proximo>▶ Próximo embate</button>` : ''}</div>`;
+    }
+    /* trapaças deste embate: só o mestre vê e decide */
+    let trap = '';
+    if(mestre){
+      Object.keys(d.embates||{}).forEach(n=>{
+        const L = (d.embates[n]||{}).luta || {};
+        ['a','b'].forEach(l=>{
+          const x = L[l]; if(!x || !x.trapaca) return;
+          trap += `<div class="tj-trapaca"><b>⚠ ${escapeHtml(tNome(d[l]))} trapaceou no embate ${n}</b> — Enganação <b>${x.enganacao}</b> (Dificuldade para notar).
+            ${x.juizes ? `<div>Juízes: Percepção ${x.juizes.grad}D → <b>${x.juizes.total}</b> — ${x.juizes.pego?'<b class="tj-falha">perceberam!</b>':'não perceberam.'}</div>`
+              : `<div class="tj-trap-linha">Juízes testam Percepção <input type="number" class="num" min="1" max="8" value="3" data-juizesgrad="${n}.${l}">D <button type="button" class="btn btn-mini" data-juizes="${n}.${l}">👁 Rolar</button></div>`}
+            ${(d.status==='andamento' || (x.juizes && x.juizes.pego && d.motivo!=='trapaca')) ? `<div class="tj-trap-linha"><label class="check-line"><input type="checkbox" data-infamia="${l}" checked> +1d6 Infâmia</label><button type="button" class="btn btn-mini danger" data-desqualificar="${l}">Desqualificar</button></div>` : ''}
+          </div>`;
+        });
+      });
+    }
+    const hist = Object.keys(d.embates||{}).map(Number).filter(n=> n < st.n || (n===st.n && st.fase==='fim')).sort((a,b)=> a-b).map(n=>{
+      const s = justaEstado(Object.assign({}, d, {embate: n}));
+      if(s.fase!=='fim') return '';
+      return `<span class="tj-hist-item">#${n}: ${['a','b'].map(X=> `${escapeHtml(primeiroNome(tNome(d[X])))} ${s.L[X].total}/${s.L[X].dif}${s.hits[X].g?` (${s.hits[X].g}G)`:''}`).join(' × ')}${s.caiu.a||s.caiu.b?` — caiu: ${['a','b'].filter(Y=> s.caiu[Y]).map(Y=> escapeHtml(primeiroNome(tNome(d[Y])))).join(' e ')}`:''}</span>`;
+    }).join('');
+    return `<section class="tj-arena">
+      <header class="t-arena-head"><span class="t-arena-tit">🐎 Justa · ${tNomeRodada(r, R)}</span>
+        ${d.status==='fim' ? `<span class="t-tag fim">encerrada</span>` : `<span class="t-tag vivo">● ao vivo</span>`}</header>
+      ${d.status==='fim' ? vencedorHtml(t, tid, did, d) : ''}
+      <div class="tj-lica">
+        ${cavaleiroHtml(t, tid, did, d, 'a', st)}
+        <div class="tj-centro"><div class="tj-lancas" aria-hidden="true"><span>🐎</span><i></i><span class="esp">🐎</span></div>${centro}</div>
+        ${cavaleiroHtml(t, tid, did, d, 'b', st)}
+      </div>
+      ${trap}
+      ${hist ? `<div class="tj-hist"><small>Embates:</small> ${hist}</div>` : ''}
+      <details class="t-regra"><summary>Regras da justa (p. 210)</summary>
+        <p>Cada embate é simultâneo: os dois testam <b>Luta</b> (dados de bônus de Lanças; com o benefício <b>Cavaleiro de Torneio</b>, também os de Torneios) contra o <b>resultado passivo de Lidar com Animais</b> do oponente (graduação × 4 + Cavalgar; + Torneios com o benefício). A lança de torneio exige treinamento 1B e causa dano igual a Lidar com Animais +3.</p>
+        <p><b>Tabela 9-4</b> — Falha crítica: um erro. Falha: a lança quebra no escudo. 1 grau: quebra no escudo e o oponente testa Lidar com Animais <b>Desafiador (9)</b> ou cai. 2 graus: atinge (dano) e teste <b>Formidável (12)</b>. 3 graus: <b>Difícil (15)</b>. 4 graus: <b>Muito Difícil (18)</b>.</p>
+        <p>Quem cai sofre dano como se o atacante tivesse um grau a mais e perde a disputa, entregando cavalo e armadura (ou pagando o resgate). Saúde 0 também encerra a justa. Trapaça: dano normal de combate; Enganação contra a Percepção dos juízes — pego, é desqualificado.</p>
+      </details>
+    </section>`;
+  }
+  function vencedorHtml(t, tid, did, d){
+    const venc = d[d.vencedor], perd = d[d.vencedor==='a'?'b':'a'];
+    const rg = d.resgate || {};
+    const mestre = session.role==='mestre';
+    let resgate = '';
+    if(d.tipo==='justa' && d.motivo!=='trapaca'){
+      if(rg.status==='pago') resgate = `<p>💰 ${escapeHtml(tNome(perd))} pagou ${formatarPrecoVc(rg.valor)} de resgate e ficou com cavalo e armadura.</p>`;
+      else if(rg.status==='entregue') resgate = `<p>🐎 ${escapeHtml(tNome(perd))} entregou ${(rg.levados||[]).map(escapeHtml).join(' e ') || 'o que tinha'} a ${escapeHtml(tNome(venc))}.</p>`;
+      else if(rg.status==='dispensado') resgate = `<p class="muted">Resgate dispensado.</p>`;
+      else if(!rg.cavalo && !rg.armadura && !rg.valor) resgate = `<div class="t-resgate"><b>Resgate:</b> ${escapeHtml(tNome(perd))} não tem cavalo nem armadura no inventário.${mestre?` <button type="button" class="btn btn-mini ghost" data-resgate="dispensar">Ok</button>`:''}</div>`;
+      else resgate = `<div class="t-resgate"><b>Resgate:</b> ${escapeHtml(tNome(perd))} entrega o cavalo${rg.cavalo?` (${escapeHtml(rg.cavalo)})`:''} e a armadura${rg.armadura?` (${escapeHtml(rg.armadura)})`:''} a ${escapeHtml(tNome(venc))} — ou paga o resgate.
+        ${mestre ? `<div class="t-resgate-acoes"><label>Valor</label><input type="number" class="num" min="0" data-resgatevalor="${did}" value="${rg.valor||0}"> <span class="muted">vc (${formatarPrecoVc(rg.valor||0)})</span>
+          <button type="button" class="btn btn-mini primary" data-resgate="pagar">💰 Pagar resgate</button>
+          <button type="button" class="btn btn-mini" data-resgate="entregar">🐎 Entregar cavalo e armadura</button>
+          <button type="button" class="btn btn-mini ghost" data-resgate="dispensar">Dispensar</button></div>` : '<span class="muted">O mestre decide.</span>'}</div>`;
+    }
+    return `<div class="t-vencedor">${tAvatar(venc,'grande')}<div><small>Vencedor</small><b>${escapeHtml(tNome(venc))}</b><span>${escapeHtml(tMotivoTxt(d))}</span></div><span class="t-vencedor-ico">🏆</span></div>${resgate}`;
+  }
+  function licaArenaHtml(t, tid, did){
+    const d = t.disputas[did];
+    const [r] = (d.chave||'0_0').split('_').map(Number);
+    const R = tRodadas((t.lica||{}).tamanho||2);
+    const lado = (l)=>{
+      const fid = d[l];
+      if(!tF(fid)) return `<div class="vazio">Ficha não encontrada.</div>`;
+      return `<div class="tl-lado">${combatCardHtml(fid)}${d.status==='andamento' && tPode(fid) ? `<button type="button" class="btn btn-mini ghost tj-desistir" data-desistir="${l}">🏳 Desistir</button>` : ''}</div>`;
+    };
+    return `<section class="tl-arena">
+      <header class="t-arena-head"><span class="t-arena-tit">⚔ Liça · ${tNomeRodada(r, R)} — primeiro sangue</span>
+        ${d.status==='fim' ? `<span class="t-tag fim">encerrada</span>` : `<span class="t-tag vivo">● ao vivo</span>`}</header>
+      ${d.status==='fim' ? vencedorHtml(t, tid, did, d) : `<p class="t-lica-nota">Combate normal com armas sem fio: os dois estão na ordem de iniciativa — use <b>⚔ Atacar!</b> nas fichas abaixo ou no mapa. Perde quem sofrer o <b>primeiro ferimento ou lesão</b>, chegar a Saúde 0 ou desistir.</p>`}
+      <div class="tl-duelo">${lado('a')}<div class="tl-vs">×</div>${lado('b')}</div>
+    </section>`;
+  }
+  function arqHtml(t, tid){
+    const arq = t.arq || tArqPadrao();
+    const mestre = session.role==='mestre';
+    const comp = arqCompetidores(arq);
+    const vit = arqVitorias(arq);
+    const {k, tiro} = arqTiroAtual(arq);
+    if(arq.status==='config'){
+      return `<section class="ta-arena"><header class="t-arena-head"><span class="t-arena-tit">🏹 Arquearia</span><span class="t-tag">preparação</span></header>
+        <div class="ta-config">
+          <div class="ta-linha-comp">${comp.length ? comp.map(fid=> `<span class="ta-chip">${tAvatar(fid)}${escapeHtml(tNome(fid))}<small class="muted">${tPoolPontaria(tF(fid)).txt}</small></span>`).join('') : '<p class="muted">Nenhum competidor ainda.</p>'}</div>
+          ${mestre ? `<div class="ta-config-acoes">
+            <button type="button" class="btn" data-arqescolher>👥 Escolher competidores</button>
+            <label class="ta-rod">Rodadas <input type="number" class="num" min="1" max="9" value="${arq.rodadas||3}" data-arqrodadas></label>
+            <button type="button" class="btn primary" data-arqiniciar ${comp.length<2?'disabled':''}>🏹 Iniciar</button></div>` : '<p class="muted">O mestre está preparando a competição.</p>'}
+        </div>
+        <details class="t-regra" open><summary>Como funciona</summary><p>Todos disparam juntos (Pontaria) contra <b>Rotineira (6)</b>. Quem erra fica para trás. Enquanto mais de um acertar, o alvo é levado para trás e a Dificuldade sobe <b>+3</b>. O último que restar vence a rodada. Se todos errarem, o tiro se repete. Após as rodadas definidas, vence quem ganhou mais; empate leva ao <b>Tiro de Ouro</b>.</p></details>
+      </section>`;
+    }
+    const rk = arqChaveRodada(arq);
+    const ouro = arq.ouro && arq.ouro.ativo;
+    /* tiros da rodada atual (colunas) */
+    const tirosRodada = Object.keys(arq.tiros||{}).filter(x=> x.split('_')[0]===rk).map(x=> parseInt(x.split('_')[1],10)).sort((a,b)=> a-b);
+    const lista = ouro ? Object.keys(arq.ouro.ids||{}) : comp;
+    const dist = tiro ? Math.round(20 + (tiro.dif - 6) / 3 * 15) : 0;
+    const linhas = lista.map(fid=>{
+      const ativo = tiro && !tiro.fim && tiro.ativos[fid];
+      const rol = tiro && (tiro.rol||{})[fid];
+      const celulas = tirosRodada.map(n=>{
+        const tt = arq.tiros[`${rk}_${n}`];
+        if(!tt.ativos[fid]) return `<td class="fora">·</td>`;
+        const r = (tt.rol||{})[fid];
+        if(!r) return `<td class="espera">…</td>`;
+        const ok = r.total >= tt.dif;
+        return `<td class="${ok?'ok':'erro'}" title="${escapeHtml(r.pool||'')}">${r.total}</td>`;
+      }).join('');
+      const pode = tPode(fid);
+      return `<tr class="${ativo?'ativo':''} ${arq.campeao===fid?'campeao':''}">
+        <th>${tAvatar(fid)}<span>${escapeHtml(tNome(fid))}</span></th>
+        <td class="ta-vit">${'★'.repeat(vit[fid]||0) || '<span class="muted">—</span>'}</td>
+        ${celulas}
+        <td class="ta-acao">${ativo && !rol && pode ? `<button type="button" class="btn btn-mini primary" data-disparar="${fid}">🏹 Disparar</button>` : (ativo && !rol ? '<span class="muted">aguardando…</span>' : '')}</td>
+      </tr>`;
+    }).join('');
+    const histRodadas = Object.keys(arq.vencRodada||{}).filter(r=> r!=='O').sort((a,b)=> a-b).map(r=> `<span class="ta-hist">Rodada ${r}: <b>${escapeHtml(tNome(arq.vencRodada[r]))}</b></span>`).join('');
+    const faltam = tiro && !tiro.fim ? Object.keys(tiro.ativos||{}).filter(fid=> !(tiro.rol||{})[fid]) : [];
+    return `<section class="ta-arena ${ouro?'ouro':''}">
+      <header class="t-arena-head"><span class="t-arena-tit">🏹 Arquearia · ${arq.status==='fim' ? 'encerrada' : ouro ? '<span class="ta-ouro-tit">Tiro de Ouro</span>' : `Rodada ${arq.rodada} de ${arq.rodadas}`}</span>
+        ${arq.status==='fim' ? `<span class="t-tag fim">encerrada</span>` : `<span class="t-tag vivo">● ao vivo</span>`}</header>
+      ${arq.campeao ? `<div class="t-vencedor">${tAvatar(arq.campeao,'grande')}<div><small>Campeão da arquearia</small><b>${escapeHtml(tNome(arq.campeao))}</b><span>${arq.ouro && arq.ouro.vencedor ? 'decidido no Tiro de Ouro' : `${vit[arq.campeao]||0} rodada(s) vencida(s)`}</span></div><span class="t-vencedor-ico">🏆</span></div>` : ''}
+      ${tiro && arq.status!=='fim' ? `<div class="ta-alvo">
+        <div class="ta-campo"><span class="ta-arqueiro">🏹</span><i style="width:${Math.min(88, dist)}%"></i><span class="ta-target" style="left:${Math.min(92, dist + 4)}%">🎯</span></div>
+        <div class="ta-dif">Tiro ${arq.tiro}${tiro.repetido?' (todos erraram — de novo)':''} · <b>${tDifNome(tiro.dif)} (${tiro.dif})</b>${faltam.length ? ` · faltam ${faltam.length}` : ' · conferindo…'}</div>
+      </div>` : ''}
+      <div class="ta-tabela-wrap"><table class="ta-tabela">
+        <thead><tr><th>Competidor</th><th>Rodadas</th>${tirosRodada.map(n=> `<th>T${n}<small>${arq.tiros[`${rk}_${n}`].dif}</small></th>`).join('')}<th></th></tr></thead>
+        <tbody>${linhas}</tbody></table></div>
+      ${histRodadas ? `<div class="ta-hists">${histRodadas}</div>` : ''}
+      ${mestre ? `<div class="ta-mestre">${arq.status==='andamento' && faltam.length ? `<button type="button" class="btn btn-mini" data-arqtodos="npc">🎲 Disparar pelos NPCs</button><button type="button" class="btn btn-mini" data-arqtodos="todos">🎲 Disparar por todos</button>` : ''}
+        <button type="button" class="btn btn-mini ghost" data-arqreiniciar>↺ Recomeçar</button></div>` : ''}
+    </section>`;
+  }
+
+  function renderTorneiosTab(){
+    const wrap = document.getElementById('iniciativaWrap'); if(!wrap) return;
+    bmAgendar();
+    const ids = Object.keys(torneiosCache).sort((a,b)=> (torneiosCache[b].criadoEm||0) - (torneiosCache[a].criadoEm||0));
+    if(!torneioSelId && ids.length) torneioSelId = ids[0];
+    const t = torneioAtual(); const tid = torneioSelId;
+    const mestre = session.role==='mestre';
+    const rolCol = (document.getElementById('combateFichaCol')||{}).scrollTop||0, rolLista = (document.getElementById('combateListaCol')||{}).scrollTop||0;
+    const abas = t ? `<div class="seg t-abas">
+      ${[['justa','🐎 Justa'],['lica','⚔ Liça'],['arq','🏹 Arquearia']].map(([k,n])=>{
+        const ao = k==='arq' ? (t.arq && t.arq.status==='andamento') : (t[k] && t[k].ativa);
+        return `<button type="button" class="seg-btn ${torneioAba===k?'on':''}" data-taba="${k}">${n}${ao?' <span class="t-ponto"></span>':''}</button>`;
+      }).join('')}</div>` : '';
+    let esquerda = '', arena = '';
+    if(t){
+      if(torneioAba==='arq'){
+        const arq = t.arq || {};
+        const vit = arqVitorias(arq);
+        esquerda = `<div class="panel-box"><h3>🏹 Placar</h3>${arqCompetidores(arq).map(fid=> `<div class="ta-placar">${tAvatar(fid)}<span>${escapeHtml(tNome(fid))}</span><b>${vit[fid]||0}</b></div>`).join('') || '<p class="muted">Sem competidores.</p>'}</div>`;
+        arena = arqHtml(t, tid);
+      } else {
+        esquerda = chaveHtml(t, torneioAba);
+        const c = t[torneioAba] || {};
+        let did = c.ativa;
+        if(!did){ /* mostra a última disputa encerrada desta modalidade */
+          const fins = Object.keys(t.disputas||{}).filter(x=> t.disputas[x].tipo===torneioAba).sort((a,b)=> (t.disputas[b].criadoEm||0)-(t.disputas[a].criadoEm||0));
+          did = fins[0] || null;
+        }
+        arena = did && t.disputas[did] ? (torneioAba==='justa' ? justaArenaHtml(t, tid, did) : licaArenaHtml(t, tid, did))
+          : `<section class="t-vazio"><div class="t-vazio-ico">${torneioAba==='justa'?'🐎':'⚔'}</div><p>Nenhuma ${torneioAba==='justa'?'justa':'liça'} em andamento.</p><p class="muted">${mestre ? 'Monte o chaveamento ao lado e clique em ⚔ entre dois competidores.' : 'Aguarde o mestre iniciar a próxima disputa.'}</p></section>`;
+        arena = `<div data-arenadid="${did||''}">${arena}</div>`;
+      }
+    }
+    wrap.innerHTML = `
+      <div id="combateLayout" class="painel-duplo torneio-layout">
+        <div id="combateListaCol" class="painel-lista">
+          ${torneioModoSwitchHtml()}
+          <div class="panel-box t-sel">
+            <h3>🏆 Torneio</h3>
+            ${ids.length ? `<select data-tsel>${ids.map(id=> `<option value="${id}" ${id===tid?'selected':''}>${escapeHtml(torneiosCache[id].nome||'Torneio')}</option>`).join('')}</select>` : `<p class="muted">${mestre?'Nenhum torneio ainda.':'O mestre ainda não criou nenhum torneio.'}</p>`}
+            ${mestre ? `<div class="t-sel-acoes"><button type="button" class="btn primary" data-tnovo>➕ Novo torneio</button>${t?`<button type="button" class="icon-btn" data-tapagar title="Apagar torneio">🗑</button>`:''}</div>` : ''}
+            ${t ? abas : ''}
+          </div>
+          ${esquerda}
+        </div>
+        <div id="combateFichaCol" class="painel-detalhe">${t ? arena : `<section class="t-vazio"><div class="t-vazio-ico">🏆</div><p>Justas, liças e arquearia.</p><p class="muted">${mestre?'Crie um torneio para começar.':'Quando o mestre criar um torneio, ele aparece aqui.'}</p></section>`}</div>
+      </div>`;
+    bmPosicionar();
+    { const c = document.getElementById('combateFichaCol'); if(c && rolCol) c.scrollTop = rolCol;
+      const l = document.getElementById('combateListaCol'); if(l && rolLista) l.scrollTop = rolLista; }
+    torneioWireModo(wrap);
+    const on = (sel, fn)=> wrap.querySelectorAll(sel).forEach(el=> el.addEventListener(el.tagName==='SELECT' ? 'change' : 'click', (ev)=> fn(el, ev)));
+    on('[data-tsel]', el=>{ torneioSelId = el.value; renderIniciativaTab(); });
+    on('[data-tnovo]', ()=> torneioNovo());
+    on('[data-tapagar]', ()=> torneioApagar(tid));
+    on('[data-taba]', el=>{ torneioAba = el.dataset.taba; renderIniciativaTab(); });
+    if(!t) return;
+    on('[data-chavecriar]', el=> chaveCriar(tid, el.dataset.chavecriar));
+    on('[data-chavesortear]', el=> chaveSortear(tid, el.dataset.chavesortear));
+    on('[data-slot]', el=>{ const [chave, lado] = el.dataset.slot.split('.'); chaveTrocarSlot(tid, torneioAba, chave, lado, el.value); });
+    on('[data-iniciar]', el=> disputaIniciar(tid, torneioAba, el.dataset.iniciar));
+    on('[data-verdisputa]', ()=> renderIniciativaTab());
+    on('[data-declarar]', el=>{ const [chave, lado] = el.dataset.declarar.split('.'); chaveDeclararVencedor(tid, torneioAba, chave, lado); });
+    on('[data-bye]', el=>{ const [chave, lado] = el.dataset.bye.split('.'); tSalvar(tid, {[torneioAba]: chaveAvancar(torneiosCache[tid], torneioAba, chave, lado)}); });
+    const arenaEl = wrap.querySelector('[data-arenadid]');
+    const did = arenaEl ? arenaEl.dataset.arenadid : null;
+    if(did){
+      on('[data-investir]', el=>{ const tr = wrap.querySelector(`[data-trapaca="${el.dataset.investir}"]`); justaInvestir(tid, did, el.dataset.investir, tr && tr.checked); });
+      on('[data-sela]', el=> justaSela(tid, did, el.dataset.sela));
+      on('[data-desistir]', el=> disputaDesistir(tid, did, el.dataset.desistir));
+      on('[data-proximo]', ()=> justaProximoEmbate(tid, did));
+      on('[data-juizes]', el=>{ const [n, l] = el.dataset.juizes.split('.'); const g = parseInt((wrap.querySelector(`[data-juizesgrad="${n}.${l}"]`)||{}).value,10) || 3; justaJuizes(tid, did, n, l, g); });
+      on('[data-desqualificar]', el=>{ const l = el.dataset.desqualificar; const inf = wrap.querySelector(`[data-infamia="${l}"]`); justaDesqualificar(tid, did, l, inf && inf.checked); });
+      on('[data-resgate]', el=>{
+        const a = el.dataset.resgate;
+        if(a==='pagar') resgatePagar(tid, did);
+        else if(a==='entregar') resgateEntregar(tid, did);
+        else tSalvar(tid, {disputas: {[did]: {resgate: {status:'dispensado'}}}});
+      });
+      const d = t.disputas[did];
+      if(d && d.tipo==='lica') [d.a, d.b].forEach(fid=>{ if(tF(fid)) wireCombatCard(arenaEl, fid); });
+    }
+    on('[data-arqescolher]', ()=> arqEscolher(tid));
+    on('[data-arqiniciar]', ()=> arqIniciar(tid));
+    on('[data-arqreiniciar]', ()=> arqReiniciar(tid));
+    on('[data-disparar]', el=> arqDisparar(tid, el.dataset.disparar));
+    on('[data-arqtodos]', el=> arqDispararTodos(tid, el.dataset.arqtodos==='npc'));
+    const rod = wrap.querySelector('[data-arqrodadas]');
+    if(rod) rod.addEventListener('change', ()=> tSalvar(tid, {arq: {rodadas: Math.max(1, Math.min(9, parseInt(rod.value,10)||3))}}));
   }
 
   /* ============ rolagens (testes de habilidade + histórico da campanha) ============ */
