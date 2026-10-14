@@ -3612,7 +3612,7 @@ window.gdtEncaixarNoLimite = function(url, limite){
     const outras = (usadas||[]).filter(x=> normTxt(x)!==normTxt(atual)).map(normTxt);
     let opts = espCatalogo(h, criatura).filter(x=> !outras.includes(normTxt(x)))
       .map(x=> `<option value="${escapeHtml(x)}" ${x===canon?'selected':''}>${escapeHtml(x)}</option>`).join('');
-    if(!canon) opts = (atual ? `<option value="${escapeHtml(atual)}" selected>${escapeHtml(atual)} (fora do livro)</option>` : `<option value="" selected disabled>escolha…</option>`) + opts;
+    if(!canon) opts = (atual ? `<option value="${escapeHtml(atual)}" selected>${escapeHtml(atual)}</option>` : `<option value="" selected disabled>escolha…</option>`) + opts;
     return `<select ${attrs||''}>${opts}</select>`;
   }
   /* as especialidades ficam EXATAMENTE como foram escritas, mesmo fora do livro — nada é
@@ -7040,7 +7040,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     const esps = getEspecialidadesList(f, h);
     return `<div class="hab-linha">
       <button type="button" class="hab-chip" data-npcroll="${h}" title="Rolar ${HABILIDADE_LABEL[h]} (${gradHab(f,h)}D)">${HABILIDADE_LABEL[h]} <b>${gradHab(f,h)}</b></button>
-      ${esps.map((e,i)=> `<button type="button" class="esp-chip ${espCanonica(h,e.nome,f.tipo==='dragao')?'':'fora'}" data-npcesproll="${h}.${i}" title="Rolar ${HABILIDADE_LABEL[h]} ${gradHab(f,h)}D + ${e.bonus||1}B">${escapeHtml(e.nome)} <b>${e.bonus||1}B</b></button>`).join('')}
+      ${esps.map((e,i)=> `<button type="button" class="esp-chip" data-npcesproll="${h}.${i}" title="Rolar ${HABILIDADE_LABEL[h]} ${gradHab(f,h)}D + ${e.bonus||1}B">${escapeHtml(e.nome)} <b>${e.bonus||1}B</b></button>`).join('')}
     </div>`;
   }
   function saudeTrackHtml(f, id, editable){
@@ -7144,7 +7144,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
         </div>
       </header>
       ${f.motivacoes?`<p class="npc-motiv"><strong>Motivações e táticas:</strong> ${escapeHtml(f.motivacoes)}</p>`:''}
-      ${foraLivro.length?`<div class="aviso">⚠ ${foraLivro.length} especialidade(s) fora do livro: ${foraLivro.map(x=> escapeHtml(x.nome)).join(', ')}.</div>`:''}
+      ${false && foraLivro.length?`<div class="aviso">⚠ ${foraLivro.length} especialidade(s) fora do livro: ${foraLivro.map(x=> escapeHtml(x.nome)).join(', ')}.</div>`:''}
 
       <section class="bloco bloco-combate">
         <h3>Combate</h3>
@@ -7305,7 +7305,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
           ${removivel?`<button type="button" class="icon-btn" data-eddelhab="${h}" title="Remover (volta ao padrão 2)">✕</button>`:''}
         </div>
         <div class="ed-esps">
-          ${lista.map((e,i)=> `<span class="ed-esp ${e.custom||espCanonica(h,e.nome)?'':'fora'} ${e.custom?'custom':''}">
+          ${lista.map((e,i)=> `<span class="ed-esp ${e.custom?'custom':''}">
               ${e.custom ? `<input type="text" class="esp-custom-input" data-edespcustom="${h}.${i}" value="${escapeHtml(e.nome||'')}" title="Especialidade personalizada"><em class="esp-custom-tag" title="Personalizada">✎</em>` : espSelectHtml(h, e.nome, `data-edespnome="${h}.${i}"`, nomes)}
               <input type="number" min="1" max="${Math.max(1,g)}" class="num mini" data-edespbonus="${h}.${i}" value="${Math.min(e.bonus||1, Math.max(1,g))}" aria-label="Dados de bônus"><span class="b">B</span>
               <button type="button" class="icon-btn" data-eddelesp="${h}.${i}" title="Remover especialidade">✕</button>
@@ -7905,7 +7905,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       const lista = getEspecialidadesList(f, h);
       const nomes = lista.map(x=> x.nome);
       const itensHtml = lista.map((e,i)=>{
-        const fora = !e.custom && !espCanonica(h, e.nome, isDragao);
+        const fora = false; /* especialidades fora do livro aparecem como qualquer outra */
         return `
         <div class="esp-item ${fora?'esp-fora':''} ${e.custom?'esp-custom':''}">
           <span class="quick-roll-btn" data-esproll="${h}.${i}" title="Rolar com essa especialidade">🎲</span>
@@ -8039,7 +8039,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
         ${editable ? `<button class="btn danger" id="btnDeleteFicha">Excluir ficha</button>` : ''}
       </div>
       <div class="editor-body ficha3">
-        ${foraDoLivro.length ? `<div class="aviso">⚠ ${foraDoLivro.length} especialidade(s) não existem no livro: ${foraDoLivro.map(x=> escapeHtml(x.nome)+' ('+HABILIDADE_LABEL[x.h]+')').join(', ')}. Elas continuam valendo normalmente.</div>` : ''}
+        ${false && foraDoLivro.length ? `<div class="aviso">⚠ ${foraDoLivro.length} especialidade(s) não existem no livro: ${foraDoLivro.map(x=> escapeHtml(x.nome)+' ('+HABILIDADE_LABEL[x.h]+')').join(', ')}. Elas continuam valendo normalmente.</div>` : ''}
         <div class="ficha3-grid">
           <div class="ficha3-col ficha3-esq">
         <div class="panel-box">
