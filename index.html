@@ -2508,6 +2508,10 @@ window.gdtEncaixarNoLimite = function(url, limite){
   .ct-ven-tit{font-family:var(--f-ui);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:.7rem 0 .3rem;}
   .ct-veneno b{color:#b9e3a8;}
 
+  .npc-niveis{display:flex;width:100%;flex-wrap:wrap;}
+  .npc-niveis .seg-btn{flex:1;justify-content:center;padding:.4rem .5rem;font-size:.9rem;white-space:nowrap;}
+  .npc-niveis .seg-btn b{color:var(--gold);}
+  .npc-niveis .seg-btn small{opacity:.7;font-size:.75em;}
   /* ===== Torneios (dentro da aba Combate) ===== */
   .torneio-modo{display:flex;width:100%;margin-bottom:.9rem;}
   .torneio-modo .seg-btn{flex:1;justify-content:center;}
@@ -6720,6 +6724,39 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     terciario:  {nome:'Terciário',  desc:'Figurante de uma cena: guarda, taverneiro, bandido. 1–2 habilidades em 3–4, 2–3 especialidades 1B. Derrotado com Saúde 0.', ferimentos:false, lesoes:false, pd:false}
   };
   function npcCategoria(f){ return (f && NPC_CATEGORIAS[f.categoria]) ? f.categoria : 'primario'; }
+  /* Nível de força do NPC gerado: ajusta o quanto ele é bom DENTRO da categoria do livro.
+     O nível marcado com padrao:true é exatamente o procedimento do livro (p. 266-267). */
+  const NPC_NIVEIS = {
+    primario: [
+      {nome:'Fraco',       xp:0.6,  topo:4, outras:3, esp:0.5,  qual:0, def:2, maxB:1},
+      {nome:'Mediano',     xp:0.8,  topo:5, outras:4, esp:0.75, qual:1, def:1, maxB:2},
+      {nome:'Competente',  xp:1,    topo:6, outras:5, esp:1,    qual:2, def:1, padrao:true},
+      {nome:'Forte',       xp:1.3,  topo:6, outras:5, esp:1.4,  qual:3, def:0},
+      {nome:'Excepcional', xp:1.65, topo:7, outras:6, esp:1.8,  qual:4, def:0}
+    ],
+    secundario: [
+      {nome:'Fraco',       habs:[4,3,3,3],           nEsp:2, espB:'baixo', qual:0, def:1},
+      {nome:'Mediano',     habs:[4,4,3,3,3],         nEsp:3, espB:'baixo', qual:0, def:1},
+      {nome:'Competente',  habs:[5,4,4,3,3,3,3],     nEsp:4, espB:'livro', qual:0, def:0, padrao:true},
+      {nome:'Forte',       habs:[6,5,4,4,3,3,3],     nEsp:5, espB:'alto',  qual:1, def:0},
+      {nome:'Excepcional', habs:[6,6,5,4,4,3,3],     nEsp:6, espB:'alto',  qual:2, def:0}
+    ],
+    terciario: [
+      {nome:'Fraco',      nEsp:1, def:1, qual:0},
+      {nome:'Comum',      nEsp:0, def:0, qual:0, padrao:true},
+      {nome:'Experiente', nEsp:3, def:0, qual:0}
+    ]
+  };
+  function npcNivelPadrao(cat){ const l = NPC_NIVEIS[cat] || NPC_NIVEIS.secundario; return l.findIndex(x=> x.padrao) + 1; }
+  function npcNivelInfo(cat, n){ const l = NPC_NIVEIS[cat] || NPC_NIVEIS.secundario; return l[Math.max(1, Math.min(l.length, parseInt(n,10)||npcNivelPadrao(cat))) - 1]; }
+  function npcNivelNome(f){ if(!f || !f.nivel) return ''; const i = npcNivelInfo(npcCategoria(f), f.nivel); return i ? i.nome : ''; }
+  function npcNivelResumo(cat, n){
+    const i = npcNivelInfo(cat, n);
+    const qd = `${i.qual} qualidade${i.qual===1?'':'s'} · ${i.def} defeito${i.def===1?'':'s'}`;
+    if(cat==='primario') return `${Math.round(i.xp*100)}% do XP de criação da idade · habilidade principal até ${i.topo}, demais até ${i.outras} · especialidades ×${String(i.esp).replace('.',',')}${i.maxB?` (até ${i.maxB}B)`:''} · ${qd}${i.padrao?' — igual ao livro':''}`;
+    if(cat==='secundario') return `Habilidades ${i.habs.join(' / ')} · ${i.nEsp} especialidades · ${qd}${i.padrao?' — igual ao livro':''}`;
+    return n==1 ? `1 habilidade em 3 · 1 especialidade 1B · ${qd}` : n==3 ? `2 habilidades em 4 e 2 em 3 · 3 especialidades 1B · ${qd}` : `1–2 habilidades em 3–4 · 2–3 especialidades 1B — igual ao livro`;
+  }
 
   /* Modelos por papel: ordem de prioridade das habilidades + especialidades coerentes (todas do
      livro) + kits de equipamento tirados das Tabelas 9-2 e 9-3. O especialista do livro não tem lista
@@ -6869,33 +6906,41 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       ordem.splice(Math.min(2, ordem.length), 0, habArma);
     }
 
+    const NV = npcNivelInfo(cat, opts.nivel);
+    const nivelN = (NPC_NIVEIS[cat]||[]).indexOf(NV) + 1;
     const hab = {};
     let xpExtra = 0;
-    if(cat==='terciario'){
+    if(cat==='terciario' && nivelN===1){
+      hab[ordem[0]] = Math.min(3, gradMax);
+    } else if(cat==='terciario' && nivelN===3){
+      ordem.slice(0,2).forEach(h=> hab[h] = Math.min(4, gradMax));
+      ordem.slice(2,4).forEach(h=> hab[h] = Math.min(3, gradMax));
+    } else if(cat==='terciario'){
       const nPrinc = Math.random()<.55 ? 1 : 2;
       let tem4 = false;
       ordem.slice(0,nPrinc).forEach((h,i)=>{ const g = Math.min(gradMax, i===0 ? (Math.random()<.7?4:3) : (Math.random()<.3?4:3)); hab[h]=g; if(g===4) tem4=true; });
       if(tem4) ordem.slice(nPrinc, nPrinc+2).forEach(h=> hab[h]=3);
     } else if(cat==='secundario'){
-      [5,4,4,3,3,3,3].forEach((g,i)=>{ if(ordem[i]) hab[ordem[i]] = Math.min(g, gradMax); });
+      NV.habs.forEach((g,i)=>{ if(ordem[i]) hab[ordem[i]] = Math.min(g, gradMax); });
     } else {
       // primário: XP de criação da faixa etária (Tabela 3-8 do app) + 1d6×10 XP + (opcional) média de evolução do grupo
       ordem.forEach(h=> hab[h] = 2);
-      let restante = tabHab.xp;
+      let restante = Math.round(tabHab.xp * NV.xp / 10) * 10;
+      const capTopo = Math.min(NV.topo, gradMax), capOutras = Math.min(NV.outras, NV.padrao || NV.xp < 1 ? gradMax-1 : gradMax);
       const custoProx = (g)=> custoAcumuladoHabilidade(g+1) - custoAcumuladoHabilidade(g);
       for(let t=0;t<400 && restante>0;t++){
         const cands = ordem.map((h,i)=>({h, w: Math.pow(ordem.length-i, 2)}))
-          .filter(c=> hab[c.h] < (c.h===ordem[0] ? Math.min(6,gradMax) : Math.min(5,gradMax-1)) && custoProx(hab[c.h]) <= restante);
+          .filter(c=> hab[c.h] < (c.h===ordem[0] ? capTopo : capOutras) && custoProx(hab[c.h]) <= restante);
         if(!cands.length) break;
         let r = Math.random()*cands.reduce((s,c)=>s+c.w,0);
         const c = cands.find(x=> (r-=x.w) <= 0) || cands[0];
         restante -= custoProx(hab[c.h]); hab[c.h]++;
       }
-      xpExtra = (1+Math.floor(Math.random()*6))*10 + (opts.acompanharGrupo ? Math.round(calcularXpMedioEvolucaoJogadores()) : 0);
+      xpExtra = Math.round((1+Math.floor(Math.random()*6))*10 * NV.xp) + (opts.acompanharGrupo ? Math.round(calcularXpMedioEvolucaoJogadores()) : 0);
       let xpHab = Math.floor(xpExtra*0.6/30)*30;
       for(let t=0;t<50 && xpHab>=30;t++){
         const h = ordem[Math.floor(Math.pow(Math.random(),2)*Math.min(4,ordem.length))];
-        if(hab[h] >= gradMax) continue;
+        if(hab[h] >= (h===ordem[0] ? capTopo : Math.min(gradMax, capOutras, capTopo-1))) continue;
         hab[h]++; xpHab -= 30; xpExtra -= 30;
       }
       Object.keys(hab).forEach(h=>{ if(hab[h]===2) delete hab[h]; });
@@ -6912,18 +6957,19 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     const pushEsp = (c, bonus)=>{ (esp[c.h] = esp[c.h] || []).push({nome:c.nome, bonus}); };
     const gradDe = (h)=> hab[h] || 2;
     if(cat==='terciario'){
-      cands.slice(0, 2 + (Math.random()<.5?1:0)).forEach(c=> pushEsp(c, 1));
+      cands.slice(0, NV.nEsp || (2 + (Math.random()<.5?1:0))).forEach(c=> pushEsp(c, 1));
     } else if(cat==='secundario'){
-      cands.slice(0,4).forEach(c=> pushEsp(c, Math.max(1, Math.floor(gradDe(c.h)/2))));
+      const bonusDe = (g)=> NV.espB==='baixo' ? 1 : NV.espB==='alto' ? Math.max(1, Math.ceil(g/2)) : Math.max(1, Math.floor(g/2));
+      cands.slice(0, NV.nEsp).forEach(c=> pushEsp(c, Math.min(gradDe(c.h), bonusDe(gradDe(c.h)))));
     } else {
-      let xpEsp = xpEspBase + Math.max(0, xpExtra);
+      let xpEsp = Math.round(xpEspBase * NV.esp / 10) * 10 + Math.max(0, xpExtra);
       const ativos = cands.slice(0, 7);
       const bonus = ativos.map(()=> 0);
       for(let t=0;t<300 && xpEsp>=10;t++){
         let r = Math.random()*ativos.reduce((s,c,i)=> s+Math.pow(ativos.length-i,1.6),0);
         let i = 0; for(;i<ativos.length;i++){ r -= Math.pow(ativos.length-i,1.6); if(r<=0) break; }
         i = Math.min(i, ativos.length-1);
-        if(bonus[i] >= gradDe(ativos[i].h)) continue;
+        if(bonus[i] >= Math.min(gradDe(ativos[i].h), NV.maxB || 99)) continue;
         bonus[i]++; xpEsp -= 10;
       }
       ativos.forEach((c,i)=>{ if(bonus[i]>0) pushEsp(c, bonus[i]); });
@@ -6948,26 +6994,30 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     // qualidades: só primários (secundários e terciários não têm benefícios — p. 266).
     // Cada papel tem uma lista de benefícios do livro que combinam com ele; combatentes também
     // podem receber o "Lutador com ... I" da própria arma principal.
-    if(cat==='primario'){
+    const escolhidas = [];
+    if(NV.qual > 0){
       const habCompleto = {}; HABILIDADES.forEach(h=> habCompleto[h] = gradDe(h));
       const LUTADOR_POR_ESP = {'Lâminas Longas':'Lutador com Lâminas Longas I','Lâminas Curtas':'Lutador com Lâminas Curtas I','Machados':'Lutador com Machados I','Lanças':'Lutador com Lanças I','Armas de Haste':'Lutador com Armas de Haste I','Armas de Contusão':'Lutador com Armas de Contusão I','Esgrima':'Lutador Braavosi I','Briga':'Pugilista I'};
       const nomesOk = M.qual.slice();
       if(M.combatente && LUTADOR_POR_ESP[kit.armas[0][0]]) nomesOk.push(LUTADOR_POR_ESP[kit.armas[0][0]], LUTADOR_POR_ESP[kit.armas[0][0]]);
       const todas = [];
       Object.keys(QUALIDADES_CATALOGO_CRIACAO).forEach(c=> QUALIDADES_CATALOGO_CRIACAO[c].forEach(q=> todas.push(q)));
-      const escolhidas = [];
-      const nQual = Math.min(2, tabPD.max, tabPD.pd);
-      for(let t=0;t<60 && escolhidas.length<nQual;t++){
+      const nQual = cat==='primario' ? Math.min(NV.qual, tabPD.max + Math.max(0, nivelN-3)) : NV.qual; // Tabela 3-10 limita pela idade
+      for(let t=0;t<120 && escolhidas.length<nQual;t++){
         const nomes = escolhidas.map(q=> q.nome);
         const alvo = sortear(nomesOk);
         const q = todas.find(x=> x.nome===alvo);
         if(q && !nomes.includes(q.nome) && atendeExigencia(q.exigencia, habCompleto, nomes)) escolhidas.push(q);
       }
-      dados.qualidadesLista = escolhidas.map(q=> ({tipo:'qualidade', nome:q.nome, desc:q.efeito}));
-      dados.pontosDestino = Math.max(0, tabPD.pd - escolhidas.length); // Tabela 3-10 pela idade, 1 PD por benefício
-    } else {
-      dados.pontosDestino = 0;
     }
+    /* defeitos sorteados do catálogo (sem o "Defeito" genérico, que exige escolher a habilidade) */
+    const defeitos = [];
+    const poolDef = DESVANTAGENS_CATALOGO_CRIACAO.filter(d=> d.nome!=='Defeito');
+    for(let t=0;t<40 && defeitos.length<(NV.def||0);t++){ const d = sortear(poolDef); if(!defeitos.includes(d)) defeitos.push(d); }
+    dados.qualidadesLista = escolhidas.map(q=> ({tipo:'qualidade', nome:q.nome, desc:q.efeito}))
+      .concat(defeitos.map(d=> ({tipo:'defeito', nome:d.nome, desc:d.efeito})));
+    dados.pontosDestino = cat==='primario' ? Math.max(0, tabPD.pd - escolhidas.length) : 0; // Tabela 3-10 pela idade, 1 PD por benefício
+    dados.nivel = nivelN;
     return dados;
   }
 
@@ -6997,6 +7047,9 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
             <strong>${NPC_CATEGORIAS[k].nome}</strong><span>${NPC_CATEGORIAS[k].desc}</span>
           </button>`).join('')}
       </div>
+      <label>Nível de força</label>
+      <div class="seg npc-niveis" id="npcGenNiveis"></div>
+      <p class="ui-hint" id="npcGenNivelHint"></p>
       <label class="check-line" id="npcGenGrupoWrap" style="display:none;"><input type="checkbox" id="npcGenGrupo" checked> Somar a média de XP que os jogadores já gastaram evoluindo (o NPC acompanha o grupo)</label>
       <div class="ui-dialog-actions">
         <button class="btn ghost" id="btnNpcEmBranco">Ficha em branco</button>
@@ -7006,6 +7059,13 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     let cat = 'secundario';
+    let nivel = npcNivelPadrao(cat);
+    const renderNiveis = ()=>{
+      const wrapN = document.getElementById('npcGenNiveis');
+      wrapN.innerHTML = NPC_NIVEIS[cat].map((x,i)=> `<button type="button" class="seg-btn ${i+1===nivel?'on':''}" data-npcnivel="${i+1}" title="${escapeHtml(npcNivelResumo(cat, i+1))}"><b>${i+1}</b> ${x.nome}${x.padrao?' <small>(livro)</small>':''}</button>`).join('');
+      wrapN.querySelectorAll('[data-npcnivel]').forEach(b=> b.addEventListener('click', ()=>{ nivel = parseInt(b.dataset.npcnivel,10); renderNiveis(); }));
+      document.getElementById('npcGenNivelHint').textContent = npcNivelResumo(cat, nivel);
+    };
     const fechar = ()=> overlay.remove();
     overlay.addEventListener('mousedown', (ev)=>{ if(ev.target===overlay) fechar(); });
     box.querySelector('[data-fechar]').addEventListener('click', fechar);
@@ -7013,7 +7073,9 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       cat = b.dataset.npccat;
       box.querySelectorAll('[data-npccat]').forEach(x=> x.classList.toggle('on', x===b));
       document.getElementById('npcGenGrupoWrap').style.display = cat==='primario' ? '' : 'none';
+      nivel = npcNivelPadrao(cat); renderNiveis();
     }));
+    renderNiveis();
     const idadeInp = document.getElementById('npcGenIdade');
     const mostrarFaixa = ()=>{
       const fx = faixaEtariaPorIdade(parseInt(idadeInp.value,10)) || 'Adulto';
@@ -7033,7 +7095,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     });
     document.getElementById('btnGerarNpcConfirmar').addEventListener('click', ()=>{
       const dados = npcGerar({
-        papel: document.getElementById('npcGenPapel').value, categoria: cat,
+        papel: document.getElementById('npcGenPapel').value, categoria: cat, nivel,
         nome: document.getElementById('npcGenNome').value, faccao: document.getElementById('npcGenFaccao').value, idade: idadeInp.value,
         acompanharGrupo: document.getElementById('npcGenGrupo').checked
       });
@@ -7141,7 +7203,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
         const naCena = (typeof iniciativaCache!=='undefined' && iniciativaCache[id]) ? '<span class="dot-combate" title="Em combate">⚔</span>' : '';
         return `<button type="button" class="bestiario-item ${id===npcSelecionadoId?'on':''} ${sAtual<=0?'caido':''}" data-npcid="${id}" role="option" aria-selected="${id===npcSelecionadoId}">
           <span class="bi-nome">${escapeHtml(f.nome||'Sem nome')} ${naCena}</span>
-          <span class="bi-meta">${[escapeHtml(f.faccao||''), npcPapelNome(f.papel), NPC_CATEGORIAS[npcCategoria(f)].nome].filter(Boolean).join(' · ')}</span>
+          <span class="bi-meta">${[escapeHtml(f.faccao||''), npcPapelNome(f.papel), NPC_CATEGORIAS[npcCategoria(f)].nome + (npcNivelNome(f)?' '+npcNivelNome(f).toLowerCase():'')].filter(Boolean).join(' · ')}</span>
           <span class="bi-stats">Defesa ${d.defesaCombate} · Saúde ${sAtual}/${sMax} · Intriga ${d.defesaIntriga}</span>
         </button>`;
       }).join('');
@@ -10790,7 +10852,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     const ini = iniciativaCache[id];
     const fotoHtml = f.foto ? `<img src="${f.foto}" alt="">` : `<span>${escapeHtml((f.nome||'?').trim().charAt(0).toUpperCase())}</span>`;
     const sub = [];
-    if(isNPC){ if(f.faccao) sub.push(escapeHtml(f.faccao)); sub.push(NPC_CATEGORIAS[npcCategoria(f)].nome); }
+    if(isNPC){ if(f.faccao) sub.push(escapeHtml(f.faccao)); sub.push(NPC_CATEGORIAS[npcCategoria(f)].nome + (npcNivelNome(f)?' '+npcNivelNome(f).toLowerCase():'')); }
     else { if(f.casa) sub.push(escapeHtml(f.casa)); if(f.ownerName) sub.push('jogador: '+escapeHtml(f.ownerName)); }
 
     const pips = (campo, max, n)=> Array.from({length:max}, (_,i)=> `<button type="button" class="pip pip-sm ${i<n?'cheio':''}" data-ccmarca="${campo}.${i}" ${pode?'':'disabled'} aria-label="${campo} ${i+1}"></button>`).join('');
