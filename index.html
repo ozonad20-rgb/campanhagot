@@ -1785,7 +1785,11 @@ window.gdtEncaixarNoLimite = function(url, limite){
   .catalogo-dialog{max-width:820px;}
   .cat-topo{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.5rem;}
   .cat-fontes{display:flex;gap:.3rem;flex-wrap:wrap;}
-  .cat-lista{overflow-y:auto;max-height:56vh;padding-right:.3rem;margin-top:.5rem;}
+  .cat-lista{overflow-y:auto;max-height:52vh;padding-right:.3rem;margin-top:.5rem;}
+  .cat-subcats{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.55rem;}
+  .cat-subcats .chip span{font-size:.75em;opacity:.7;margin-left:.15rem;}
+  .cat-nota{font-size:.8rem;color:var(--muted);margin:.4rem 0 0;font-style:italic;}
+  .cat-grupo-desc{margin:-.15rem 0 .5rem;font-size:.85rem;color:var(--muted);}
   .cat-grupo{font-family:var(--f-display);color:var(--gold-bright);font-size:1.02rem;margin:.9rem 0 .35rem;display:flex;align-items:center;gap:.5rem;}
   .cat-grupo span{font-family:var(--f-ui);font-size:.75rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 .45rem;}
   .cat-item{border:1px solid var(--line);border-radius:10px;padding:.55rem .7rem;margin-bottom:.4rem;background:rgba(255,255,255,.015);}
@@ -3937,29 +3941,62 @@ window.gdtEncaixarNoLimite = function(url, limite){
     Object.keys(src).forEach(cat=> src[cat].forEach(q=> flat.push({nome:(q.homebrew?'🛠️ ':'')+q.nome, desc:q.efeito, homebrew:!!q.homebrew, categoria:cat, exigencia:q.exigencia, custoXp: isDragao ? q.custo : null})));
     return flat;
   }
+  /* O livro lista as desvantagens em ordem alfabética, sem categorias (Tabela 5-2). Para o catálogo
+     ficar navegável, o app as agrupa por tema — a divisão é do app, não do livro. */
+  const DEFEITOS_GRUPO = {
+    'Corpo e saúde': ['Aleijado','Anão','Defeito','Desastrado','Doença na Infância','Doente','Eunuco','Frágil','Manco','Marcado','Mudo','Saúde Frágil','Sentido Deficiente'],
+    'Mente e temperamento': ['Arrogância Suprema','Assombrado','Colérico','Covarde','Distraído','Hábito Perturbador','Ingênuo','Insanidade Cruel','Lascivo','Medo','Preso à Garrafa'],
+    'Posição e reputação': ['Ameaçador','Bastardo','Empolado','Honrado','Ignóbil','Odiado','Proscrito'],
+    'Laços e obrigações': ['Dívida','Inimigo','Protegido'],
+    'Destino': ['Amaldiçoado']
+  };
+  const QD_GRUPO_DESC = {
+    'Fortuna':'Expressões do seu destino: o que já está escrito sobre sua vida e seu futuro.',
+    'Herança':'Ligadas à linhagem e à família. Só é possível ter uma qualidade de herança.',
+    'Habilidade':'Vantagens ou opções novas ao usar uma habilidade.',
+    'Marcial':'Armas, armaduras e capacidades de combate.',
+    'Social':'Vantagens ou opções novas em intrigas.',
+    'Corpo e saúde':'Ferimentos antigos, doenças e limitações físicas.',
+    'Mente e temperamento':'Medos, vícios, manias e o gênio difícil.',
+    'Posição e reputação':'Como os outros o enxergam: nascimento, fama ruim, conduta.',
+    'Laços e obrigações':'Pessoas a quem você deve algo, protege ou que o perseguem.',
+    'Destino':'Maldições e o peso do destino.',
+    'Outros':'Defeitos que não se encaixam nos grupos acima.'
+  };
+  function defeitoGrupo(nome){ return Object.keys(DEFEITOS_GRUPO).find(g=> DEFEITOS_GRUPO[g].includes(nome)) || 'Outros'; }
   function DEFEITOS_CATALOGO(isDragao){
     return (isDragao ? DESVANTAGENS_CATALOGO_DRAGAO : DESVANTAGENS_CATALOGO_CRIACAO)
-      .map(d=> ({nome:(d.homebrew?'🛠️ ':'')+d.nome, desc:d.efeito, homebrew:!!d.homebrew, categoria: d.homebrew ? HB_CAT : 'Defeitos'}));
+      .map(d=> ({nome:(d.homebrew?'🛠️ ':'')+d.nome, desc:d.efeito, homebrew:!!d.homebrew, categoria: d.homebrew ? HB_CAT : (isDragao ? 'Desvantagens' : defeitoGrupo(d.nome))}));
   }
 
   /* ---------- Catálogo (ficha): Livro × Homebrew, com busca e "adicionar" ---------- */
-  function abrirCatalogoQualidades(fichaId, tipoInicial){
+  function abrirCatalogoQualidades(fichaId, tipoInicial, aoAdicionar){
     const f0 = fichaId ? fichasCache[fichaId] : null;
     const isDragao = !!(f0 && f0.tipo==='dragao');
     const podeAdicionar = !!(f0 && fichaId && canEdit(fichaId));
-    let tipo = tipoInicial || 'qualidade', fonte = 'todos', busca = '';
+    let tipo = tipoInicial || 'qualidade', fonte = 'todos', busca = '', grupo = 'todos';
     const ov = document.createElement('div'); ov.className = 'ui-overlay';
     const box = document.createElement('div'); box.className = 'ui-dialog guia-dialog catalogo-dialog';
     ov.appendChild(box); document.body.appendChild(ov);
     const fechar = ()=> ov.remove();
     ov.addEventListener('mousedown', ev=>{ if(ev.target===ov) fechar(); });
     function render(){
-      const lista = (tipo==='qualidade' ? QUALIDADES_CATALOGO(isDragao) : DEFEITOS_CATALOGO(isDragao))
+      const grupoDe = (q)=> q.homebrew ? HB_CAT : (q.categoria||'Geral');
+      const base = (tipo==='qualidade' ? QUALIDADES_CATALOGO(isDragao) : DEFEITOS_CATALOGO(isDragao))
         .filter(q=> fonte==='todos' || (fonte==='hb') === q.homebrew)
         .filter(q=> !busca || normTxt(q.nome+' '+(q.desc||'')+' '+(q.exigencia||'')).includes(normTxt(busca)));
+      /* ordem dos grupos: a do catálogo (livro), homebrew por último */
+      const ordemGrupos = [];
+      (tipo==='qualidade' ? QUALIDADES_CATALOGO(isDragao) : DEFEITOS_CATALOGO(isDragao)).forEach(q=>{ const g = grupoDe(q); if(!ordemGrupos.includes(g)) ordemGrupos.push(g); });
+      if(tipo==='defeito' && !isDragao) ordemGrupos.sort((a,b)=> { const o = Object.keys(DEFEITOS_GRUPO).concat(['Outros', HB_CAT]); return o.indexOf(a) - o.indexOf(b); });
+      else ordemGrupos.sort((a,b)=> (a===HB_CAT) - (b===HB_CAT));
+      const contagem = {}; base.forEach(q=> contagem[grupoDe(q)] = (contagem[grupoDe(q)]||0) + 1);
+      if(grupo!=='todos' && !contagem[grupo]) grupo = 'todos';
+      const lista = base.filter(q=> grupo==='todos' || grupoDe(q)===grupo);
       const grupos = {};
-      lista.forEach(q=> (grupos[q.homebrew ? HB_CAT : (q.categoria||'Geral')] = grupos[q.homebrew ? HB_CAT : (q.categoria||'Geral')] || []).push(q));
-      const jaTem = new Set(((f0 && f0.qualidadesLista)||[]).map(q=> normTxt(q.nome)));
+      ordemGrupos.forEach(g=>{ const itens = lista.filter(q=> grupoDe(q)===g); if(itens.length) grupos[g] = itens; });
+      const fAtual = fichaId ? (fichasCache[fichaId] || f0) : null;
+      const jaTem = new Set(((fAtual && fAtual.qualidadesLista)||[]).map(q=> normTxt(q.nome)));
       const qtdHb = (tipo==='qualidade' ? QUALIDADES_CATALOGO(isDragao) : DEFEITOS_CATALOGO(isDragao)).filter(q=> q.homebrew).length;
       box.innerHTML = `
         <div class="ui-dialog-head"><h3>📖 Catálogo ${isDragao?'de Dragões':''}</h3><button class="icon-btn" data-x>✕</button></div>
@@ -3968,8 +4005,14 @@ window.gdtEncaixarNoLimite = function(url, limite){
           <div class="cat-fontes">${[['todos','Todos'],['livro','📖 Livro'],['hb',`🛠️ Homebrew (${qtdHb})`]].map(([k,t])=> `<button type="button" class="chip ${fonte===k?'on':''}" data-fonte="${k}">${t}</button>`).join('')}</div>
         </div>
         <input type="search" class="busca" data-busca placeholder="Buscar por nome, efeito ou exigência…" value="${escapeHtml(busca)}">
+        <div class="cat-subcats" role="tablist">
+          <button type="button" class="chip ${grupo==='todos'?'on':''}" data-grupo="todos">Todas <span>${base.length}</span></button>
+          ${ordemGrupos.filter(g=> contagem[g]).map(g=> `<button type="button" class="chip ${grupo===g?'on':''}" data-grupo="${escapeHtml(g)}">${escapeHtml(g)} <span>${contagem[g]}</span></button>`).join('')}
+        </div>
+        ${tipo==='defeito' && !isDragao ? '<p class="cat-nota">O livro lista os defeitos sem categorias; os grupos abaixo são do app, para facilitar a busca.</p>' : ''}
         <div class="cat-lista">${Object.keys(grupos).length ? Object.keys(grupos).map(g=> `
           <h4 class="cat-grupo">${escapeHtml(g)} <span>${grupos[g].length}</span></h4>
+          ${QD_GRUPO_DESC[g] && !isDragao ? `<p class="cat-grupo-desc">${escapeHtml(QD_GRUPO_DESC[g])}</p>` : ''}
           ${grupos[g].map(q=>{ const nomeLimpo = q.nome.replace(/^🛠️\s*/,''); const tem = jaTem.has(normTxt(nomeLimpo)); return `
             <div class="cat-item ${q.homebrew?'hb':''} ${tipo}">
               <div class="cat-item-top"><strong>${escapeHtml(nomeLimpo)}</strong>
@@ -3989,21 +4032,26 @@ window.gdtEncaixarNoLimite = function(url, limite){
           <button type="button" class="btn primary" data-cadd style="margin-top:.5rem;">+ Adicionar à ficha</button>
         </details>` : ''}`;
       box.querySelector('[data-x]').addEventListener('click', fechar);
-      box.querySelectorAll('[data-tipo]').forEach(b=> b.addEventListener('click', ()=>{ tipo = b.dataset.tipo; render(); }));
+      box.querySelectorAll('[data-tipo]').forEach(b=> b.addEventListener('click', ()=>{ tipo = b.dataset.tipo; grupo = 'todos'; render(); const l = box.querySelector('.cat-lista'); if(l) l.scrollTop = 0; }));
+      box.querySelectorAll('[data-grupo]').forEach(b=> b.addEventListener('click', ()=>{ grupo = b.dataset.grupo; render(); const l = box.querySelector('.cat-lista'); if(l) l.scrollTop = 0; }));
       box.querySelectorAll('[data-fonte]').forEach(b=> b.addEventListener('click', ()=>{ fonte = b.dataset.fonte; render(); }));
       const bi = box.querySelector('[data-busca]');
       bi.addEventListener('input', ()=>{ busca = bi.value; const p = bi.selectionStart; render(); const n = box.querySelector('[data-busca]'); n.focus(); n.setSelectionRange(p,p); });
       box.querySelectorAll('[data-add]').forEach(b=> b.addEventListener('click', ()=>{
         const item = (tipo==='qualidade' ? QUALIDADES_CATALOGO(isDragao) : DEFEITOS_CATALOGO(isDragao)).find(x=> x.nome===b.dataset.add); if(!item) return;
+        const rolagem = (box.querySelector('.cat-lista')||{}).scrollTop || 0;
         adicionarQualidadeNaFicha(fichaId, {tipo, nome: item.nome.replace(/^🛠️\s*/,''), desc: item.desc||''});
-        toast(`${tipo==='qualidade'?'✨':'⚠️'} ${item.nome.replace(/^🛠️\s*/,'')} adicionada — ${tipo==='qualidade'?'defina os Pontos de Destino investidos':'confira os detalhes'}.`);
+        toast(`${tipo==='qualidade'?'✨':'⚠️'} ${item.nome.replace(/^🛠️\s*/,'')} adicionad${tipo==='qualidade'?'a':'o'}${aoAdicionar ? '.' : ` — ${tipo==='qualidade'?'defina os Pontos de Destino investidos':'confira os detalhes'}.`}`);
+        if(aoAdicionar) aoAdicionar();
         render();
+        const l2 = box.querySelector('.cat-lista'); if(l2) l2.scrollTop = rolagem;
       }));
       const cadd = box.querySelector('[data-cadd]');
       if(cadd) cadd.addEventListener('click', ()=>{
         const nome = box.querySelector('[data-cnome]').value.trim(); const desc = box.querySelector('[data-cdesc]').value.trim();
         if(!nome){ toast('Dê um nome.'); return; }
         adicionarQualidadeNaFicha(fichaId, {tipo, nome, desc, personalizada:true});
+        if(aoAdicionar) aoAdicionar();
         const hb = box.querySelector('[data-chb]');
         if(hb && hb.checked) addHomebrewItem(tipo, nome, desc, isDragao?'dragao':'humano');
         fechar();
@@ -7641,8 +7689,8 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
         <h3>Qualidades e defeitos</h3>
         ${(f.qualidadesLista||[]).map((q,i)=> `<div class="ed-linha"><span class="${q.tipo==='defeito'?'defeito':''}"><strong>${escapeHtml(q.nome)}</strong>${q.tipo==='defeito'?' (defeito)':''}</span><button type="button" class="icon-btn" data-eddelqd="${i}" title="Remover">✕</button></div>`).join('') || '<p class="nota">Nenhuma.</p>'}
         <div class="ed-add-linha">
-          <select class="add-sel" data-edaddqd="qualidade"><option value="">+ Qualidade do livro</option>${qdCatalogo.map((q,i)=> `<option value="${i}">${escapeHtml(q.nome)}</option>`).join('')}</select>
-          <select class="add-sel" data-edaddqd="defeito"><option value="">+ Defeito do livro</option>${dfCatalogo.map((q,i)=> `<option value="${i}">${escapeHtml(q.nome)}</option>`).join('')}</select>
+          <button type="button" class="btn" data-edcatalogo="qualidade">📖 + Qualidade</button>
+          <button type="button" class="btn" data-edcatalogo="defeito">📖 + Defeito</button>
         </div>
       </section>
 
@@ -7784,6 +7832,9 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       salvar(false);
     });
 
+    ed.querySelectorAll('[data-edcatalogo]').forEach(b=> b.addEventListener('click', ()=>{
+      abrirCatalogoQualidades(id, b.dataset.edcatalogo, ()=> salvar(true));
+    }));
     ed.querySelectorAll('[data-edaddqd]').forEach(sel=> sel.addEventListener('change', ()=>{
       if(sel.value==='') return;
       const tipo = sel.dataset.edaddqd;
