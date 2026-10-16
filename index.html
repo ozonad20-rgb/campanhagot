@@ -2142,6 +2142,8 @@ window.gdtEncaixarNoLimite = function(url, limite){
   .bm-med-ponto{fill:#ffe08a;stroke:#3a2a10;stroke-width:2px;}
   .bm-leitura{position:absolute;top:.6rem;left:50%;transform:translateX(-50%);display:none;padding:.3rem .7rem;font-family:var(--f-ui);font-weight:600;color:#ffe08a;background:rgba(10,7,5,.85);border:1px solid #5a4520;border-radius:6px;pointer-events:none;}
   .bm-tokens, .bm-pings{position:absolute;left:0;top:0;}
+  .bm-vp, .bm-vp *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;}
+  .bm-vp input, .bm-vp textarea, .bm-vp select{-webkit-user-select:text;user-select:text;}
   .bm-token{position:absolute;box-sizing:border-box;padding:4px;transition:left .25s ease, top .25s ease;}
   .bm-token.arrastando{transition:none;z-index:5;filter:drop-shadow(0 10px 14px rgba(0,0,0,.7));}
   .bm-token.movel{cursor:grab;}
@@ -2562,6 +2564,10 @@ window.gdtEncaixarNoLimite = function(url, limite){
   .tc-vs.off{border-color:var(--line);color:var(--muted);cursor:default;background:transparent;}
   .tc-vs.ao-vivo{border-color:var(--crimson-bright);color:var(--crimson-bright);animation:t-pulso 1.4s infinite;}
   .tc-bye{grid-column:1 / -1;justify-self:center;margin-top:.15rem;}
+  .tc-desfazer{opacity:.7;font-size:.78rem;padding:.15rem .5rem;}
+  .tc-desfazer:hover{opacity:1;}
+  .t-desfazer-lista{font-size:.92rem;line-height:1.6;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:8px;padding:.5rem .7rem;}
+  .t-arena-head .btn-mini{margin-left:.3rem;}
   .tc-campeao,.t-vencedor{display:flex;align-items:center;gap:.8rem;padding:.7rem .9rem;margin-bottom:.8rem;border-radius:10px;border:1px solid var(--gold);background:linear-gradient(120deg, rgba(243,197,69,.16), rgba(243,197,69,.03));}
   .tc-campeao small,.t-vencedor small{display:block;font-family:var(--f-ui);letter-spacing:.1em;text-transform:uppercase;font-size:.7rem;color:var(--gold);}
   .tc-campeao b,.t-vencedor b{display:block;font-family:var(--f-ui);font-size:1.15rem;color:var(--gold-bright);}
@@ -9760,6 +9766,12 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       </div>
     </section>`;
     bmWireViewport(bmNode.querySelector('.bm-vp'));
+    /* nada dentro do mapa vira seleção de texto (só os campos de digitar) */
+    if(!bmNode._semSelecao){
+      bmNode._semSelecao = true;
+      bmNode.addEventListener('selectstart', ev=>{ if(!(ev.target.closest && ev.target.closest('input, textarea, [contenteditable="true"]'))) ev.preventDefault(); });
+      bmNode.addEventListener('dragstart', ev=>{ if(!(ev.target.closest && ev.target.closest('input, textarea'))) ev.preventDefault(); });
+    }
   }
   /* coloca o mapa logo abaixo da ficha de combate (a coluna é redesenhada a cada mudança) */
   function bmPosicionar(){
@@ -10321,6 +10333,10 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     vp.addEventListener('pointerleave', ()=> hover.classList.remove('on'));
     vp.addEventListener('pointerdown', ev=>{
       if(ev.target.closest('.bm-vazio, button, input, select')) return;
+      /* sem isto o navegador começa uma seleção de texto ao arrastar, e todos os tokens
+         (e o resto da página) ficam "selecionados" em azul, atrapalhando o movimento */
+      ev.preventDefault();
+      try{ const sel = window.getSelection && window.getSelection(); if(sel && sel.rangeCount) sel.removeAllRanges(); }catch(e){}
       vp.focus({preventScroll:true});
       pts.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
       try{ vp.setPointerCapture(ev.pointerId); }catch(e){}
@@ -12113,6 +12129,76 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     else patch.campeao = vencedorFid;
     return patch;
   }
+
+  /* ---------- desfazer uma partida do chaveamento ----------
+     Tira o vencedor da rodada seguinte e, em cascata, desfaz as partidas seguintes que ele já
+     tinha disputado. As disputas desfeitas ficam marcadas como "anulada" (somem da arena). */
+  function chaveCascata(t, tipo, chave){
+    const c = t[tipo]; const lista = [];
+    let k = chave;
+    while(k){
+      const p = c.partidas[k]; if(!p) break;
+      lista.push(k);
+      if(!p.v) break;
+      const [r, m] = k.split('_').map(Number);
+      const prox = `${r+1}_${m>>1}`, q = c.partidas[prox];
+      const venc = p[p.v];
+      k = (q && (q.v || q.did) && (q.a===venc || q.b===venc)) ? prox : null;
+    }
+    return lista;
+  }
+  function partidaDesfazer(tid, tipo, chave){
+    const t = torneiosCache[tid]; if(!t || !t[tipo]) return;
+    const c = t[tipo];
+    const lista = chaveCascata(t, tipo, chave);
+    const R = tRodadas(c.tamanho);
+    const desc = lista.map(k=>{ const p = c.partidas[k]; const [r] = k.split('_').map(Number);
+      return `• ${tNomeRodada(r, R)}: ${tNome(p.a)} × ${tNome(p.b)}${p.v?` (venceu ${tNome(p[p.v])})`:' (em andamento)'}`; }).join('<br>');
+    const temResgate = lista.some(k=>{ const d = c.partidas[k].did && t.disputas ? t.disputas[c.partidas[k].did] : null; return d && d.resgate && (d.resgate.status==='pago' || d.resgate.status==='entregue'); });
+    const ov = document.createElement('div'); ov.className = 'ui-overlay';
+    ov.innerHTML = `<div class="ui-dialog" style="max-width:560px;">
+      <div class="ui-dialog-head"><h3>↩ Desfazer partida</h3><button class="icon-btn" data-x>✕</button></div>
+      <p>Isto volta o chaveamento para antes desta luta:</p>
+      <p class="t-desfazer-lista">${desc}</p>
+      <p class="ui-hint">Dano, ferimentos e lesões já aplicados nas fichas não são desfeitos${temResgate ? ', nem o resgate já pago ou entregue' : ''} — ajuste nas fichas se precisar.</p>
+      <div class="ui-dialog-actions" style="flex-wrap:wrap;"><button class="btn ghost" data-x>Cancelar</button><div class="topbar-fill"></div>
+        <button class="btn" data-so>Só desfazer</button><button class="btn primary" data-reiniciar>↺ Desfazer e reiniciar</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    const fechar = ()=> ov.remove();
+    ov.addEventListener('mousedown', ev=>{ if(ev.target===ov) fechar(); });
+    ov.querySelectorAll('[data-x]').forEach(b=> b.addEventListener('click', fechar));
+    const aplicar = (reiniciar)=>{
+      fechar();
+      const partidas = {}, disputas = {};
+      let anularAtiva = false, tirarCampeao = false;
+      lista.forEach((k, i)=>{
+        const p = c.partidas[k];
+        partidas[k] = Object.assign(partidas[k] || {}, {v:null, did:null});
+        if(p.v){
+          const [r, m] = k.split('_').map(Number);
+          if(r+1 < R){ const prox = `${r+1}_${m>>1}`; partidas[prox] = Object.assign(partidas[prox] || {}, {[m%2===0?'a':'b']: null}); }
+          else tirarCampeao = true;
+        }
+        if(p.did && t.disputas && t.disputas[p.did]){
+          const d = t.disputas[p.did];
+          disputas[p.did] = {status:'anulada', anuladaEm: Date.now(), statusAntes: d.status};
+          if(c.ativa===p.did) anularAtiva = true;
+          if(d.tipo==='lica') [d.a, d.b].forEach(fid=>{ const ini = iniciativaCache[fid]; if(ini && ini.torneio===p.did) iniciativaCol().doc(fid).delete().catch(()=>{}); });
+        }
+      });
+      const patch = {[tipo]: {partidas}};
+      if(anularAtiva) patch[tipo].ativa = null;
+      if(tirarCampeao) patch[tipo].campeao = null;
+      if(Object.keys(disputas).length) patch.disputas = disputas;
+      tSalvar(tid, patch).then(()=>{
+        toast(`↩ Partida desfeita${lista.length>1?` (e mais ${lista.length-1} em seguida)`:''}.`);
+        if(reiniciar) setTimeout(()=> disputaIniciar(tid, tipo, chave), 350);
+      });
+    };
+    ov.querySelector('[data-so]').addEventListener('click', ()=> aplicar(false));
+    ov.querySelector('[data-reiniciar]').addEventListener('click', ()=> aplicar(true));
+  }
   function chaveDeclararVencedor(tid, tipo, chave, lado){
     const t = torneiosCache[tid]; if(!t) return;
     const p = t[tipo].partidas[chave];
@@ -12501,6 +12587,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
             : podeIniciar ? `<button type="button" class="tc-vs" data-iniciar="${chave}" title="Iniciar a ${nomeTipo}">⚔</button>`
             : `<span class="tc-vs off">${p.v?'✓':'×'}</span>`}</div>
           ${slotHtml(t, tipo, chave, p, 'b', editavel)}
+          ${(mestre && (p.v || emAndamento)) ? `<button type="button" class="btn btn-mini ghost tc-bye tc-desfazer" data-desfazer="${chave}" title="Desfazer esta partida (e as seguintes do vencedor)">↩ Desfazer</button>` : ''}
           ${(mestre && !p.v && ((p.a && !p.b) || (!p.a && p.b))) ? `<button type="button" class="btn btn-mini ghost tc-bye" data-bye="${chave}.${p.a?'a':'b'}">➜ avança sem disputa</button>` : ''}
         </div>`;
         void bye;
@@ -12600,7 +12687,8 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     }).join('');
     return `<section class="tj-arena">
       <header class="t-arena-head"><span class="t-arena-tit">🐎 Justa · ${tNomeRodada(r, R)}</span>
-        ${d.status==='fim' ? `<span class="t-tag fim">encerrada</span>` : `<span class="t-tag vivo">● ao vivo</span>`}</header>
+        ${d.status==='fim' ? `<span class="t-tag fim">encerrada</span>` : `<span class="t-tag vivo">● ao vivo</span>`}
+        ${session.role==='mestre' && d.status==='andamento' ? `<button type="button" class="btn btn-mini ghost" data-desfazer="${d.chave}" title="Anular e recomeçar esta disputa">↺ Reiniciar</button>` : ''}</header>
       ${d.status==='fim' ? vencedorHtml(t, tid, did, d) : ''}
       <div class="tj-lica">
         ${cavaleiroHtml(t, tid, did, d, 'a', st)}
@@ -12632,7 +12720,8 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
           <button type="button" class="btn btn-mini" data-resgate="entregar">🐎 Entregar cavalo e armadura</button>
           <button type="button" class="btn btn-mini ghost" data-resgate="dispensar">Dispensar</button></div>` : '<span class="muted">O mestre decide.</span>'}</div>`;
     }
-    return `<div class="t-vencedor">${tAvatar(venc,'grande')}<div><small>Vencedor</small><b>${escapeHtml(tNome(venc))}</b><span>${escapeHtml(tMotivoTxt(d))}</span></div><span class="t-vencedor-ico">🏆</span></div>${resgate}`;
+    const podeDesfazer = mestre && d.chave && t[d.tipo] && t[d.tipo].partidas && t[d.tipo].partidas[d.chave] && t[d.tipo].partidas[d.chave].did===did;
+    return `<div class="t-vencedor">${tAvatar(venc,'grande')}<div><small>Vencedor</small><b>${escapeHtml(tNome(venc))}</b><span>${escapeHtml(tMotivoTxt(d))}</span></div>${podeDesfazer?`<button type="button" class="btn btn-mini ghost" data-desfazer="${d.chave}" title="Desfazer esta disputa">↩ Desfazer</button>`:''}<span class="t-vencedor-ico">🏆</span></div>${resgate}`;
   }
   function licaArenaHtml(t, tid, did){
     const d = t.disputas[did];
@@ -12645,7 +12734,8 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     };
     return `<section class="tl-arena">
       <header class="t-arena-head"><span class="t-arena-tit">⚔ Liça · ${tNomeRodada(r, R)} — primeiro sangue</span>
-        ${d.status==='fim' ? `<span class="t-tag fim">encerrada</span>` : `<span class="t-tag vivo">● ao vivo</span>`}</header>
+        ${d.status==='fim' ? `<span class="t-tag fim">encerrada</span>` : `<span class="t-tag vivo">● ao vivo</span>`}
+        ${session.role==='mestre' && d.status==='andamento' ? `<button type="button" class="btn btn-mini ghost" data-desfazer="${d.chave}" title="Anular e recomeçar esta disputa">↺ Reiniciar</button>` : ''}</header>
       ${d.status==='fim' ? vencedorHtml(t, tid, did, d) : `<p class="t-lica-nota">Combate normal com armas sem fio: os dois estão na ordem de iniciativa — use <b>⚔ Atacar!</b> nas fichas abaixo ou no mapa. Perde quem sofrer o <b>primeiro ferimento ou lesão</b>, chegar a Saúde 0 ou desistir.</p>`}
       <div class="tl-duelo">${lado('a')}<div class="tl-vs">×</div>${lado('b')}</div>
     </section>`;
@@ -12737,7 +12827,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
         const c = t[torneioAba] || {};
         let did = c.ativa;
         if(!did){ /* mostra a última disputa encerrada desta modalidade */
-          const fins = Object.keys(t.disputas||{}).filter(x=> t.disputas[x].tipo===torneioAba).sort((a,b)=> (t.disputas[b].criadoEm||0)-(t.disputas[a].criadoEm||0));
+          const fins = Object.keys(t.disputas||{}).filter(x=> t.disputas[x].tipo===torneioAba && t.disputas[x].status!=='anulada').sort((a,b)=> (t.disputas[b].criadoEm||0)-(t.disputas[a].criadoEm||0));
           did = fins[0] || null;
         }
         arena = did && t.disputas[did] ? (torneioAba==='justa' ? justaArenaHtml(t, tid, did) : licaArenaHtml(t, tid, did))
@@ -12775,6 +12865,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     on('[data-iniciar]', el=> disputaIniciar(tid, torneioAba, el.dataset.iniciar));
     on('[data-verdisputa]', ()=> renderIniciativaTab());
     on('[data-declarar]', el=>{ const [chave, lado] = el.dataset.declarar.split('.'); chaveDeclararVencedor(tid, torneioAba, chave, lado); });
+    on('[data-desfazer]', el=> partidaDesfazer(tid, torneioAba, el.dataset.desfazer));
     on('[data-bye]', el=>{ const [chave, lado] = el.dataset.bye.split('.'); tSalvar(tid, {[torneioAba]: chaveAvancar(torneiosCache[tid], torneioAba, chave, lado)}); });
     const arenaEl = wrap.querySelector('[data-arenadid]');
     const did = arenaEl ? arenaEl.dataset.arenadid : null;
