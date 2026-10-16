@@ -2512,6 +2512,13 @@ window.gdtEncaixarNoLimite = function(url, limite){
   .ct-ven-tit{font-family:var(--f-ui);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:.7rem 0 .3rem;}
   .ct-veneno b{color:#b9e3a8;}
 
+  .tag-xp{border-color:var(--gold);color:var(--gold-bright);}
+  .tag-xp small{opacity:.7;}
+  .evo-npc{max-width:620px;}
+  .evo-ajuste,.evo-hist{margin-top:.7rem;font-size:.92rem;}
+  .evo-ajuste summary,.evo-hist summary{cursor:pointer;color:var(--gold);font-family:var(--f-ui);}
+  .rec-npcs{margin-top:.7rem;}
+  .rec-npcs summary{cursor:pointer;font-family:var(--f-ui);color:var(--gold-bright);}
   .npc-niveis{display:flex;width:100%;flex-wrap:wrap;}
   .npc-niveis .seg-btn{flex:1;justify-content:center;padding:.4rem .5rem;font-size:.9rem;white-space:nowrap;}
   .npc-niveis .seg-btn b{color:var(--gold);}
@@ -6608,6 +6615,132 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     evoDraft = null; evoSubFormAberto = null;
     renderEditor(id);
   }
+  /* ---------- evolução de NPC: mesmas regras e custos da evolução de personagem ----------
+     +1 graduação = 30 XP · +1B de especialidade = 10 XP · Ponto de Destino = 50 XP (só quem usa PD).
+     O XP vem de Recompensas (o mestre pode incluir NPCs) ou do ajuste manual abaixo. */
+  function abrirEvolucaoNpc(id){
+    const f0 = fichasCache[id]; if(!f0) return;
+    const temPD = !!(regrasDanoFicha(f0) || {}).pd;
+    const st = {acoes:[], sub:null, ajuste:''};
+    const ov = document.createElement('div'); ov.className = 'ui-overlay';
+    const box = document.createElement('div'); box.className = 'ui-dialog evo-npc';
+    ov.appendChild(box); document.body.appendChild(ov);
+    const fechar = ()=> ov.remove();
+    ov.addEventListener('mousedown', ev=>{ if(ev.target===ov && !st.acoes.length) fechar(); });
+    const habs = HABILIDADES.filter(h=> h!=='status');
+    /* graduação/bônus considerando o que já está no rascunho */
+    const gradCom = (f, h)=> gradHab(f, h) + st.acoes.filter(a=> a.tipo==='habilidade' && a.habilidade===h).length;
+    const bonusCom = (f, h, nome)=>{
+      const e = getEspecialidadesList(f, h).find(x=> normTxt(x.nome)===normTxt(nome));
+      return (e ? (e.bonus||1) : 0) + st.acoes.filter(a=> a.tipo==='especialidade' && a.habilidade===h && normTxt(a.nome)===normTxt(nome)).length;
+    };
+    function render(){
+      const f = fichasCache[id] || f0;
+      const disp = (f.experienciaTotal||0) - (f.experienciaGasta||0);
+      const custo = st.acoes.reduce((s,a)=> s+a.custo, 0);
+      const resta = disp - custo;
+      let sub = '';
+      if(st.sub==='habilidade'){
+        sub = `<div class="field-row" style="align-items:flex-end;">
+          <div><label>Habilidade</label><select data-evohab>${habs.map(h=> `<option value="${h}">${HABILIDADE_LABEL[h]} (${gradCom(f,h)})</option>`).join('')}</select></div>
+          <button type="button" class="btn primary" data-evook="habilidade">+1 graduação (30 XP)</button>
+          <button type="button" class="btn ghost" data-evosubx>Cancelar</button></div>`;
+      } else if(st.sub==='especialidade'){
+        const h = st.espHab || habs.find(x=> gradHab(f,x)>2) || 'luta';
+        const existentes = getEspecialidadesList(f, h).map(e=> e.nome);
+        const opcoes = Array.from(new Set(existentes.concat(espCatalogo(h))));
+        sub = `<div class="field-row" style="align-items:flex-end;flex-wrap:wrap;">
+          <div><label>Habilidade</label><select data-evoesphab>${habs.map(x=> `<option value="${x}" ${x===h?'selected':''}>${HABILIDADE_LABEL[x]} (${gradCom(f,x)})</option>`).join('')}</select></div>
+          <div><label>Especialidade</label><select data-evoespnome>${opcoes.map(n=> `<option value="${escapeHtml(n)}">${escapeHtml(n)}${existentes.includes(n)?` — tem ${bonusCom(f,h,n)}B`:''}</option>`).join('')}<option value="__outra">Outra…</option></select></div>
+          <div data-evooutrawrap style="display:none;"><label>Nome</label><input type="text" data-evooutra placeholder="ex: Justas"></div>
+          <button type="button" class="btn primary" data-evook="especialidade">+1B (10 XP)</button>
+          <button type="button" class="btn ghost" data-evosubx>Cancelar</button></div>`;
+      }
+      box.innerHTML = `
+        <div class="ui-dialog-head"><h3>📈 Evoluir — ${escapeHtml(f.nome||'NPC')}</h3><button class="icon-btn" data-x>✕</button></div>
+        <div class="xp-totais-row">
+          <div class="xp-stat-box"><div class="xp-stat-value">${f.experienciaTotal||0}</div><div class="xp-stat-label">XP total</div></div>
+          <div class="xp-stat-box"><div class="xp-stat-value">${disp}</div><div class="xp-stat-label">Disponível</div></div>
+        </div>
+        <details class="evo-ajuste"><summary>Ajustar XP manualmente</summary>
+          <div class="field-row" style="align-items:flex-end;"><div><label>Somar (ou subtrair) XP</label><input type="number" class="num" data-evoajuste value="${escapeHtml(st.ajuste)}" placeholder="ex: 60"></div>
+          <button type="button" class="btn" data-evoajustar>Aplicar</button></div>
+          <p class="ui-hint">Para dar XP a vários de uma vez, use a aba 🎁 Recompensas — os NPCs aparecem lá também.</p>
+        </details>
+        <div class="wizard-xp-tracker ${resta<0?'estourado':''}" style="margin-top:.7rem;">Rascunho: <strong>${custo}</strong> XP — ${resta>=0?`restam ${resta}`:`faltam ${-resta}`}</div>
+        <div>${st.acoes.map((a,i)=> `<div class="compra-gorjeta-linha"><div style="flex:1;font-size:.9rem;">${evoAcaoLabel(a)}</div><div style="color:var(--gold-bright);font-size:.85rem;">${a.custo} XP</div><button class="row-del" data-evodel="${i}" title="Remover">×</button></div>`).join('') || '<div class="campanhas-empty-hint" style="padding:.3rem 0;">Nenhuma evolução no rascunho ainda.</div>'}</div>
+        <div class="login-actions" style="margin-top:.6rem;flex-wrap:wrap;">
+          <button type="button" class="btn add-row-btn" data-evosub="habilidade">+ Melhorar habilidade</button>
+          <button type="button" class="btn add-row-btn" data-evosub="especialidade">+ Especialidade</button>
+          ${temPD ? `<button type="button" class="btn add-row-btn" data-evopd>+ Ponto de Destino (50 XP)</button>` : ''}
+        </div>
+        <div style="margin-top:.5rem;">${sub}</div>
+        <details class="evo-hist"><summary>Histórico de XP</summary><div style="max-height:200px;overflow:auto;margin-top:.4rem;">${renderHistoricoXPHtml(f)}</div></details>
+        <div class="ui-dialog-actions">
+          <button type="button" class="btn ghost" data-x>${st.acoes.length?'Descartar':'Fechar'}</button><div class="topbar-fill"></div>
+          <button type="button" class="btn primary" data-evoconfirmar ${(resta<0 || !st.acoes.length)?'disabled':''}>✅ Evoluir NPC</button>
+        </div>`;
+      const q = (s)=> box.querySelector(s);
+      box.querySelectorAll('[data-x]').forEach(b=> b.addEventListener('click', ()=>{ if(st.acoes.length && !confirm('Descartar o rascunho de evolução?')) return; fechar(); }));
+      box.querySelectorAll('[data-evosub]').forEach(b=> b.addEventListener('click', ()=>{ st.sub = b.dataset.evosub; render(); }));
+      box.querySelectorAll('[data-evosubx]').forEach(b=> b.addEventListener('click', ()=>{ st.sub = null; render(); }));
+      box.querySelectorAll('[data-evodel]').forEach(b=> b.addEventListener('click', ()=>{ st.acoes.splice(parseInt(b.dataset.evodel,10),1); render(); }));
+      const pd = q('[data-evopd]'); if(pd) pd.addEventListener('click', ()=>{ st.acoes.push({tipo:'destino', custo:50}); render(); });
+      const eh = q('[data-evoesphab]'); if(eh) eh.addEventListener('change', ()=>{ st.espHab = eh.value; render(); });
+      const en = q('[data-evoespnome]'); if(en) en.addEventListener('change', ()=>{ q('[data-evooutrawrap]').style.display = en.value==='__outra' ? '' : 'none'; });
+      const aj = q('[data-evoajuste]'); if(aj) aj.addEventListener('input', ()=>{ st.ajuste = aj.value; });
+      const ajb = q('[data-evoajustar]'); if(ajb) ajb.addEventListener('click', ()=>{
+        const n = parseInt(st.ajuste,10); if(!n){ toast('Informe quanto XP somar ou subtrair.'); return; }
+        const ff = fichasCache[id];
+        ff.experienciaTotal = Math.max(0, (ff.experienciaTotal||0) + n);
+        if(!ff.historicoXP) ff.historicoXP = [];
+        ff.historicoXP.push({tipo:'recompensa', data: Date.now(), xp: n, motivo: 'Ajuste manual do mestre'});
+        scheduleFichaSave(id, ff); flushFichaSave();
+        st.ajuste = ''; toast(`${n>0?'+':''}${n} XP para ${ff.nome||'o NPC'}.`);
+        render(); refreshVistasDaFicha(id);
+      });
+      box.querySelectorAll('[data-evook]').forEach(b=> b.addEventListener('click', ()=>{
+        const ff = fichasCache[id] || f0;
+        if(b.dataset.evook==='habilidade'){
+          const h = q('[data-evohab]').value;
+          if(gradCom(ff,h) >= 7){ toast('Graduação máxima é 7.'); return; }
+          st.acoes.push({tipo:'habilidade', habilidade:h, custo:30});
+        } else {
+          const h = q('[data-evoesphab]').value;
+          let nome = q('[data-evoespnome]').value;
+          if(nome==='__outra') nome = (q('[data-evooutra]').value||'').trim();
+          if(!nome){ toast('Dê um nome à especialidade.'); return; }
+          if(bonusCom(ff,h,nome) + 1 > gradCom(ff,h)){ toast(`Os dados de bônus de ${nome} não podem passar a graduação em ${HABILIDADE_LABEL[h]} (${gradCom(ff,h)}).`); return; }
+          st.acoes.push({tipo:'especialidade', habilidade:h, nome, custo:10});
+        }
+        st.sub = null; render();
+      }));
+      const ok = q('[data-evoconfirmar]'); if(ok) ok.addEventListener('click', ()=>{
+        const ff = fichasCache[id]; if(!ff) return;
+        const custoT = st.acoes.reduce((s,a)=> s+a.custo, 0);
+        if(custoT > (ff.experienciaTotal||0) - (ff.experienciaGasta||0)){ toast('XP insuficiente.'); return; }
+        if(!ff.habilidades) ff.habilidades = {};
+        if(!ff.especialidades) ff.especialidades = {};
+        st.acoes.forEach(a=>{
+          if(a.tipo==='habilidade') ff.habilidades[a.habilidade] = gradHab(ff, a.habilidade) + 1;
+          else if(a.tipo==='especialidade'){
+            const lista = getEspecialidadesList(ff, a.habilidade).slice();
+            const ex = lista.find(e=> normTxt(e.nome)===normTxt(a.nome));
+            if(ex) ex.bonus = (ex.bonus||1) + 1; else lista.push({nome:a.nome, bonus:1});
+            ff.especialidades[a.habilidade] = lista;
+          } else if(a.tipo==='destino') ff.pontosDestino = (ff.pontosDestino||0) + 1;
+        });
+        ff.experienciaGasta = (ff.experienciaGasta||0) + custoT;
+        if(!ff.historicoXP) ff.historicoXP = [];
+        ff.historicoXP.push({tipo:'evolucao', data: Date.now(), custoTotal: custoT, itens: st.acoes.map(a=> ({label: evoAcaoLabel(a).replace(/<[^>]+>/g,''), custo: a.custo}))});
+        npcResolverArmas(ff);
+        scheduleFichaSave(id, ff); flushFichaSave();
+        toast(`✅ ${ff.nome||'NPC'} evoluiu! −${custoT} XP`);
+        fechar(); refreshVistasDaFicha(id);
+      });
+    }
+    render();
+  }
 
   /* ============ recompensas (mestre distribui XP e dinheiro em lote pra vários personagens) ============ */
   let recompensaSelecionadas = new Set();
@@ -6621,6 +6754,13 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
   function renderRecompensasTab(){
     const wrap = document.getElementById('recompensasWrap');
     const ids = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo!=='npcImportante');
+    const npcIds = Object.keys(fichasCache).filter(id=> fichasCache[id].tipo==='npcImportante')
+      .sort((a,b)=> (fichasCache[a].nome||'').localeCompare(fichasCache[b].nome||''));
+    const linhaRec = (id, sub)=> `<label style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;cursor:pointer;">
+              <input type="checkbox" data-recompensafichaid="${id}" ${recompensaSelecionadas.has(id)?'checked':''}>
+              <span>${escapeHtml(fichasCache[id].nome||'Sem nome')} <span style="color:var(--muted);font-size:.8rem;">(${escapeHtml(sub)})</span></span>
+            </label>`;
+    const npcsMarcados = npcIds.filter(id=> recompensaSelecionadas.has(id)).length;
     wrap.innerHTML = `<div style="max-width:700px;margin:0 auto;padding:1.2rem;">
       <div class="panel-box">
         <h3>🎁 Dar Recompensa</h3>
@@ -6634,6 +6774,14 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
             </label>`;
           }).join('') : `<div class="campanhas-empty-hint">Nenhuma ficha de jogador na campanha ainda.</div>`}
         </div>
+        ${npcIds.length ? `<details class="rec-npcs" ${npcsMarcados?'open':''}>
+          <summary>👑 NPCs (${npcIds.length})${npcsMarcados?` · ${npcsMarcados} marcado(s)`:''}</summary>
+          <input type="text" id="recompensaNpcBusca" placeholder="Buscar NPC…" style="margin:.4rem 0;">
+          <div id="recompensasNpcsLista" style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;padding:.5rem;">
+            ${npcIds.map(id=>{ const f = fichasCache[id]; return linhaRec(id, [f.faccao, NPC_CATEGORIAS[npcCategoria(f)].nome].filter(Boolean).join(' · ')); }).join('')}
+          </div>
+          <p class="muted" style="font-size:.8rem;margin:.3rem 0 0;">Os NPCs gastam o XP pelo botão 📈 Evoluir da ficha deles.</p>
+        </details>` : ''}
         <div class="field-row" style="margin-top:.7rem;">
           <div><label>Experiência (XP)</label><input type="number" id="recompensaXpInput" min="0" value="${recompensaXp}"></div>
           <div><label>Pontos de Destino</label><input type="number" id="recompensaPdInput" min="0" value="${recompensaPd}"></div>
@@ -6665,6 +6813,8 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       const id = chk.dataset.recompensafichaid;
       if(chk.checked) recompensaSelecionadas.add(id); else recompensaSelecionadas.delete(id);
     }));
+    const buscaNpc = document.getElementById('recompensaNpcBusca');
+    if(buscaNpc) buscaNpc.addEventListener('input', ()=>{ const qq = normTxt(buscaNpc.value); document.querySelectorAll('#recompensasNpcsLista label').forEach(l=> l.style.display = normTxt(l.textContent).includes(qq) ? 'flex' : 'none'); });
     document.getElementById('recompensaXpInput').addEventListener('input', (ev)=>{ recompensaXp = parseInt(ev.target.value,10)||0; });
     document.getElementById('recompensaPdInput').addEventListener('input', (ev)=>{ recompensaPd = Math.max(0, parseInt(ev.target.value,10)||0); });
     document.getElementById('recompensaObjetivo').addEventListener('change', (ev)=>{ recompensaObjetivo = ev.target.checked; });
@@ -7416,13 +7566,15 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
             ${f.faccao?`<span class="faccao">${escapeHtml(f.faccao)}</span>`:''}
             ${npcPapelNome(f.papel)?`<span class="tag">${npcPapelNome(f.papel)}</span>`:''}
             ${f.idade?`<span class="tag" title="${escapeHtml(faixaEtariaPorIdade(f.idade)||'')}">${escapeHtml(String(f.idade))} anos</span>`:''}
-            <span class="tag cat-${cat}" title="${escapeHtml(C.desc)}">${C.nome}</span>
+            <span class="tag cat-${cat}" title="${escapeHtml(C.desc)}">${C.nome}${npcNivelNome(f)?' '+npcNivelNome(f).toLowerCase():''}</span>
+            ${editable ? `<span class="tag tag-xp" title="XP disponível / total">⭐ ${(f.experienciaTotal||0)-(f.experienciaGasta||0)} XP${f.experienciaTotal?` <small>de ${f.experienciaTotal}</small>`:''}</span>` : ''}
           </div>
           ${f.descricao?`<p class="npc-desc">${escapeHtml(f.descricao)}</p>`:''}
         </div>
         <div class="npc-acoes">
           ${editable?`<button type="button" class="btn ${f.rollVisibility==='privada'?'':'on'}" data-npcacao="visibilidade" title="Pública: aparece para os jogadores (ex.: no Mapa de Posturas). Privada: só o mestre vê.">${f.rollVisibility==='privada'?'🔒 Privada':'🌐 Pública'}</button>`:''}
           ${editable?`<button type="button" class="btn" data-npcacao="editar">✎ Editar</button>`:''}
+          ${editable?`<button type="button" class="btn" data-npcacao="evoluir" title="Gastar XP: habilidades, especialidades${C.pd?' e Pontos de Destino':''}">📈 Evoluir</button>`:''}
           ${editable?`<button type="button" class="btn ${emCombate?'on':''}" data-npcacao="combate" title="${emCombate?'Tirar do combate':'Rolar iniciativa e entrar no combate'}">⚔ ${emCombate?`Combate · ${emCombate.valor}`:'Combate'}</button>`:''}
           ${editable?`<button type="button" class="btn ${emIntriga?'on':''}" data-npcacao="intriga" title="${emIntriga?'Tirar da intriga':'Entrar na intriga'}">🎭 ${emIntriga?'Na intriga':'Intriga'}</button>`:''}
           ${editable && ctx==='fichas'?`<button type="button" class="icon-btn" data-npcacao="duplicar" title="Duplicar NPC">⧉</button><button type="button" class="icon-btn perigo" data-npcacao="excluir" title="Excluir NPC">🗑</button>`:''}
@@ -7507,6 +7659,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       else if(acao==='combate') npcAlternarCombate(id);
       else if(acao==='intriga') npcAlternarIntriga(id);
       else if(acao==='duplicar') npcDuplicar(id);
+      else if(acao==='evoluir') abrirEvolucaoNpc(id);
       else if(acao==='visibilidade'){ const f = fichasCache[id]; f.rollVisibility = f.rollVisibility==='privada' ? 'publica' : 'privada'; scheduleFichaSave(id, f); renderNpcDetalhe(); }
       else if(acao==='excluir') npcExcluir(id);
       else if(acao==='fechar'){ combateFichaSelecionada = null; renderIniciativaTab(); }
