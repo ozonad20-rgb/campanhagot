@@ -11662,15 +11662,26 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       const les = box.querySelector('[data-lesao]'); if(les) les.addEventListener('change', ()=>{ st.lesao = les.checked; if(st.lesao) st.fer = 0; render(); });
       const ap = box.querySelector('[data-aplicar]');
       if(ap) ap.addEventListener('click', ()=>{
+        /* dano de justa: se o mestre desfez a investida enquanto esta tela estava aberta, não aplica */
+        if(ataque && ataque.justa && ataque.ataqueId && !ap.dataset.conferido){
+          ap.disabled = true;
+          ataquesCol().doc(ataque.ataqueId).get().then(sn=>{
+            if(!sn.exists){ toast('Essa investida foi desfeita pelo mestre — nenhum dano aplicado.'); ov.remove(); return; }
+            ap.dataset.conferido = '1'; ap.disabled = false; ap.click();
+          }).catch(()=>{ ap.dataset.conferido = '1'; ap.disabled = false; ap.click(); });
+          return;
+        }
         const c2 = calcular();
         if(c2.incompleto) return;
         if(c2.acertou){
           const ff = fichasCache[fichaId];
+          const antesJ = {dano: ff.danoSaude||0, fer: contarMarcados(ff.ferimentos), les: contarMarcados(ff.lesoes)};
           if(c2.ferUsados) marcarProximos(ff, 'ferimentos', c2.ferUsados);
           if(c2.usarLesao) marcarProximos(ff, 'lesoes', 1);
           if(ven && ven.lesoes) marcarProximos(ff, 'lesoes', ven.lesoes);
           ff.danoSaude = Math.max(0, Math.min(c2.maxSaude, (ff.danoSaude||0) + c2.final));
           scheduleFichaSave(fichaId, ff); flushFichaSave();
+          if(ataque && ataque.justa) justaRegistrarAplicado(ataque.justa, {dano: (ff.danoSaude||0) - antesJ.dano, fer: contarMarcados(ff.ferimentos) - antesJ.fer, les: contarMarcados(ff.lesoes) - antesJ.les});
           const partes = [`${ff.nome||'Personagem'} sofreu ${c2.final} de dano`];
           if(c2.ferUsados) partes.push(`${c2.ferUsados} ferimento(s)`);
           if(c2.usarLesao) partes.push('1 lesão');
@@ -12155,12 +12166,26 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     const desc = lista.map(k=>{ const p = c.partidas[k]; const [r] = k.split('_').map(Number);
       return `• ${tNomeRodada(r, R)}: ${tNome(p.a)} × ${tNome(p.b)}${p.v?` (venceu ${tNome(p[p.v])})`:' (em andamento)'}`; }).join('<br>');
     const temResgate = lista.some(k=>{ const d = c.partidas[k].did && t.disputas ? t.disputas[c.partidas[k].did] : null; return d && d.resgate && (d.resgate.status==='pago' || d.resgate.status==='entregue'); });
+    /* o que volta para as fichas: justa = soma do que cada embate aplicou; liça = estado do início */
+    const disputasLista = lista.map(k=> c.partidas[k].did).filter(did=> did && t.disputas && t.disputas[did]);
+    const devolver = [];
+    disputasLista.forEach(did=>{
+      const d = t.disputas[did];
+      if(d.tipo==='justa') Object.keys(d.embates||{}).forEach(ek=> justaResumoAplicado(d, ek).forEach(x=> devolver.push(x)));
+      else if(d.inicio) ['a','b'].forEach(l=>{
+        const f = tF(d[l]), i0 = d.inicio[l]; if(!f || !i0) return;
+        const dd = (f.danoSaude||0) - (i0.danoSaude||0), df = contarMarcados(f.ferimentos) - contarMarcados(i0.ferimentos), dl = contarMarcados(f.lesoes) - contarMarcados(i0.lesoes);
+        const partes = []; if(dd>0) partes.push(`${dd} de dano`); if(df>0) partes.push(`${df} ferimento(s)`); if(dl>0) partes.push(`${dl} lesão(ões)`);
+        if(partes.length) devolver.push(`${tNome(d[l])}: ${partes.join(', ')} (volta ao início da liça)`);
+      });
+    });
     const ov = document.createElement('div'); ov.className = 'ui-overlay';
     ov.innerHTML = `<div class="ui-dialog" style="max-width:560px;">
       <div class="ui-dialog-head"><h3>↩ Desfazer partida</h3><button class="icon-btn" data-x>✕</button></div>
       <p>Isto volta o chaveamento para antes desta luta:</p>
       <p class="t-desfazer-lista">${desc}</p>
-      <p class="ui-hint">Dano, ferimentos e lesões já aplicados nas fichas não são desfeitos${temResgate ? ', nem o resgate já pago ou entregue' : ''} — ajuste nas fichas se precisar.</p>
+      ${devolver.length ? `<p>Volta para as fichas:</p><p class="t-desfazer-lista">${devolver.map(escapeHtml).join('<br>')}</p>` : '<p class="ui-hint">Nenhum dano dessas lutas tinha sido aplicado nas fichas.</p>'}
+      ${temResgate ? '<p class="ui-hint">O resgate já pago ou entregue não é desfeito — ajuste nas fichas se precisar.</p>' : ''}
       <div class="ui-dialog-actions" style="flex-wrap:wrap;"><button class="btn ghost" data-x>Cancelar</button><div class="topbar-fill"></div>
         <button class="btn" data-so>Só desfazer</button><button class="btn primary" data-reiniciar>↺ Desfazer e reiniciar</button></div>
     </div>`;
@@ -12170,6 +12195,16 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     ov.querySelectorAll('[data-x]').forEach(b=> b.addEventListener('click', fechar));
     const aplicar = (reiniciar)=>{
       fechar();
+      /* devolve primeiro o que veio depois, para cada ficha terminar como estava antes da primeira luta desfeita */
+      disputasLista.slice().reverse().forEach(did=>{
+        const d = t.disputas[did];
+        if(d.tipo==='justa') Object.keys(d.embates||{}).forEach(ek=> justaReverterEmbate(d, ek));
+        else if(d.inicio) ['a','b'].forEach(l=>{
+          const f = tF(d[l]), i0 = d.inicio[l]; if(!f || !i0) return;
+          f.danoSaude = i0.danoSaude||0; f.ferimentos = (i0.ferimentos||[]).slice(); f.lesoes = (i0.lesoes||[]).slice();
+          scheduleFichaSave(d[l], f); flushFichaSave();
+        });
+      });
       const partidas = {}, disputas = {};
       let anularAtiva = false, tirarCampeao = false;
       lista.forEach((k, i)=>{
@@ -12220,8 +12255,10 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     if(tipo==='justa'){ disputa.embate = 1; disputa.embates = {}; }
     if(tipo==='lica'){
       const base = {};
-      ['a','b'].forEach(l=>{ const f = tF(p[l]); base[l] = {fer: contarMarcados(f.ferimentos), les: contarMarcados(f.lesoes)}; });
-      disputa.base = base;
+      const inicio = {};
+      ['a','b'].forEach(l=>{ const f = tF(p[l]); base[l] = {fer: contarMarcados(f.ferimentos), les: contarMarcados(f.lesoes)};
+        inicio[l] = {danoSaude: f.danoSaude||0, ferimentos: (f.ferimentos||[]).map(Boolean), lesoes: (f.lesoes||[]).map(Boolean)}; });
+      disputa.base = base; disputa.inicio = inicio;
       const outros = Object.keys(iniciativaCache).filter(id=> id!==p.a && id!==p.b);
       if(outros.length && !confirm(`Há ${outros.length} participante(s) na ordem de combate. Os dois competidores da liça entram junto com eles. Continuar?`)) return;
       ['a','b'].forEach(l=>{
@@ -12277,11 +12314,19 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
   }
 
   /* ---------- justa: estado do embate (calculado a partir das rolagens guardadas) ---------- */
-  function justaEstado(d){
-    const n = d.embate || 1;
-    const e = (d.embates||{})[n] || {};
+  /* cada embate tem uma chave própria (ek); desfazer um embate só troca a chave atual,
+     então o embate refeito começa limpo e nada precisa ser apagado do banco */
+  function justaEk(d){ return d.ek || String(d.embate || 1); }
+  function justaFeitos(d){
+    return d.feitos || Object.keys(d.embates||{}).filter(k=> /^\d+$/.test(k) && Number(k) < (d.embate||1)).sort((a,b)=> a-b);
+  }
+  function justaLinha(d){ return justaFeitos(d).map((ek,i)=> ({ek, n:i+1})).concat([{ek: justaEk(d), n: d.embate||1, atual:true}]); }
+  function justaEstado(d, alvo){
+    const n = alvo ? alvo.n : (d.embate || 1);
+    const ek = alvo ? alvo.ek : justaEk(d);
+    const e = (d.embates||{})[ek] || {};
     const L = e.luta || {}, S = e.sela || {};
-    const st = {n, e, L, S, fase:'luta', hits:{}, precisaSela:{}, caiu:{}, dano:{}, vencedor:null};
+    const st = {n, ek, e, L, S, fase:'luta', hits:{}, precisaSela:{}, caiu:{}, dano:{}, vencedor:null};
     if(!(L.a && L.b)) return st;
     ['a','b'].forEach(X=>{
       const Y = X==='a' ? 'b' : 'a';
@@ -12318,7 +12363,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       const re = tRolar(f, 'enganacao', gradHab(f,'enganacao'), eng?eng.bonus:0, 0, null);
       roll.enganacao = re.total;
     }
-    tSalvar(tid, {disputas: {[did]: {embates: {[st.n]: {luta: {[lado]: roll}}}}}});
+    tSalvar(tid, {disputas: {[did]: {embates: {[st.ek]: {luta: {[lado]: roll}}}}}});
   }
   function justaSela(tid, did, lado){
     const t = torneiosCache[tid]; const d = t && t.disputas[did]; if(!d) return;
@@ -12326,7 +12371,7 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     if(st.fase!=='sela' || !st.precisaSela[lado] || st.S[lado]) return;
     const f = tF(d[lado]); const pool = tPoolSela(f);
     const r = tRolar(f, 'lidarAnimais', pool.grad, pool.bonus, 0, st.precisaSela[lado]);
-    tSalvar(tid, {disputas: {[did]: {embates: {[st.n]: {sela: {[lado]: Object.assign(r, {dif: st.precisaSela[lado], pool: pool.txt})}}}}}});
+    tSalvar(tid, {disputas: {[did]: {embates: {[st.ek]: {sela: {[lado]: Object.assign(r, {dif: st.precisaSela[lado], pool: pool.txt})}}}}}});
   }
   /* mestre: quando o embate termina, grava o resultado, manda o dano para quem controla cada
      cavaleiro (tela de Receber dano, com armadura, ferimentos e lesões) e decide a justa */
@@ -12334,15 +12379,18 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     const t = torneiosCache[tid]; const d = t.disputas[did];
     const st = justaEstado(d);
     if(st.fase!=='fim' || st.e.res) return;
-    const chave = `${tid}/${did}/${st.n}`;
+    const chave = `${tid}/${did}/${st.ek}`;
     if(torneioVistos.resolvendo.has(chave)) return;
     torneioVistos.resolvendo.add(chave);
-    tSalvar(tid, {disputas: {[did]: {embates: {[st.n]: {res: {caiu: st.caiu, dano: st.dano, resolvidoEm: Date.now()}}}}}});
+    const refs = {};
+    ['a','b'].forEach(Y=>{ if(st.dano[Y] && tF(d[Y])) refs[Y] = ataquesCol().doc(); });
+    tSalvar(tid, {disputas: {[did]: {embates: {[st.ek]: {res: {caiu: st.caiu, dano: st.dano, resolvidoEm: Date.now(), ataques: Object.fromEntries(Object.entries(refs).map(([Y,r])=> [Y, r.id]))}}}}}});
     ['a','b'].forEach(Y=>{
       const X = Y==='a' ? 'b' : 'a';
-      if(!st.dano[Y] || !tF(d[Y])) return;
+      if(!refs[Y]) return;
       const g = st.hits[X].g;
-      ataquesCol().doc().set({
+      refs[Y].set({
+        justa: {tid, did, ek: st.ek, lado: Y},
         atacanteId: d[X], atacanteNome: tNome(d[X]), alvoId: d[Y], alvoFichaId: d[Y], alvoNome: tNome(d[Y]),
         armaNome: 'Lança de Torneio', total: st.L[X].total, defesa: st.L[X].dif, graus: g, acertou: true,
         danoBase: st.L[X].dano||0, perfurante: 0, danoBruto: st.dano[Y], danoDireto: st.dano[Y],
@@ -12356,11 +12404,77 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
   }
   function justaProximoEmbate(tid, did){
     const d = torneiosCache[tid].disputas[did];
-    tSalvar(tid, {disputas: {[did]: {embate: (d.embate||1) + 1}}});
+    const n = (d.embate||1) + 1;
+    tSalvar(tid, {disputas: {[did]: {embate: n, ek: `${n}-${Date.now().toString(36)}`, feitos: justaFeitos(d).concat(justaEk(d))}}});
+  }
+  /* guarda o que o "Receber dano" realmente aplicou em cada cavaleiro, para poder devolver */
+  function justaRegistrarAplicado(j, v){
+    if(!j || !j.tid || !torneiosCache[j.tid]) return;
+    tSalvar(j.tid, {disputas: {[j.did]: {embates: {[j.ek]: {aplicado: {[j.lado]: Object.assign({em: Date.now()}, v)}}}}}});
+  }
+  function tDesmarcarUltimos(f, campo, n){
+    if(!Array.isArray(f[campo]) || n<=0) return;
+    for(let i=f[campo].length-1; i>=0 && n>0; i--){ if(f[campo][i]){ f[campo][i] = false; n--; } }
+  }
+  /* devolve ao(s) cavaleiro(s) o que um embate aplicou; apaga danos ainda não aplicados */
+  function justaReverterEmbate(d, ek){
+    const e = (d.embates||{})[ek] || {};
+    const feito = [];
+    if(e.revertido) return feito;
+    Object.entries(e.aplicado || {}).forEach(([lado, ap])=>{
+      const fid = d[lado], f = tF(fid); if(!f || !ap) return;
+      f.danoSaude = Math.max(0, (f.danoSaude||0) - (ap.dano||0));
+      tDesmarcarUltimos(f, 'ferimentos', ap.fer||0);
+      tDesmarcarUltimos(f, 'lesoes', ap.les||0);
+      scheduleFichaSave(fid, f); flushFichaSave();
+      const partes = [];
+      if(ap.dano) partes.push(`${ap.dano} de dano`); if(ap.fer) partes.push(`${ap.fer} ferimento(s)`); if(ap.les) partes.push(`${ap.les} lesão(ões)`);
+      if(partes.length) feito.push(`${tNome(fid)}: ${partes.join(', ')}`);
+    });
+    Object.values((e.res && e.res.ataques) || {}).forEach(aid=>{ ataquesAbertos.add(aid); ataquesCol().doc(aid).delete().catch(()=>{}); });
+    return feito;
+  }
+  function justaResumoAplicado(d, ek){
+    const e = (d.embates||{})[ek] || {};
+    if(e.revertido) return [];
+    return Object.entries(e.aplicado || {}).map(([lado, ap])=>{
+      const partes = []; if(ap.dano) partes.push(`${ap.dano} de dano`); if(ap.fer) partes.push(`${ap.fer} ferimento(s)`); if(ap.les) partes.push(`${ap.les} lesão(ões)`);
+      return partes.length ? `${tNome(d[lado])}: ${partes.join(', ')}` : '';
+    }).filter(Boolean);
+  }
+  /* mestre: desfaz a última investida (a do embate atual, se já houve rolagem; senão a anterior) */
+  function justaDesfazerInvestida(tid, did){
+    const t = torneiosCache[tid]; const d = t && t.disputas[did]; if(!d) return;
+    const atual = justaEstado(d);
+    const feitos = justaFeitos(d);
+    let alvo, n, novosFeitos;
+    if(atual.L.a || atual.L.b){ alvo = atual.ek; n = d.embate||1; novosFeitos = feitos; }
+    else if(feitos.length){ alvo = feitos[feitos.length-1]; n = (d.embate||1) - 1; novosFeitos = feitos.slice(0,-1); }
+    else { toast('Ainda não há investida para desfazer.'); return; }
+    const reabrir = d.status==='fim';
+    if(reabrir && chaveCascata(t, d.tipo, d.chave).length > 1){ toast('O vencedor já disputou a partida seguinte — desfaça aquela partida antes.'); return; }
+    const resumo = justaResumoAplicado(d, alvo);
+    const pendentes = Object.keys((((d.embates||{})[alvo]||{}).res||{}).ataques||{}).filter(Y=> !((((d.embates||{})[alvo]||{}).aplicado||{})[Y]));
+    const rg = d.resgate || {};
+    if(!confirm(`Desfazer a investida do embate ${n}?\n\n`
+      + (resumo.length ? `Volta para as fichas:\n• ${resumo.join('\n• ')}\n\n` : 'Nenhum dano dessa investida tinha sido aplicado nas fichas.\n\n')
+      + (pendentes.length ? `Danos ainda não aplicados (${pendentes.map(Y=> tNome(d[Y])).join(', ')}) são cancelados.\n` : '')
+      + (reabrir ? `A justa volta a ficar em andamento${(rg.status==='pago'||rg.status==='entregue') ? ' (o resgate já pago/entregue não é desfeito)' : ''}.\n` : '')
+      + 'Os dois investem de novo nesse embate.')) return;
+    justaReverterEmbate(d, alvo);
+    const patch = {disputas: {[did]: {embate: n, ek: `${n}-${Date.now().toString(36)}`, feitos: novosFeitos, embates: {[alvo]: {revertido: true}}}}};
+    if(reabrir){
+      Object.assign(patch.disputas[did], {status:'andamento', vencedor:null, motivo:null, fimEm:null, resgate:null});
+      const c = t[d.tipo]; const [r, m] = d.chave.split('_').map(Number); const R = tRodadas(c.tamanho);
+      patch[d.tipo] = {ativa: did, partidas: {[d.chave]: {v:null}}};
+      if(r+1 < R) patch[d.tipo].partidas[`${r+1}_${m>>1}`] = {[m%2===0?'a':'b']: null}; else patch[d.tipo].campeao = null;
+      torneioVistos.fim.delete(tid + '/' + did);
+    }
+    tSalvar(tid, patch).then(()=> toast(`↶ Investida do embate ${n} desfeita.`));
   }
   function justaJuizes(tid, did, n, lado, grad){
     const d = torneiosCache[tid].disputas[did];
-    const L = d.embates[n].luta[lado];
+    const L = ((d.embates[n]||{}).luta||{})[lado]; if(!L) return;
     const r = rollDiceCore(grad, 0, 0, 0);
     const pego = r.total >= (L.enganacao||0);
     tSalvar(tid, {disputas: {[did]: {embates: {[n]: {luta: {[lado]: {juizes: {total: r.total, rolls: r.rolls, grad, pego}}}}}}}});
@@ -12668,26 +12782,27 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
     /* trapaças deste embate: só o mestre vê e decide */
     let trap = '';
     if(mestre){
-      Object.keys(d.embates||{}).forEach(n=>{
-        const L = (d.embates[n]||{}).luta || {};
+      justaLinha(d).forEach(({ek, n})=>{
+        const L = ((d.embates||{})[ek]||{}).luta || {};
         ['a','b'].forEach(l=>{
           const x = L[l]; if(!x || !x.trapaca) return;
           trap += `<div class="tj-trapaca"><b>⚠ ${escapeHtml(tNome(d[l]))} trapaceou no embate ${n}</b> — Enganação <b>${x.enganacao}</b> (Dificuldade para notar).
             ${x.juizes ? `<div>Juízes: Percepção ${x.juizes.grad}D → <b>${x.juizes.total}</b> — ${x.juizes.pego?'<b class="tj-falha">perceberam!</b>':'não perceberam.'}</div>`
-              : `<div class="tj-trap-linha">Juízes testam Percepção <input type="number" class="num" min="1" max="8" value="3" data-juizesgrad="${n}.${l}">D <button type="button" class="btn btn-mini" data-juizes="${n}.${l}">👁 Rolar</button></div>`}
+              : `<div class="tj-trap-linha">Juízes testam Percepção <input type="number" class="num" min="1" max="8" value="3" data-juizesgrad="${ek}|${l}">D <button type="button" class="btn btn-mini" data-juizes="${ek}|${l}">👁 Rolar</button></div>`}
             ${(d.status==='andamento' || (x.juizes && x.juizes.pego && d.motivo!=='trapaca')) ? `<div class="tj-trap-linha"><label class="check-line"><input type="checkbox" data-infamia="${l}" checked> +1d6 Infâmia</label><button type="button" class="btn btn-mini danger" data-desqualificar="${l}">Desqualificar</button></div>` : ''}
           </div>`;
         });
       });
     }
-    const hist = Object.keys(d.embates||{}).map(Number).filter(n=> n < st.n || (n===st.n && st.fase==='fim')).sort((a,b)=> a-b).map(n=>{
-      const s = justaEstado(Object.assign({}, d, {embate: n}));
+    const hist = justaLinha(d).map(({ek, n})=>{
+      const s = justaEstado(d, {ek, n});
       if(s.fase!=='fim') return '';
       return `<span class="tj-hist-item">#${n}: ${['a','b'].map(X=> `${escapeHtml(primeiroNome(tNome(d[X])))} ${s.L[X].total}/${s.L[X].dif}${s.hits[X].g?` (${s.hits[X].g}G)`:''}`).join(' × ')}${s.caiu.a||s.caiu.b?` — caiu: ${['a','b'].filter(Y=> s.caiu[Y]).map(Y=> escapeHtml(primeiroNome(tNome(d[Y])))).join(' e ')}`:''}</span>`;
     }).join('');
     return `<section class="tj-arena">
       <header class="t-arena-head"><span class="t-arena-tit">🐎 Justa · ${tNomeRodada(r, R)}</span>
         ${d.status==='fim' ? `<span class="t-tag fim">encerrada</span>` : `<span class="t-tag vivo">● ao vivo</span>`}
+        ${mestre && (st.L.a || st.L.b || justaFeitos(d).length) && (d.status==='andamento' || d.motivo==='queda' || d.motivo==='derrotado') ? `<button type="button" class="btn btn-mini ghost" data-desfazerinvestida title="Desfaz a última investida simultânea e devolve dano, ferimentos e lesões que ela causou">↶ Desfazer investida</button>` : ''}
         ${session.role==='mestre' && d.status==='andamento' ? `<button type="button" class="btn btn-mini ghost" data-desfazer="${d.chave}" title="Anular e recomeçar esta disputa">↺ Reiniciar</button>` : ''}</header>
       ${d.status==='fim' ? vencedorHtml(t, tid, did, d) : ''}
       <div class="tj-lica">
@@ -12874,7 +12989,8 @@ ${mostra('bio') ? `            ${isNPC ? '' : `
       on('[data-sela]', el=> justaSela(tid, did, el.dataset.sela));
       on('[data-desistir]', el=> disputaDesistir(tid, did, el.dataset.desistir));
       on('[data-proximo]', ()=> justaProximoEmbate(tid, did));
-      on('[data-juizes]', el=>{ const [n, l] = el.dataset.juizes.split('.'); const g = parseInt((wrap.querySelector(`[data-juizesgrad="${n}.${l}"]`)||{}).value,10) || 3; justaJuizes(tid, did, n, l, g); });
+      on('[data-juizes]', el=>{ const [n, l] = el.dataset.juizes.split('|'); const g = parseInt((wrap.querySelector(`[data-juizesgrad="${el.dataset.juizes}"]`)||{}).value,10) || 3; justaJuizes(tid, did, n, l, g); });
+      on('[data-desfazerinvestida]', ()=> justaDesfazerInvestida(tid, did));
       on('[data-desqualificar]', el=>{ const l = el.dataset.desqualificar; const inf = wrap.querySelector(`[data-infamia="${l}"]`); justaDesqualificar(tid, did, l, inf && inf.checked); });
       on('[data-resgate]', el=>{
         const a = el.dataset.resgate;
